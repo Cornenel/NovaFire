@@ -61,15 +61,15 @@ export function ComplianceAssessment() {
                   Compliance Check
                 </h3>
                 <p className="text-sm text-zinc-500">
-                  6–8 questions • Conditional logic • Score at end
+                  2-minute check • Conditional logic • Score at end
                 </p>
               </div>
             </div>
             <div className="p-6 sm:p-8">
-              {/* ZOHO FORM EMBED HERE */}
+              {/* ZOHO FORM EMBED – Nova Fire 2 Minute Fire Compliance Check */}
               <ZohoFormEmbed
                 formId="compliance-self-assessment"
-                minHeight={420}
+                minHeight={500}
                 fallback={
                   <div className="flex flex-col items-center justify-center py-12 gap-4">
                     <div className="w-12 h-12 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
@@ -77,15 +77,13 @@ export function ComplianceAssessment() {
                   </div>
                 }
               >
-                {/*
-                  Placeholder: Replace with your Zoho Forms embed.
-                  Form should include:
-                  - 6–8 questions with conditional logic
-                  - Score calculation
-                  - Compliance percentage result
-                  - Submit creates CRM lead, tags "Website Compliance Lead"
-                  - Redirect to /thank-you
-                */}
+                <iframe
+                  aria-label="Nova Fire – 2 Minute Fire Compliance Check"
+                  frameBorder="0"
+                  className="w-full min-h-[500px] border-0"
+                  src="https://forms.zohopublic.com/AbakhisaGroup/form/NovaFire2MinuteFireComplianceCheck/formperma/EWhSaaBOV0Rcq34Ly2tmxK_Q44T0y9qg0pakqjJuZ-M"
+                  title="Nova Fire 2 Minute Fire Compliance Check"
+                />
               </ZohoFormEmbed>
               <div className="mt-6 pt-6 border-t border-white/5 flex flex-col sm:flex-row gap-4 justify-between items-center">
                 <p className="text-xs text-zinc-500">
