@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono, Syne } from "next/font/google";
+import { OrganizationStructuredData } from "@/components/structured-data";
 import "./globals.css";
+import "./forms.css";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -34,6 +36,7 @@ export default function RootLayout({
       <body
         className={`${outfit.variable} ${syne.variable} ${jetbrainsMono.variable} font-sans antialiased bg-[#0a0a0a] text-white`}
       >
+        <OrganizationStructuredData />
         {children}
       </body>
     </html>

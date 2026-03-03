@@ -1,0 +1,103 @@
+/**
+ * Nova Fire – Form Styles
+ * Shared form styling for Zoho embeds and custom form components.
+ * Red, white, black branding with professional industrial tone.
+ */
+
+/* Form embed container – ensures Zoho iframe inherits our theme hints */
+.novafire-form-embed {
+  --nf-input-bg: #171717;
+  --nf-input-border: rgba(255, 255, 255, 0.1);
+  --nf-input-focus-border: rgba(220, 38, 38, 0.6);
+  --nf-input-text: #fafafa;
+  --nf-label-text: #a3a3a3;
+}
+
+/* Override Zoho form elements when they render inside our container */
+.novafire-form-embed input,
+.novafire-form-embed select,
+.novafire-form-embed textarea {
+  background-color: var(--nf-input-bg) !important;
+  border: 1px solid var(--nf-input-border) !important;
+  color: var(--nf-input-text) !important;
+  border-radius: 0.5rem;
+  padding: 0.625rem 1rem;
+  font-family: var(--font-outfit), system-ui, sans-serif;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.novafire-form-embed input:focus,
+.novafire-form-embed select:focus,
+.novafire-form-embed textarea:focus {
+  border-color: var(--nf-input-focus-border) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.15);
+  outline: none;
+}
+
+.novafire-form-embed label {
+  color: var(--nf-label-text) !important;
+  font-size: 0.875rem;
+}
+
+/* Custom form field – for non-Zoho fields (e.g. conditional UI) */
+.novafire-form-field {
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: #171717;
+  padding: 0.75rem 1rem;
+  color: #fafafa;
+  transition: all 0.2s ease;
+}
+
+.novafire-form-field::placeholder {
+  color: #737373;
+}
+
+.novafire-form-field:focus {
+  border-color: rgba(220, 38, 38, 0.6);
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.2);
+  outline: none;
+}
+
+.novafire-form-field:focus {
+  animation: nf-field-focus 0.3s ease;
+}
+
+@keyframes nf-field-focus {
+  0% {
+    box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(220, 38, 38, 0.15);
+  }
+  100% {
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  }
+}
+
+/* Form group spacing */
+.novafire-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Success / error states */
+.novafire-form-success {
+  border-radius: 0.5rem;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  background-color: rgba(16, 185, 129, 0.1);
+  padding: 1rem;
+  color: #34d399;
+  font-size: 0.875rem;
+}
+
+.novafire-form-error {
+  border-radius: 0.5rem;
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  background-color: rgba(220, 38, 38, 0.1);
+  padding: 1rem;
+  color: #f87171;
+  font-size: 0.875rem;
+}

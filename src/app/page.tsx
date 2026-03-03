@@ -24,6 +24,7 @@ import { Marquee } from "@/components/marquee";
 import { ScrollProgress } from "@/components/scroll-progress";
 import { AnimatedStat } from "@/components/animated-stat";
 import { SectionDivider } from "@/components/section-divider";
+import { ComplianceAssessment } from "@/components/forms/compliance-assessment";
 
 const SERVICES = [
   {
@@ -557,6 +558,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Fire Compliance Self-Assessment */}
+      <ComplianceAssessment />
+
       {/* CTA - Premium Glow */}
       <section className="py-32 bg-[#0a0a0a]">
         <div className="container mx-auto px-6">
@@ -624,7 +628,8 @@ export default function HomePage() {
               </h4>
               <ul className="space-y-4 text-sm text-zinc-400">
                 {[
-                  { label: "Services", href: "#services" },
+                  { label: "Services", href: "/services" },
+                  { label: "Training", href: "/training" },
                   { label: "Why Nova Fire", href: "#whynovafire" },
                   { label: "Industries", href: "#industries" },
                   { label: "Process", href: "#process" },
