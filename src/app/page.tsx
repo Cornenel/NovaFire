@@ -660,6 +660,7 @@ export default function HomePage() {
                 Accreditations
               </h4>
               <ul className="space-y-3 text-sm text-zinc-400">
+                <li>BSI accredited</li>
                 <li>SANS 1475</li>
                 <li>SAQCC</li>
                 <li>ISO 9001</li>
