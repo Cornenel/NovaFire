@@ -246,24 +246,25 @@ export default function ServicesPage() {
             </div>
             <div className="lg:col-span-3">
               <div className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6 md:p-8">
+                {/* ZOHO FORM EMBED – Nova Fire Compliance Assessment / Quote Form */}
                 <ZohoFormEmbed
                   formId="quote-engine"
-                  minHeight={420}
+                  minHeight={500}
                   fallback={
                     <div className="flex flex-col items-center justify-center py-12 gap-4">
                       <div className="w-10 h-10 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
-                      <p className="text-zinc-500 text-sm">Loading quote form…</p>
+                      <p className="text-zinc-500 text-sm">Loading form…</p>
                     </div>
                   }
-                />
-                <div className="mt-6 flex justify-end">
-                  <Button asChild className="bg-red-600 hover:bg-red-500">
-                    <Link href="/quote-confirmation">
-                      Submit Quote Request
-                      <ArrowRight className="w-4 h-4" />
-                    </Link>
-                  </Button>
-                </div>
+                >
+                  <iframe
+                    aria-label="Nova Fire Compliance Assessment Form"
+                    frameBorder="0"
+                    className="w-full min-h-[500px] border-0"
+                    src="https://forms.zohopublic.com/AbakhisaGroup/form/NovaFireComplianceAssessmentForm/formperma/e21SwYu48K_cyg4hGor_mkLWhemphA-JE5hbx9qAYxE"
+                    title="Nova Fire Quote & Compliance Assessment"
+                  />
+                </ZohoFormEmbed>
               </div>
             </div>
           </div>
