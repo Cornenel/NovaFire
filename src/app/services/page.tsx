@@ -4,7 +4,6 @@ import React from "react";
 import { motion } from "framer-motion";
 import { EmberBackground } from "@/components/ember-background";
 import { Navbar } from "@/components/navbar";
-import { FormSection } from "@/components/forms";
 import { ZohoFormEmbed } from "@/components/forms/zoho-form-embed";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -19,7 +18,7 @@ import {
   Wrench,
 } from "lucide-react";
 
-const SERVICES = [
+const CORE_SERVICES = [
   {
     icon: Package,
     title: "Installations & Supply",
@@ -40,20 +39,23 @@ const SERVICES = [
     title: "Insurance VAPs",
     desc: "Insurance-mandated Value Added Programmes and fire risk assessments. Satisfy insurer requirements and optimise premiums with documented compliance.",
   },
+];
+
+const ADDITIONAL_SERVICES = [
   {
     icon: Flame,
     title: "Detection System Support",
-    desc: "Installation, testing, and monitoring of fire detection and alarm systems. Integration with suppression and evacuation systems.",
+    desc: "Installation, testing, and monitoring of fire detection and alarm systems.",
   },
   {
     icon: FileCheck,
     title: "Compliance Management",
-    desc: "End-to-end compliance tracking and SANS-aligned certification. Audit-ready documentation, renewal reminders, and gap analysis.",
+    desc: "End-to-end compliance tracking, SANS certification, and audit-ready documentation.",
   },
   {
     icon: Building2,
     title: "Fire Risk Assessments",
-    desc: "Comprehensive site audits and risk mitigation strategies. Identify hazards and implement controls for lodges, warehouses, and industrial sites.",
+    desc: "Site audits and risk mitigation for lodges, warehouses, and industrial sites.",
   },
 ];
 
@@ -72,126 +74,221 @@ export default function ServicesPage() {
       <Navbar />
 
       {/* Hero */}
-      <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden pt-24">
+      <section className="relative min-h-[45vh] flex items-center justify-center overflow-hidden pt-24 pb-16">
         <EmberBackground />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0a0a0a]/80" />
         <div className="relative z-10 container mx-auto px-6 text-center">
           <motion.p
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             className="text-xs font-mono text-red-500/90 uppercase tracking-[0.25em] mb-4"
           >
             What We Deliver
           </motion.p>
           <motion.h1
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl md:text-6xl font-bold text-white font-[family-name:var(--font-syne)]"
+            transition={{ delay: 0.08 }}
+            className="text-4xl md:text-5xl lg:text-6xl font-bold text-white font-[family-name:var(--font-syne)] tracking-tight"
           >
             Our Services
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="text-zinc-400 mt-6 max-w-2xl mx-auto text-lg"
+            transition={{ delay: 0.16 }}
+            className="text-zinc-400 mt-5 max-w-xl mx-auto text-base md:text-lg"
           >
             Fire protection, compliance, and safety solutions tailored to your site.
           </motion.p>
         </div>
       </section>
 
-      {/* Services Grid */}
-      <section className="py-24 bg-[#0d0d0d] border-y border-white/5">
+      {/* Trust strip */}
+      <section className="py-6 border-y border-white/5 bg-[#0d0d0d]">
         <div className="container mx-auto px-6">
+          <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-xs font-mono text-zinc-500 tracking-widest">
+            {["SANS 1475", "SAQCC", "ISO 9001", "SABS Approved"].map((badge) => (
+              <span key={badge}>{badge}</span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Core services – 2x2 grid */}
+      <section className="py-20 md:py-28 bg-[#0a0a0a]">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.2em] mb-3">
+              Core Services
+            </p>
+            <h2 className="text-2xl md:text-3xl font-bold text-white font-[family-name:var(--font-syne)]">
+              End-to-end fire protection
+            </h2>
+          </motion.div>
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
+            viewport={{ once: true, margin: "-60px" }}
             variants={stagger}
-            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+            className="grid sm:grid-cols-2 gap-6 lg:gap-8"
           >
-            {SERVICES.map((s, idx) => (
+            {CORE_SERVICES.map((s) => (
               <motion.div
                 key={s.title}
                 variants={fadeUp}
-                className="group relative p-8 rounded-xl border border-white/5 bg-[#0a0a0a]/80 backdrop-blur-sm hover:border-red-900/40 hover:bg-[#111]/90 transition-all duration-300 overflow-hidden"
+                className="group relative p-8 md:p-10 rounded-2xl border border-white/5 bg-[#0d0d0d] hover:border-red-900/30 hover:bg-[#111] transition-all duration-300 overflow-hidden"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <div className="relative mb-6">
-                  <s.icon className="w-11 h-11 text-red-500/90" strokeWidth={1.5} />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex gap-6">
+                  <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-red-500/10 flex items-center justify-center">
+                    <s.icon className="w-7 h-7 text-red-500" strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <h3 className="text-lg md:text-xl font-semibold text-white font-[family-name:var(--font-syne)] mb-3">
+                      {s.title}
+                    </h3>
+                    <p className="text-zinc-400 text-sm md:text-base leading-relaxed">
+                      {s.desc}
+                    </p>
+                  </div>
                 </div>
-                <h3 className="relative text-xl font-semibold text-white mb-3 font-[family-name:var(--font-syne)]">
-                  {s.title}
-                </h3>
-                <p className="relative text-zinc-400 text-sm leading-relaxed">
-                  {s.desc}
-                </p>
-                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </motion.div>
             ))}
           </motion.div>
         </div>
       </section>
 
-      {/* Request Quote Section */}
-      <section id="request-quote" className="py-24 bg-[#0a0a0a] scroll-mt-24">
-        <div className="container mx-auto px-6 max-w-3xl">
-          <FormSection
-            title="Request a Quote"
-            description="Select your business type and requirements. We'll provide an estimated cost and follow up within 24 hours."
-            label="Quote Form"
-            maxWidth="full"
+      {/* Additional services – 3-col compact */}
+      <section className="py-16 md:py-24 bg-[#0d0d0d] border-y border-white/5">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
           >
-            <ZohoFormEmbed
-              formId="quote-engine"
-              minHeight={500}
-              fallback={
-                <div className="flex flex-col items-center justify-center py-16 gap-4">
-                  <div className="w-12 h-12 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
-                  <p className="text-zinc-500 text-sm">Loading quote form…</p>
+            <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.2em] mb-3">
+              Additional Services
+            </p>
+            <h2 className="text-2xl md:text-3xl font-bold text-white font-[family-name:var(--font-syne)]">
+              Support & compliance
+            </h2>
+          </motion.div>
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={stagger}
+            className="grid md:grid-cols-3 gap-6"
+          >
+            {ADDITIONAL_SERVICES.map((s) => (
+              <motion.div
+                key={s.title}
+                variants={fadeUp}
+                className="group p-6 rounded-xl border border-white/5 bg-[#0a0a0a]/60 hover:border-red-900/20 transition-all duration-300"
+              >
+                <s.icon className="w-10 h-10 text-red-500/90 mb-4" strokeWidth={1.5} />
+                <h3 className="text-base font-semibold text-white font-[family-name:var(--font-syne)] mb-2">
+                  {s.title}
+                </h3>
+                <p className="text-zinc-500 text-sm leading-relaxed">{s.desc}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Quote section – two-column layout */}
+      <section
+        id="request-quote"
+        className="relative py-20 md:py-28 bg-[#0a0a0a] scroll-mt-24"
+      >
+        <div
+          className="absolute inset-0 opacity-30"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 50% at 50% 100%, rgba(220, 38, 38, 0.08) 0%, transparent 70%)",
+          }}
+        />
+        <div className="container mx-auto px-6 max-w-5xl relative">
+          <div className="grid lg:grid-cols-5 gap-12 lg:gap-16 items-start">
+            <div className="lg:col-span-2 space-y-6">
+              <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.2em]">
+                Get a Quote
+              </p>
+              <h2 className="text-2xl md:text-3xl font-bold text-white font-[family-name:var(--font-syne)] leading-tight">
+                Request a tailored quote
+              </h2>
+              <p className="text-zinc-400 leading-relaxed">
+                Tell us your business type, extinguisher needs, and site details.
+                We&apos;ll provide an estimated cost and follow up within 24 hours.
+              </p>
+              <ul className="space-y-3 text-sm text-zinc-500">
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500/60" />
+                  Office, warehouse, lodge, farm, industrial
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500/60" />
+                  Extinguisher types & quantities
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500/60" />
+                  Optional floor plan upload
+                </li>
+              </ul>
+            </div>
+            <div className="lg:col-span-3">
+              <div className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6 md:p-8">
+                <ZohoFormEmbed
+                  formId="quote-engine"
+                  minHeight={420}
+                  fallback={
+                    <div className="flex flex-col items-center justify-center py-12 gap-4">
+                      <div className="w-10 h-10 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
+                      <p className="text-zinc-500 text-sm">Loading quote form…</p>
+                    </div>
+                  }
+                />
+                <div className="mt-6 flex justify-end">
+                  <Button asChild className="bg-red-600 hover:bg-red-500">
+                    <Link href="/quote-confirmation">
+                      Submit Quote Request
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
                 </div>
-              }
-            />
-
-            <div className="mt-8 space-y-6 text-sm text-zinc-500 border border-dashed border-white/10 rounded-lg p-6">
-              <p className="font-medium text-zinc-400">
-                Form fields: Business type, extinguisher count & types, thatch roof, fire blankets,
-                floor plan upload, contact details.
-              </p>
-              <p className="text-xs">
-                On submit: Create CRM opportunity, notify admin, redirect to confirmation.
-              </p>
+              </div>
             </div>
-
-            <div className="mt-8 flex justify-end">
-              <Button asChild className="bg-red-600 hover:bg-red-500">
-                <Link href="/quote-confirmation">
-                  Submit Quote Request
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </Button>
-            </div>
-          </FormSection>
+          </div>
         </div>
       </section>
 
       {/* CTA */}
       <section className="py-16 bg-[#0d0d0d] border-t border-white/5">
         <div className="container mx-auto px-6 text-center">
-          <p className="text-zinc-400 mb-6">Need a custom solution or SLA?</p>
+          <p className="text-zinc-400 mb-6">Need a custom solution or site-specific SLA?</p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button asChild className="bg-red-600 hover:bg-red-500">
               <Link href="/#contact">Contact Us</Link>
             </Button>
             <Button asChild variant="outline" className="border-white/20 text-zinc-400 hover:text-white">
-              <Link href="/">← Back to Home</Link>
+              <Link href="/">
+                <ArrowRight className="w-4 h-4 rotate-180 mr-2" />
+                Back to Home
+              </Link>
             </Button>
           </div>
         </div>
       </section>
 
-      <footer className="bg-[#0a0a0a] border-t border-white/5 py-12">
+      <footer className="bg-[#0a0a0a] border-t border-white/5 py-8">
         <div className="container mx-auto px-6 text-center text-zinc-500 text-sm">
           <Link href="/" className="text-red-500 hover:text-red-400 transition-colors">
             ← Back to Home
