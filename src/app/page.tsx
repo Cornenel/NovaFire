@@ -650,8 +650,8 @@ export default function HomePage() {
                 Contact
               </h4>
               <ul className="space-y-3 text-sm text-zinc-400">
-                <li>Tel: 0XX XXX XXXX</li>
-                <li>Email: info@novafire.co.za</li>
+                <li><a href="tel:+27662700293" className="hover:text-white transition-colors">066 270 0293</a></li>
+                <li><a href="mailto:jacques@novafire.co.za" className="hover:text-white transition-colors">jacques@novafire.co.za</a></li>
                 <li>South Africa</li>
               </ul>
             </div>

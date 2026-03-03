@@ -17,7 +17,8 @@ export function OrganizationStructuredData() {
     },
     contactPoint: {
       "@type": "ContactPoint",
-      email: "info@novafire.co.za",
+      email: "jacques@novafire.co.za",
+      telephone: "+27662700293",
       contactType: "customer service",
       areaServed: "ZA",
     },
