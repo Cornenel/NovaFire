@@ -108,7 +108,7 @@ export default function ServicesPage() {
       <section className="py-6 border-y border-white/5 bg-[#0d0d0d]">
         <div className="container mx-auto px-6">
           <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-xs font-mono text-zinc-500 tracking-widest">
-            {["SANS 1475", "SAQCC", "ISO 9001", "SABS Approved"].map((badge) => (
+            {["SANS 1475", "SAQCC", "ISO 9001", "BSI Permit Holder"].map((badge) => (
               <span key={badge}>{badge}</span>
             ))}
           </div>
