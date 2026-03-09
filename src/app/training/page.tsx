@@ -6,9 +6,8 @@ import { Navbar } from "@/components/navbar";
 import { EmberBackground } from "@/components/ember-background";
 import { FormSection } from "@/components/forms";
 import { ZohoFormEmbed } from "@/components/forms/zoho-form-embed";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { GraduationCap, ArrowRight } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 
 /**
  * Fire Safety Training Registration
@@ -62,31 +61,25 @@ export default function TrainingPage() {
             label="Fire Safety Training"
             maxWidth="full"
           >
-            {/* ZOHO FORM EMBED HERE */}
+            {/* ZOHO FORM EMBED – Training Registration Form */}
             <ZohoFormEmbed
               formId="training-registration"
-              minHeight={450}
+              minHeight={500}
               fallback={
                 <div className="flex flex-col items-center justify-center py-16 gap-4">
                   <div className="w-12 h-12 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
                   <p className="text-zinc-500 text-sm">Loading registration form…</p>
                 </div>
               }
-            />
-
-            <div className="mt-6 text-xs text-zinc-500 space-y-1">
-              <p>Fields: Company name, Number of attendees, Training type, Preferred date, Contact details</p>
-              <p>On submit: Create CRM lead, Trigger email confirmation, Ready for certificate automation</p>
-            </div>
-
-            <div className="mt-8 flex justify-end">
-              <Button asChild className="bg-red-600 hover:bg-red-500">
-                <Link href="/thank-you?source=training">
-                  Submit Registration
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </Button>
-            </div>
+            >
+              <iframe
+                aria-label="Training Registration Form"
+                frameBorder="0"
+                className="w-full min-h-[500px] border-0"
+                src="https://forms.zohopublic.com/AbakhisaGroup/form/TrainingRegistrationForm/formperma/3GLSKdCC3uGP32l0v3dVkAyi9Kp0JXDF_-g7xLpC4I4"
+                title="Nova Fire Training Registration"
+              />
+            </ZohoFormEmbed>
           </FormSection>
         </div>
       </section>
