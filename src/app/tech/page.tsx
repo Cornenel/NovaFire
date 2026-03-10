@@ -14,6 +14,7 @@ import {
   ChevronUp,
   Activity,
   FileText,
+  BarChart3,
 } from "lucide-react";
 
 /**
@@ -101,8 +102,56 @@ export default function TechPortalPage() {
           </p>
         </motion.div>
 
+        {/* Finalized Jobs Report */}
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          id="finalized-jobs"
+          className="mb-10 rounded-xl border border-white/10 bg-[#0d0d0d] overflow-hidden"
+        >
+          <div className="p-6 border-b border-white/5">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center">
+                <BarChart3 className="w-6 h-6 text-red-500" />
+              </div>
+              <div>
+                <h2 className="font-semibold text-white font-[family-name:var(--font-syne)]">
+                  Finalized Jobs
+                </h2>
+                <p className="text-sm text-zinc-500 mt-0.5">
+                  View and review completed jobcards
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 md:p-6 min-h-[400px]">
+            {/* ZOHO REPORT EMBED HERE – Add your Zoho Reports/Analytics iframe src */}
+            <ZohoFormEmbed
+              formId="tech-finalized-jobs-report"
+              minHeight={400}
+              fallback={
+                <div className="flex flex-col items-center justify-center py-16 gap-4 rounded-lg border border-dashed border-white/10 bg-[#0a0a0a]/50">
+                  <BarChart3 className="w-12 h-12 text-zinc-600" />
+                  <p className="text-zinc-500 text-sm">Zoho report will load here</p>
+                  <p className="text-xs text-zinc-600 max-w-sm text-center">
+                    Add your Zoho Reports or Analytics embed URL when ready
+                  </p>
+                </div>
+              }
+            />
+          </div>
+        </motion.section>
+
         {/* Quick links */}
         <div className="flex flex-wrap gap-2 mb-10">
+          <a
+            href="#finalized-jobs"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-white hover:bg-white/5 border border-white/5 hover:border-red-500/20 transition-colors"
+          >
+            <BarChart3 className="w-4 h-4" />
+            Finalized Jobs
+          </a>
           {SECTIONS.map((s) => (
             <a
               key={s.id}
