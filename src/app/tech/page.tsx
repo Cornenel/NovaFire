@@ -170,22 +170,51 @@ export default function TechPortalPage() {
                     className="border-t border-white/5"
                   >
                     <div className="p-6 pt-4">
-                      <div className="rounded-lg border border-white/5 bg-[#0a0a0a] p-4 md:p-6">
-                        {/* ZOHO FORM EMBED HERE – Add form URL when available */}
-                        <ZohoFormEmbed
-                          formId={`tech-${s.id}`}
-                          minHeight={400}
-                          fallback={
-                            <div className="flex flex-col items-center justify-center py-16 gap-4">
-                              <FileText className="w-12 h-12 text-zinc-600" />
-                              <p className="text-zinc-500 text-sm">Form will load here</p>
-                              <p className="text-xs text-zinc-600">
-                                Add Zoho form embed for {s.label}
-                              </p>
-                            </div>
-                          }
-                        />
-                      </div>
+                      {s.id === "jobcard" ? (
+                        <div className="rounded-lg border border-white/5 bg-[#0a0a0a] p-6 flex flex-col items-center justify-center gap-4">
+                          <p className="text-zinc-400 text-sm text-center">
+                            Annual Service Job Card & Service Certificate
+                          </p>
+                          <a
+                            href="https://forms.zohopublic.com/AbakhisaGroup/form/JobcardV2/formperma/bcoxipOvNeRw0CUmOm5y4eAKaev-8m0RLson7Q-0ckI"
+                            title="Annual Service Job Card & Service Certificate"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              const w = 700;
+                              const h = 648;
+                              const left = typeof window !== "undefined" ? (window.screen.width - w) / 2 : 0;
+                              const top = typeof window !== "undefined" ? (window.screen.height - h) / 2 : 0;
+                              window.open(
+                                (e.currentTarget as HTMLAnchorElement).href,
+                                "_blank",
+                                `width=${w},height=${h},left=${left},top=${top},toolbar=0,location=0,status=1,scrollbars=1,resizable=1`
+                              );
+                            }}
+                            className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-500 transition-colors"
+                          >
+                            <FileText className="w-4 h-4" />
+                            Access Jobcard Form
+                          </a>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-white/5 bg-[#0a0a0a] p-4 md:p-6">
+                          <ZohoFormEmbed
+                            formId={`tech-${s.id}`}
+                            minHeight={400}
+                            fallback={
+                              <div className="flex flex-col items-center justify-center py-16 gap-4">
+                                <FileText className="w-12 h-12 text-zinc-600" />
+                                <p className="text-zinc-500 text-sm">Form will load here</p>
+                                <p className="text-xs text-zinc-600">
+                                  Add Zoho form embed for {s.label}
+                                </p>
+                              </div>
+                            }
+                          />
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 )}
