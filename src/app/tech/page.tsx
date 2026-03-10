@@ -10,7 +10,6 @@ import {
   Cylinder,
   Truck,
   Wrench,
-  Lock,
   LogOut,
 } from "lucide-react";
 
@@ -27,30 +26,7 @@ const TECH_FORMS = [
 ] as const;
 
 export default function TechPortalPage() {
-  const [isAuthenticated] = useState(false); // TODO: Replace with real auth
   const [activeForm, setActiveForm] = useState<string | null>(null);
-
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a]">
-        <div className="flex flex-col items-center justify-center min-h-screen px-6">
-          <div className="w-16 h-16 rounded-xl bg-red-500/20 flex items-center justify-center mb-6">
-            <Lock className="w-8 h-8 text-red-500" />
-          </div>
-          <h1 className="text-2xl font-bold text-white font-[family-name:var(--font-syne)] mb-4">
-            Technician Portal
-          </h1>
-          <p className="text-zinc-400 text-center mb-8 max-w-sm">
-            Sign in to submit jobcards, refill logs, and equipment requests.
-          </p>
-          <Button className="bg-red-600 hover:bg-red-500">Sign In (Placeholder)</Button>
-          <Link href="/" className="mt-8 text-sm text-zinc-500 hover:text-white transition-colors">
-            ← Back to Nova Fire
-          </Link>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
@@ -66,9 +42,13 @@ export default function TechPortalPage() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-zinc-400">Technician</span>
-            <button className="p-2 text-zinc-500 hover:text-white transition-colors" aria-label="Sign out">
+            <a
+              href="/api/tech-logout"
+              className="p-2 text-zinc-500 hover:text-white transition-colors"
+              aria-label="Sign out"
+            >
               <LogOut className="w-4 h-4" />
-            </button>
+            </a>
           </div>
         </div>
       </header>

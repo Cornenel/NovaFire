@@ -4,21 +4,26 @@ import { NextRequest, NextResponse } from "next/server";
  * Subdomain routing & maintenance mode
  *
  * maintenance.novafire.co.za → /maintenance
- * firetech.novafire.co.za → /tech
+ * firetech.novafire.co.za → /tech (staff/admin only – requires FIRETECH_ACCESS_SECRET)
  * client.novafire.co.za → /client-portal
+ * training.novafire.co.za → /training
  *
  * Main domain (novafire.co.za, www): shows maintenance page for all visitors.
- * Bypass: Add ?bypass=YOUR_SECRET to any main-domain URL to set cookie and view site.
- * Set MAINTENANCE_BYPASS_SECRET in env (e.g. Vercel) – only you should know this.
+ * Bypass: ?bypass=YOUR_SECRET. Set MAINTENANCE_BYPASS_SECRET in env.
+ *
+ * Firetech: staff/admin only. Visit firetech.novafire.co.za?access=YOUR_SECRET to grant access.
+ * Set FIRETECH_ACCESS_SECRET in env – share only with authorised personnel.
  */
 
 const SUBDOMAIN_ROUTES: Record<string, string> = {
   maintenance: "/maintenance",
   firetech: "/tech",
   client: "/client-portal",
+  training: "/training",
 };
 
 const BYPASS_COOKIE = "nf_bypass";
+const FIRETECH_COOKIE = "nf_firetech";
 
 function isMainDomain(hostname: string, subdomain: string | null): boolean {
   return !subdomain || subdomain === "www";
@@ -58,7 +63,29 @@ export function proxy(request: NextRequest) {
     }
   }
 
-  // Other subdomains: firetech → /tech, client → /client-portal
+  // firetech: staff/admin only – require access token
+  const firetechSecret = process.env.FIRETECH_ACCESS_SECRET;
+  const firetechAccessParam = url.searchParams.get("access");
+  const hasFiretechCookie = request.cookies.get(FIRETECH_COOKIE)?.value === firetechSecret;
+
+  if (subdomain === "firetech" && firetechSecret) {
+    if (firetechAccessParam === firetechSecret) {
+      const redirectUrl = new URL(request.url);
+      redirectUrl.searchParams.delete("access");
+      const res = NextResponse.redirect(redirectUrl);
+      res.cookies.set(FIRETECH_COOKIE, firetechSecret, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 30 });
+      return res;
+    }
+    if (!hasFiretechCookie) {
+      const path = url.pathname;
+      if (path === "/tech-login" || path.startsWith("/api/tech-auth")) {
+        return NextResponse.next();
+      }
+      return NextResponse.redirect(new URL("/tech-login", request.url));
+    }
+  }
+
+  // Other subdomains: firetech → /tech, client → /client-portal, training → /training
   if (subdomain && SUBDOMAIN_ROUTES[subdomain]) {
     const basePath = SUBDOMAIN_ROUTES[subdomain];
     const pathname = url.pathname === "/" ? basePath : `${basePath}${url.pathname}`;
