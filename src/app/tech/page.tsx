@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { ZohoFormEmbed } from "@/components/forms/zoho-form-embed";
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
   ClipboardList,
@@ -11,110 +10,193 @@ import {
   Truck,
   Wrench,
   LogOut,
+  ChevronDown,
+  ChevronUp,
+  Activity,
+  FileText,
 } from "lucide-react";
 
 /**
- * Technician Backend Dashboard
- * Clean admin UI, role-based auth ready, configurable submission endpoints.
+ * Technician Portal – firetech.novafire.co.za/tech
+ * Jobcard, cylinder refill, vehicle inspection, equipment replacement
  */
 
-const TECH_FORMS = [
-  { id: "jobcard", label: "Jobcard Submission", icon: ClipboardList },
-  { id: "cylinder", label: "Cylinder Refill Log", icon: Cylinder },
-  { id: "vehicle", label: "Vehicle Inspection Checklist", icon: Truck },
-  { id: "equipment", label: "Equipment Replacement Request", icon: Wrench },
+const SECTIONS = [
+  {
+    id: "jobcard",
+    label: "Jobcard Submission",
+    icon: ClipboardList,
+    desc: "Submit completed service jobcards. Client, site, work done, and sign-off.",
+  },
+  {
+    id: "cylinder",
+    label: "Cylinder Refill Log",
+    icon: Cylinder,
+    desc: "Log cylinder refills and recharges. Quantity, type, and batch details.",
+  },
+  {
+    id: "vehicle",
+    label: "Vehicle Inspection Checklist",
+    icon: Truck,
+    desc: "Daily or periodic vehicle inspection. Safety, equipment, and mileage.",
+  },
+  {
+    id: "equipment",
+    label: "Equipment Replacement Request",
+    icon: Wrench,
+    desc: "Request replacement of faulty or expired equipment.",
+  },
 ] as const;
 
 export default function TechPortalPage() {
-  const [activeForm, setActiveForm] = useState<string | null>(null);
+  const [expandedSection, setExpandedSection] = useState<string | null>("jobcard");
 
   return (
     <div className="min-h-screen bg-[#0a0a0a]">
-      <header className="border-b border-white/5 bg-[#0d0d0d]/80 backdrop-blur-sm sticky top-0 z-40">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-xl font-bold text-white font-[family-name:var(--font-syne)]">
-              Nova<span className="text-red-600">Fire</span>
-            </span>
-            <span className="text-xs font-mono text-zinc-500 px-2 py-1 rounded bg-white/5">
-              TECH
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-400">Technician</span>
-            <a
-              href="/api/tech-logout"
-              className="p-2 text-zinc-500 hover:text-white transition-colors"
-              aria-label="Sign out"
-            >
-              <LogOut className="w-4 h-4" />
-            </a>
+      {/* Header */}
+      <header className="border-b border-white/5 bg-[#0d0d0d]/95 backdrop-blur-sm sticky top-0 z-40">
+        <div className="container mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-xl font-bold text-white font-[family-name:var(--font-syne)]">
+                Nova<span className="text-red-600">Fire</span>
+              </span>
+              <span className="text-[10px] font-mono text-zinc-500 px-2 py-1 rounded bg-red-500/10 border border-red-500/20">
+                TECH
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="hidden sm:inline text-sm text-zinc-400">Technician Portal</span>
+              <a
+                href="/api/tech-logout"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition-colors"
+                aria-label="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign out</span>
+              </a>
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-12 max-w-4xl">
+      <main className="container mx-auto px-4 sm:px-6 py-8 max-w-4xl">
+        {/* Welcome */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-12"
+          className="mb-10"
         >
-          <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.25em] mb-2">
-            Technician Backend
-          </p>
+          <div className="flex items-center gap-3 mb-2">
+            <Activity className="w-5 h-5 text-red-500" />
+            <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.2em]">
+              Technician Portal
+            </p>
+          </div>
           <h1 className="text-2xl md:text-3xl font-bold text-white font-[family-name:var(--font-syne)]">
             Forms & Logs
           </h1>
-          <p className="text-zinc-400 mt-2 text-sm">
-            Submission endpoint: Configure via <code className="text-zinc-500 font-mono">NEXT_PUBLIC_TECH_API_URL</code>
+          <p className="text-zinc-400 mt-2 text-sm max-w-xl">
+            Submit jobcards, log cylinder refills, complete vehicle inspections, and request equipment replacements.
           </p>
         </motion.div>
 
-        <div className="grid gap-6 sm:grid-cols-2">
-          {TECH_FORMS.map((form) => (
-            <motion.div
-              key={form.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.05 * TECH_FORMS.indexOf(form) }}
-              className="rounded-xl border border-white/10 bg-[#0d0d0d] p-6 hover:border-red-500/30 transition-colors"
+        {/* Quick links */}
+        <div className="flex flex-wrap gap-2 mb-10">
+          {SECTIONS.map((s) => (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-white hover:bg-white/5 border border-white/5 hover:border-red-500/20 transition-colors"
             >
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center shrink-0">
-                  <form.icon className="w-6 h-6 text-red-500" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-white font-[family-name:var(--font-syne)]">
-                    {form.label}
-                  </h3>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4 border-white/10 text-zinc-400 hover:text-white hover:border-red-500/30"
-                    onClick={() => setActiveForm(activeForm === form.id ? null : form.id)}
-                  >
-                    {activeForm === form.id ? "Hide Form" : "Show Form"}
-                  </Button>
-                  {activeForm === form.id && (
-                    <div className="mt-4 pt-4 border-t border-white/5">
-                      {/* ZOHO FORM EMBED HERE */}
-                      <ZohoFormEmbed
-                        formId={`tech-${form.id}`}
-                        minHeight={220}
-                        fallback={<p className="text-zinc-500 text-xs">Loading…</p>}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </motion.div>
+              <s.icon className="w-4 h-4" />
+              {s.label}
+            </a>
           ))}
         </div>
 
-        <div className="mt-12 text-center">
-          <Link href="/" className="text-sm text-zinc-500 hover:text-white transition-colors">
+        {/* Form sections */}
+        <div className="space-y-4">
+          {SECTIONS.map((s, idx) => {
+            const isExpanded = expandedSection === s.id;
+            return (
+              <motion.section
+                key={s.id}
+                id={s.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                className="rounded-xl border border-white/10 bg-[#0d0d0d] overflow-hidden scroll-mt-24"
+              >
+                <button
+                  onClick={() => setExpandedSection(isExpanded ? null : s.id)}
+                  className="w-full flex items-center justify-between gap-4 p-6 text-left hover:bg-white/[0.02] transition-colors"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center shrink-0">
+                      <s.icon className="w-6 h-6 text-red-500" />
+                    </div>
+                    <div className="min-w-0">
+                      <h2 className="font-semibold text-white font-[family-name:var(--font-syne)]">
+                        {s.label}
+                      </h2>
+                      <p className="text-sm text-zinc-500 mt-0.5 truncate">
+                        {s.desc}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-zinc-500">
+                    {isExpanded ? (
+                      <ChevronUp className="w-5 h-5" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5" />
+                    )}
+                  </div>
+                </button>
+
+                {isExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="border-t border-white/5"
+                  >
+                    <div className="p-6 pt-4">
+                      <div className="rounded-lg border border-white/5 bg-[#0a0a0a] p-4 md:p-6">
+                        {/* ZOHO FORM EMBED HERE – Add form URL when available */}
+                        <ZohoFormEmbed
+                          formId={`tech-${s.id}`}
+                          minHeight={400}
+                          fallback={
+                            <div className="flex flex-col items-center justify-center py-16 gap-4">
+                              <FileText className="w-12 h-12 text-zinc-600" />
+                              <p className="text-zinc-500 text-sm">Form will load here</p>
+                              <p className="text-xs text-zinc-600">
+                                Add Zoho form embed for {s.label}
+                              </p>
+                            </div>
+                          }
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </motion.section>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <Link
+            href="https://novafire.co.za"
+            className="text-sm text-zinc-500 hover:text-white transition-colors"
+          >
             ← Back to Nova Fire
           </Link>
+          <p className="text-xs text-zinc-600">
+            Submissions are logged and routed per your config
+          </p>
         </div>
       </main>
     </div>
