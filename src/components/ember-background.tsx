@@ -22,18 +22,18 @@ function seededRandom(seed: number): number {
 
 const PARTICLES = (() => {
   const p: Particle[] = [];
-  for (let i = 0; i < 32; i++) {
-    const s = i * 7; // stride for independent values
+  for (let i = 0; i < 48; i++) {
+    const s = i * 7;
     p.push({
       id: i,
       x: seededRandom(s) * 100 - 5,
       y: seededRandom(s + 1) * 100 - 5,
-      size: 1.5 + seededRandom(s + 2) * 3,
-      duration: 5 + seededRandom(s + 3) * 8,
-      delay: seededRandom(s + 4) * 4,
-      opacity: 0.15 + seededRandom(s + 5) * 0.35,
-      drift: (seededRandom(s + 6) - 0.5) * 40,
-      blur: 2 + seededRandom(s + 7) * 4,
+      size: 2 + seededRandom(s + 2) * 4,
+      duration: 3 + seededRandom(s + 3) * 5,
+      delay: seededRandom(s + 4) * 3,
+      opacity: 0.25 + seededRandom(s + 5) * 0.45,
+      drift: (seededRandom(s + 6) - 0.5) * 60,
+      blur: 1 + seededRandom(s + 7) * 5,
     });
   }
   return p;
@@ -43,14 +43,32 @@ export function EmberBackground() {
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {/* Base gradient - deeper, more atmospheric */}
+      {/* Base gradient - stronger, more dramatic */}
       <div
         className="absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 100% 80% at 50% 20%, rgba(139, 0, 0, 0.12) 0%, transparent 45%), radial-gradient(ellipse 60% 40% at 80% 60%, rgba(220, 38, 38, 0.06) 0%, transparent 50%)",
+            "radial-gradient(ellipse 120% 100% at 50% 10%, rgba(185, 28, 28, 0.18) 0%, transparent 50%), radial-gradient(ellipse 80% 50% at 20% 80%, rgba(220, 38, 38, 0.08) 0%, transparent 50%), radial-gradient(ellipse 60% 40% at 85% 50%, rgba(220, 38, 38, 0.06) 0%, transparent 50%)",
         }}
       />
+      {/* Pulsing central glow */}
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center"
+        style={{ pointerEvents: "none" }}
+      >
+        <motion.div
+          className="w-[600px] h-[400px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, rgba(220, 38, 38, 0.25) 0%, rgba(185, 28, 28, 0.1) 30%, transparent 70%)",
+            filter: "blur(60px)",
+          }}
+          animate={{
+            opacity: [0.5, 0.9, 0.5],
+            scale: [1, 1.15, 1],
+          }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </motion.div>
       {/* Vignette */}
       <div
         className="absolute inset-0"
@@ -59,23 +77,27 @@ export function EmberBackground() {
             "radial-gradient(ellipse 100% 100% at 50% 50%, transparent 50%, rgba(0,0,0,0.4) 100%)",
         }}
       />
-      {/* Mission control grid - finer, perspective feel */}
+      {/* Mission control grid - perspective */}
       <div
-        className="absolute inset-0 opacity-[0.05]"
+        className="absolute inset-0 opacity-[0.07]"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)
+            linear-gradient(rgba(255,255,255,0.15) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.15) 1px, transparent 1px)
           `,
-          backgroundSize: "36px 36px",
+          backgroundSize: "48px 48px",
         }}
       />
-      {/* Animated scan line - very subtle */}
+      {/* Animated scan lines - more visible */}
       <motion.div
-        className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/10 to-transparent"
-        style={{ top: "30%" }}
+        className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/20 to-transparent"
         animate={{ y: ["0vh", "100vh"] }}
-        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+        transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
+      />
+      <motion.div
+        className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/15 to-transparent"
+        animate={{ y: ["100vh", "0vh"] }}
+        transition={{ duration: 8, repeat: Infinity, ease: "linear", delay: 2 }}
       />
       {/* Floating ember particles - layered, deterministic for hydration */}
       {PARTICLES.map((particle) => (
@@ -92,10 +114,10 @@ export function EmberBackground() {
             filter: `blur(${particle.blur}px)`,
           }}
           animate={{
-            y: [0, -50, 0],
+            y: [0, -80, 0],
             x: [0, particle.drift, 0],
-            opacity: [particle.opacity * 0.3, particle.opacity, particle.opacity * 0.3],
-            scale: [1, 1.3, 1],
+            opacity: [particle.opacity * 0.4, particle.opacity, particle.opacity * 0.4],
+            scale: [1, 1.4, 1],
           }}
           transition={{
             duration: particle.duration,

@@ -102,6 +102,20 @@ export default function HomePage() {
       {/* Hero */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         <EmberBackground />
+        <div className="absolute inset-0 z-[1] flex items-center justify-center pointer-events-none">
+          <motion.div
+            className="w-[800px] h-[500px] rounded-full opacity-20"
+            style={{
+              background: "radial-gradient(circle, rgba(220,38,38,0.4) 0%, transparent 70%)",
+              filter: "blur(100px)",
+            }}
+            animate={{
+              scale: [1, 1.3, 1],
+              opacity: [0.15, 0.3, 0.15],
+            }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
         <div className="relative z-10 container mx-auto px-6 text-center">
           <motion.div
             initial="hidden"
@@ -111,34 +125,56 @@ export default function HomePage() {
           >
             <motion.div
               variants={fadeUp}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-red-500/30 bg-red-500/5 mb-8"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-red-500/40 bg-red-500/10 mb-8 shadow-[0_0_30px_rgba(220,38,38,0.15)]"
+              animate={{ opacity: [0.95, 1, 0.95] }}
+              transition={{ duration: 2.5, repeat: Infinity }}
             >
               <motion.span
-                className="w-2 h-2 rounded-full bg-emerald-500"
-                animate={{ opacity: [1, 0.3, 1] }}
-                transition={{ duration: 2, repeat: Infinity }}
+                className="w-2.5 h-2.5 rounded-full bg-emerald-500"
+                animate={{ opacity: [1, 0.3, 1], scale: [1, 1.2, 1] }}
+                transition={{ duration: 1.5, repeat: Infinity }}
               />
-              <span className="text-xs font-mono text-red-400/90 uppercase tracking-[0.2em]">
+              <span className="text-xs font-mono text-red-400 uppercase tracking-[0.25em] font-medium">
                 Mission Ready
               </span>
             </motion.div>
             <motion.p
               variants={fadeUp}
-              className="text-xs font-mono text-red-500/90 uppercase tracking-[0.35em] mb-6"
+              className="text-xs font-mono text-red-500/90 uppercase tracking-[0.4em] mb-6"
             >
               Fire Protection & Compliance
             </motion.p>
             <motion.h1
-              variants={fadeUp}
+              variants={stagger}
               className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight text-white leading-[1.05] mb-8 font-[family-name:var(--font-syne)]"
             >
-              <span className="block">Compliance.</span>
-              <span className="block">Protection.</span>
               <motion.span
                 variants={fadeUp}
-                className="block text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-red-500 to-red-700 bg-[length:200%_auto] animate-[gradient-shift_6s_ease_infinite]"
+                className="block"
+                transition={{ type: "spring", stiffness: 80, damping: 15 }}
               >
-                Confidence.
+                Compliance.
+              </motion.span>
+              <motion.span
+                variants={fadeUp}
+                className="block"
+                transition={{ type: "spring", stiffness: 80, damping: 15 }}
+              >
+                Protection.
+              </motion.span>
+              <motion.span
+                variants={fadeUp}
+                className="relative block"
+                transition={{ type: "spring", stiffness: 80, damping: 15 }}
+              >
+                <span className="relative z-10 block text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-red-500 to-red-700 bg-[length:200%_auto] animate-[gradient-shift_4s_ease_infinite] drop-shadow-[0_0_30px_rgba(220,38,38,0.5)]">
+                  Confidence.
+                </span>
+                <motion.span
+                  className="absolute -inset-2 rounded-lg bg-red-500/10 blur-xl -z-10"
+                  animate={{ opacity: [0.3, 0.6, 0.3] }}
+                  transition={{ duration: 2.5, repeat: Infinity }}
+                />
               </motion.span>
             </motion.h1>
             <motion.p
@@ -153,33 +189,41 @@ export default function HomePage() {
               variants={fadeUp}
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
-              <a
+              <motion.a
                 href="#contact"
-                className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold rounded overflow-hidden bg-red-600 text-white hover:bg-red-500 transition-colors shadow-[0_0_40px_rgba(220,38,38,0.3)]"
+                className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold rounded-lg overflow-hidden bg-red-600 text-white transition-colors"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                style={{ boxShadow: "0 0 40px rgba(220,38,38,0.4)" }}
               >
+                <motion.span
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"
+                  style={{ width: "50%" }}
+                />
                 <span className="relative z-10">Get Compliant</span>
-                <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-              </a>
-              <a
+              </motion.a>
+              <motion.a
                 href="#contact"
-                className="group inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold rounded border border-white/20 text-white hover:bg-white/5 hover:border-white/40 transition-all duration-300"
+                className="group inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold rounded-lg border-2 border-white/25 text-white hover:bg-white/10 hover:border-red-500/40 transition-all duration-300"
+                whileHover={{ scale: 1.03, x: 4 }}
+                whileTap={{ scale: 0.98 }}
               >
                 Request a Quote
-                <ArrowRight className="w-4 h-4 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
-              </a>
+                <ArrowRight className="w-5 h-5 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+              </motion.a>
             </motion.div>
           </motion.div>
         </div>
         <motion.div
-          className="absolute bottom-10 left-1/2 -translate-x-1/2"
-          animate={{ y: [0, 10, 0] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10"
+          animate={{ y: [0, 12, 0] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         >
-          <div className="w-6 h-10 rounded-full border-2 border-white/20 flex justify-center pt-2">
+          <div className="w-6 h-10 rounded-full border-2 border-white/30 flex justify-center pt-2">
             <motion.div
               className="w-1.5 h-1.5 rounded-full bg-red-500"
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              animate={{ opacity: [0.4, 1, 0.4] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
             />
           </div>
         </motion.div>
