@@ -246,21 +246,34 @@ export default function TechPortalPage() {
               </div>
             </div>
           </div>
-          <div className="p-4 md:p-6 min-h-[400px]">
-            {/* ZOHO REPORT EMBED HERE – Add your Zoho Reports/Analytics iframe src */}
-            <ZohoFormEmbed
-              formId="tech-finalized-jobs-report"
-              minHeight={400}
-              fallback={
-                <div className="flex flex-col items-center justify-center py-16 gap-4 rounded-lg border border-dashed border-white/10 bg-[#0a0a0a]/50">
-                  <BarChart3 className="w-12 h-12 text-zinc-600" />
-                  <p className="text-zinc-500 text-sm">Zoho report will load here</p>
-                  <p className="text-xs text-zinc-600 max-w-sm text-center">
-                    Add your Zoho Reports or Analytics embed URL when ready
-                  </p>
-                </div>
-              }
-            />
+          <div className="p-4 md:p-6">
+            <div className="rounded-lg border border-white/5 bg-[#0a0a0a] p-6 flex flex-col items-center justify-center gap-4">
+              <p className="text-zinc-400 text-sm text-center">
+                Service History / New Updated Jobcard Report
+              </p>
+              <a
+                href="https://forms.zohopublic.com/AbakhisaGroup/report/NewUpdatedJobcard/reportperma/Xc7eC19l5O_W6eny5aHJks1aEJLeVT69vo6prU7JBL8"
+                title="Annual Service Job Card & Service Certificate"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const w = 700;
+                  const h = 648;
+                  const left = typeof window !== "undefined" ? (window.screen.width - w) / 2 : 0;
+                  const top = typeof window !== "undefined" ? (window.screen.height - h) / 2 : 0;
+                  window.open(
+                    (e.currentTarget as HTMLAnchorElement).href,
+                    "_blank",
+                    `width=${w},height=${h},left=${left},top=${top},toolbar=0,location=0,status=1,scrollbars=1,resizable=1`
+                  );
+                }}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-500 transition-colors"
+              >
+                <BarChart3 className="w-4 h-4" />
+                Access Service History Report
+              </a>
+            </div>
           </div>
         </motion.section>
 
