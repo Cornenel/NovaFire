@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 /**
- * Clear firetech auth cookie and redirect to login
+ * Clear firetech auth cookie and redirect to main site
  */
-export function GET(request: NextRequest) {
-  const base = new URL(request.url);
-  const res = NextResponse.redirect(new URL("/tech-login", base.origin));
+export function GET() {
+  const mainSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://novafire.co.za";
+  const res = NextResponse.redirect(mainSiteUrl);
   res.cookies.set("nf_firetech", "", { maxAge: 0, path: "/" });
   return res;
 }
