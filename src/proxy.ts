@@ -85,6 +85,11 @@ export function proxy(request: NextRequest) {
     }
   }
 
+  // API routes – never rewrite, pass through to actual /api/* handlers
+  if (url.pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
   // Other subdomains: firetech → /tech, client → /client-portal, training → /training
   if (subdomain && SUBDOMAIN_ROUTES[subdomain]) {
     const basePath = SUBDOMAIN_ROUTES[subdomain];
