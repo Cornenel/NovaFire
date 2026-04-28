@@ -4,6 +4,8 @@ import React from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Lock } from "lucide-react";
+import { Navbar } from "@/components/navbar";
+import { SiteFooter } from "@/components/site-footer";
 
 /**
  * Firetech subdomain – access restricted to staff/admin
@@ -12,11 +14,12 @@ import { Lock } from "lucide-react";
 
 export default function TechRestrictedPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen nf-bg-base flex flex-col">
+      <Navbar />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-sm w-full text-center"
+        className="max-w-sm w-full text-center mx-auto flex-1 flex flex-col justify-center py-20 pt-32 px-6"
       >
         <div className="w-16 h-16 rounded-xl bg-red-500/20 flex items-center justify-center mx-auto mb-6">
           <Lock className="w-8 h-8 text-red-500" />
@@ -35,6 +38,7 @@ export default function TechRestrictedPage() {
           ← Return to Nova Fire
         </Link>
       </motion.div>
+      <SiteFooter variant="compact" />
     </div>
   );
 }

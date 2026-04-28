@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { ZohoFormEmbed } from "./zoho-form-embed";
+import { FormLegalNotice } from "@/components/form-legal-notice";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Shield, ArrowRight } from "lucide-react";
@@ -24,17 +25,22 @@ import { Shield, ArrowRight } from "lucide-react";
 
 export function ComplianceAssessment() {
   return (
-    <section id="compliance-assessment" className="py-32 bg-[#0d0d0d] border-y border-white/5 scroll-mt-24">
-      <div className="container mx-auto px-6">
+    <section
+      id="compliance-assessment"
+      className="py-32 nf-bg-raised border-y border-white/[0.06] scroll-mt-24 relative overflow-hidden"
+    >
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(220,38,38,0.06),transparent)]"
+        aria-hidden
+      />
+      <div className="container mx-auto px-6 relative">
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           className="text-center mb-16"
         >
-          <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.25em] mb-4">
-            Self-Assessment
-          </p>
+          <p className="nf-eyebrow mb-4">Self-Assessment</p>
           <h2 className="text-4xl md:text-5xl font-bold text-white font-[family-name:var(--font-syne)] mb-4">
             Is Your Business Fire Compliant?
           </h2>
@@ -50,7 +56,7 @@ export function ComplianceAssessment() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ delay: 0.1 }}
-            className="rounded-xl border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-sm overflow-hidden"
+            className="rounded-2xl nf-glass-panel backdrop-blur-md overflow-hidden border-white/[0.08]"
           >
             <div className="p-6 sm:p-8 border-b border-white/5 flex items-center gap-4">
               <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center">
@@ -85,6 +91,7 @@ export function ComplianceAssessment() {
                   title="Nova Fire 2 Minute Fire Compliance Check"
                 />
               </ZohoFormEmbed>
+              <FormLegalNotice className="mt-6" />
               <div className="mt-6 pt-6 border-t border-white/5 flex flex-col sm:flex-row gap-4 justify-between items-center">
                 <p className="text-xs text-zinc-500">
                   After submitting, you&apos;ll be redirected to book an inspection.

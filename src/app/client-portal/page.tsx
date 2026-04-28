@@ -6,6 +6,8 @@ import { Navbar } from "@/components/navbar";
 import { FormSection } from "@/components/forms";
 import { ZohoFormEmbed } from "@/components/forms/zoho-form-embed";
 import { Button } from "@/components/ui/button";
+import { FormLegalNotice } from "@/components/form-legal-notice";
+import { SiteFooter } from "@/components/site-footer";
 import Link from "next/link";
 import { Lock } from "lucide-react";
 
@@ -21,9 +23,9 @@ export default function ClientPortalPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a]">
+      <div className="min-h-screen nf-bg-base flex flex-col">
         <Navbar />
-        <section className="pt-32 pb-20 px-6">
+        <section className="pt-32 pb-20 px-6 flex-1">
           <div className="max-w-md mx-auto text-center">
             <div className="w-16 h-16 rounded-xl bg-red-500/20 flex items-center justify-center mx-auto mb-6">
               <Lock className="w-8 h-8 text-red-500" />
@@ -42,14 +44,15 @@ export default function ClientPortalPage() {
             </p>
           </div>
         </section>
+        <SiteFooter variant="compact" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen nf-bg-base flex flex-col">
       <Navbar />
-      <section className="pt-32 pb-20 px-6">
+      <section className="pt-32 pb-20 px-6 flex-1">
         <div className="container mx-auto max-w-4xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -66,6 +69,8 @@ export default function ClientPortalPage() {
               Emergency call-outs, payment uploads, and asset updates.
             </p>
           </motion.div>
+
+          <FormLegalNotice className="mb-10 max-w-2xl mx-auto text-center" />
 
           <div className="space-y-12">
             {/* A) Emergency Call-Out Form */}
@@ -129,13 +134,9 @@ export default function ClientPortalPage() {
             </FormSection>
           </div>
 
-          <div className="mt-16 text-center">
-            <Link href="/" className="text-red-500 hover:text-red-400 text-sm transition-colors">
-              ← Back to Home
-            </Link>
-          </div>
         </div>
       </section>
+      <SiteFooter variant="compact" />
     </div>
   );
 }

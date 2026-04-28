@@ -58,16 +58,12 @@ export function FormSection({
         "w-full mx-auto",
         maxWidthClasses[maxWidth],
         variant === "card" &&
-          "rounded-xl border border-white/10 bg-[#0d0d0d]/90 backdrop-blur-sm p-6 sm:p-8",
+          "rounded-2xl nf-glass-panel backdrop-blur-md p-6 sm:p-8 border-white/[0.08]",
         variant === "minimal" && "py-6",
         className
       )}
     >
-      {label && (
-        <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.25em] mb-3">
-          {label}
-        </p>
-      )}
+      {label && <p className="nf-eyebrow mb-3">{label}</p>}
       <h2 className="text-2xl sm:text-3xl font-bold text-white font-[family-name:var(--font-syne)] mb-2">
         {title}
       </h2>

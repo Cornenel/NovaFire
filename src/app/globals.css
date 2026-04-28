@@ -52,6 +52,27 @@
 }
 
 :root {
+  /* Nova Fire — industrial forge palette (used across marketing + tools) */
+  --nf-void: #040406;
+  --nf-base: #08080d;
+  --nf-surface: #0c0c14;
+  --nf-raised: #11111a;
+  --nf-rim: #1a1a26;
+  --nf-heat: #ea580c;
+  --nf-flame: #dc2626;
+  --nf-ember-glow: rgba(220, 38, 38, 0.14);
+  --nf-amber-glow: rgba(251, 146, 60, 0.08);
+  --nf-border: rgba(255, 255, 255, 0.055);
+  --nf-border-warm: rgba(220, 38, 38, 0.14);
+  --nf-shine: linear-gradient(
+    105deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.02) 40%,
+    rgba(220, 38, 38, 0.09) 55%,
+    rgba(251, 146, 60, 0.06) 75%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+
   --radius: 0.5rem;
   --background: #0a0a0a;
   --foreground: oklch(0.95 0.01 264);
@@ -125,7 +146,102 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground antialiased;
+    background-color: var(--nf-void);
+    background-image:
+      radial-gradient(ellipse 130% 70% at 50% -25%, var(--nf-ember-glow), transparent 52%),
+      radial-gradient(ellipse 90% 55% at 100% 0%, var(--nf-amber-glow), transparent 42%),
+      radial-gradient(ellipse 70% 45% at 0% 40%, rgba(127, 29, 29, 0.06), transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  .nf-bg-base {
+    background-color: color-mix(in oklab, var(--nf-base) 96%, transparent);
+  }
+  .nf-bg-surface {
+    background-color: color-mix(in oklab, var(--nf-surface) 94%, transparent);
+  }
+  .nf-bg-raised {
+    background-color: color-mix(in oklab, var(--nf-raised) 92%, transparent);
+  }
+  .nf-border {
+    border-color: var(--nf-border);
+  }
+  .nf-border-warm {
+    border-color: var(--nf-border-warm);
+  }
+  .nf-text-heat {
+    background-image: linear-gradient(
+      115deg,
+      #fecdd3 0%,
+      #fb923c 28%,
+      #ef4444 52%,
+      #b91c1c 88%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .nf-glass-panel {
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(12, 12, 20, 0.75) 45%,
+      rgba(8, 8, 14, 0.9) 100%
+    );
+    border: 1px solid var(--nf-border);
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.35) inset,
+      0 24px 64px rgba(0, 0, 0, 0.45),
+      0 0 80px rgba(220, 38, 38, 0.04);
+  }
+  .nf-card-hover {
+    transition:
+      border-color 0.35s ease,
+      box-shadow 0.35s ease,
+      transform 0.35s ease,
+      background-color 0.35s ease;
+  }
+  .nf-card-hover:hover {
+    border-color: color-mix(in oklab, var(--nf-flame) 35%, var(--nf-border));
+    box-shadow:
+      0 0 0 1px rgba(220, 38, 38, 0.08) inset,
+      0 20px 50px rgba(0, 0, 0, 0.35),
+      0 0 60px rgba(220, 38, 38, 0.07);
+  }
+  .nf-eyebrow {
+    @apply text-xs font-mono uppercase tracking-[0.28em] text-red-400/95;
+  }
+  .nf-btn-primary {
+    background: linear-gradient(165deg, #f87171 0%, #dc2626 38%, #b91c1c 100%);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.12) inset,
+      0 0 0 1px rgba(0, 0, 0, 0.2),
+      0 12px 40px rgba(220, 38, 38, 0.35);
+  }
+  .nf-btn-primary:hover {
+    filter: brightness(1.06);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.15) inset,
+      0 0 0 1px rgba(0, 0, 0, 0.25),
+      0 16px 48px rgba(220, 38, 38, 0.45);
+  }
+  .nf-btn-ghost {
+    border: 1px solid color-mix(in oklab, white 14%, transparent);
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(10px);
+  }
+  .nf-btn-ghost:hover {
+    border-color: color-mix(in oklab, var(--nf-flame) 45%, transparent);
+    background: rgba(255, 255, 255, 0.05);
+  }
+  .nf-noise {
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 }
 

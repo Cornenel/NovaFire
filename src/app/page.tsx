@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import {
   Shield,
   Flame,
@@ -25,6 +26,7 @@ import { ScrollProgress } from "@/components/scroll-progress";
 import { AnimatedStat } from "@/components/animated-stat";
 import { SectionDivider } from "@/components/section-divider";
 import { ComplianceAssessment } from "@/components/forms/compliance-assessment";
+import { SiteFooter } from "@/components/site-footer";
 
 const SERVICES = [
   {
@@ -95,12 +97,33 @@ const stagger = {
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen nf-bg-base">
       <ScrollProgress />
       <Navbar />
 
       {/* Hero */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        {/* Optional hero video layer (place file at /public/hero.mp4) */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <video
+            className="absolute inset-0 h-full w-full object-cover opacity-[0.22]"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            aria-hidden="true"
+          >
+            <source src="/hero.mp4" type="video/mp4" />
+          </video>
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse 110% 80% at 50% 10%, rgba(220,38,38,0.22) 0%, transparent 55%), linear-gradient(to bottom, rgba(4,4,6,0.25), rgba(4,4,6,0.85))",
+            }}
+          />
+        </div>
         <EmberBackground />
         <div className="absolute inset-0 z-[1] flex items-center justify-center pointer-events-none">
           <motion.div
@@ -125,22 +148,35 @@ export default function HomePage() {
           >
             <motion.div
               variants={fadeUp}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-red-500/40 bg-red-500/10 mb-8 shadow-[0_0_30px_rgba(220,38,38,0.15)]"
+              className="relative mx-auto mb-8 w-28 h-28 sm:w-32 sm:h-32 rounded-2xl nf-glass-panel border-white/[0.08] shadow-[0_0_60px_rgba(220,38,38,0.12)]"
+            >
+              <Image
+                src="/brand/logo.png"
+                alt="Nova Fire logo"
+                fill
+                sizes="(max-width: 640px) 112px, 128px"
+                className="p-4 sm:p-5 object-contain"
+                priority
+              />
+            </motion.div>
+            <motion.div
+              variants={fadeUp}
+              className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-white/[0.08] bg-gradient-to-r from-red-950/40 via-zinc-950/50 to-orange-950/30 mb-8 shadow-[0_0_40px_rgba(220,38,38,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]"
               animate={{ opacity: [0.95, 1, 0.95] }}
               transition={{ duration: 2.5, repeat: Infinity }}
             >
               <motion.span
-                className="w-2.5 h-2.5 rounded-full bg-emerald-500"
-                animate={{ opacity: [1, 0.3, 1], scale: [1, 1.2, 1] }}
+                className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_0_12px_rgba(52,211,153,0.5)]"
+                animate={{ opacity: [1, 0.35, 1], scale: [1, 1.15, 1] }}
                 transition={{ duration: 1.5, repeat: Infinity }}
               />
-              <span className="text-xs font-mono text-red-400 uppercase tracking-[0.25em] font-medium">
+              <span className="nf-eyebrow tracking-[0.22em] text-orange-200/90">
                 Mission Ready
               </span>
             </motion.div>
             <motion.p
               variants={fadeUp}
-              className="text-xs font-mono text-red-500/90 uppercase tracking-[0.4em] mb-6"
+              className="nf-eyebrow tracking-[0.38em] mb-6 text-red-400/90"
             >
               Fire Protection & Compliance
             </motion.p>
@@ -167,7 +203,7 @@ export default function HomePage() {
                 className="relative block"
                 transition={{ type: "spring", stiffness: 80, damping: 15 }}
               >
-                <span className="relative z-10 block text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-red-500 to-red-700 bg-[length:200%_auto] animate-[gradient-shift_4s_ease_infinite] drop-shadow-[0_0_30px_rgba(220,38,38,0.5)]">
+                <span className="relative z-10 block text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-orange-400 to-red-600 bg-[length:200%_auto] animate-[gradient-shift_4s_ease_infinite] drop-shadow-[0_0_40px_rgba(251,146,60,0.35)]">
                   Confidence.
                 </span>
                 <motion.span
@@ -179,7 +215,7 @@ export default function HomePage() {
             </motion.h1>
             <motion.p
               variants={fadeUp}
-              className="text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto mb-12 leading-relaxed"
+              className="text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto mb-12 leading-relaxed [text-wrap:balance]"
             >
               One audit failure can shut you down. We deliver fire protection systems,
               servicing, and compliance solutions that keep your business operational
@@ -191,20 +227,19 @@ export default function HomePage() {
             >
               <motion.a
                 href="#contact"
-                className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold rounded-lg overflow-hidden bg-red-600 text-white transition-colors"
+                className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold rounded-xl overflow-hidden nf-btn-primary text-white transition-[filter,transform] duration-300"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
-                style={{ boxShadow: "0 0 40px rgba(220,38,38,0.4)" }}
               >
                 <motion.span
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"
                   style={{ width: "50%" }}
                 />
                 <span className="relative z-10">Get Compliant</span>
               </motion.a>
               <motion.a
                 href="#contact"
-                className="group inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold rounded-lg border-2 border-white/25 text-white hover:bg-white/10 hover:border-red-500/40 transition-all duration-300"
+                className="group inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold rounded-xl nf-btn-ghost text-white transition-all duration-300"
                 whileHover={{ scale: 1.03, x: 4 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -230,17 +265,21 @@ export default function HomePage() {
       </section>
 
       {/* Trust Strip with Marquee */}
-      <section className="py-10 border-y border-white/5 bg-[#0a0a0a]">
-        <div className="container mx-auto px-6">
+      <section className="py-12 border-y border-white/[0.06] nf-bg-base relative overflow-hidden">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.35] bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,rgba(220,38,38,0.08),transparent)]"
+          aria-hidden
+        />
+        <div className="container mx-auto px-6 relative">
           <motion.p
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-center text-sm text-zinc-500 mb-8"
+            className="text-center text-sm text-zinc-500 mb-8 tracking-wide"
           >
             Trusted by lodges, estates, and commercial facilities across South Africa
           </motion.p>
-          <div className="flex justify-center gap-12 md:gap-20 mb-8">
+          <div className="flex justify-center gap-8 md:gap-14 mb-8 flex-wrap">
             {["SANS 1475", "SAQCC", "ISO 9001"].map((badge, i) => (
               <motion.div
                 key={badge}
@@ -248,7 +287,7 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="px-6 py-3 rounded-lg border border-white/10 bg-white/[0.02] font-mono text-xs text-zinc-400 tracking-widest"
+                className="px-6 py-3 rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-transparent font-mono text-xs text-zinc-400 tracking-[0.2em] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
               >
                 {badge}
               </motion.div>
@@ -259,8 +298,12 @@ export default function HomePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-20 bg-[#0d0d0d] border-y border-white/5">
-        <div className="container mx-auto px-6">
+      <section className="py-24 nf-bg-raised border-y border-white/[0.06] relative">
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_50%,rgba(220,38,38,0.04),transparent)]"
+          aria-hidden
+        />
+        <div className="container mx-auto px-6 relative">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-12 md:gap-8">
             {[
               { value: 500, suffix: "+", label: "Facilities Protected" },
@@ -276,10 +319,14 @@ export default function HomePage() {
                 transition={{ delay: idx * 0.1 }}
                 className="text-center"
               >
-                <div className="text-3xl md:text-4xl font-bold text-white font-[family-name:var(--font-syne)] mb-1">
-                  <AnimatedStat value={stat.value} suffix={stat.suffix} />
+                <div className="text-3xl md:text-4xl font-bold font-[family-name:var(--font-syne)] mb-1">
+                  <AnimatedStat
+                    value={stat.value}
+                    suffix={stat.suffix}
+                    className="nf-text-heat drop-shadow-[0_0_28px_rgba(220,38,38,0.2)]"
+                  />
                 </div>
-                <p className="text-sm text-zinc-500 font-mono uppercase tracking-wider">
+                <p className="text-sm text-zinc-500 font-mono uppercase tracking-[0.18em]">
                   {stat.label}
                 </p>
               </motion.div>
@@ -289,7 +336,7 @@ export default function HomePage() {
       </section>
 
       {/* Services */}
-      <section id="services" className="py-32 bg-[#0a0a0a]">
+      <section id="services" className="py-32 nf-bg-base relative">
         <div className="container mx-auto px-6">
           <motion.div
             initial="hidden"
@@ -298,10 +345,7 @@ export default function HomePage() {
             variants={stagger}
             className="text-center mb-20"
           >
-            <motion.p
-              variants={fadeUp}
-              className="text-xs font-mono text-red-500/90 uppercase tracking-[0.25em] mb-4"
-            >
+            <motion.p variants={fadeUp} className="nf-eyebrow mb-4">
               What We Deliver
             </motion.p>
             <motion.h2
@@ -325,9 +369,9 @@ export default function HomePage() {
                   damping: 20,
                 }}
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                className="group relative p-8 rounded-xl border border-white/5 bg-[#0d0d0d]/80 backdrop-blur-sm hover:border-red-900/40 hover:bg-[#111]/90 transition-all duration-300 overflow-hidden"
+                className="group relative p-8 rounded-2xl border border-white/[0.07] nf-glass-panel nf-card-hover overflow-hidden"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 via-transparent to-orange-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <motion.div
                   className="relative mb-6"
                   whileHover={{ scale: 1.1, rotate: 5 }}
@@ -350,7 +394,7 @@ export default function HomePage() {
       </section>
 
       {/* Why Nova Fire - Mission Control */}
-      <section id="whynovafire" className="py-32 bg-[#0d0d0d] border-y border-white/5">
+      <section id="whynovafire" className="py-32 nf-bg-raised border-y border-white/[0.06] relative">
         <div className="container mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-20 items-center">
             <motion.div
@@ -360,9 +404,7 @@ export default function HomePage() {
               transition={{ type: "spring", stiffness: 80 }}
               className="space-y-8"
             >
-              <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.25em]">
-                Why Nova Fire
-              </p>
+              <p className="nf-eyebrow">Why Nova Fire</p>
               <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.1] font-[family-name:var(--font-syne)]">
                 We manage compliance so you can run your business.
               </h2>
@@ -399,8 +441,8 @@ export default function HomePage() {
               className="relative"
             >
               {/* Mission Control Dashboard Card */}
-              <div className="relative rounded-2xl border border-white/10 bg-[#0a0a0a] p-8 overflow-hidden">
-                <div className="absolute top-0 right-0 w-48 h-48 bg-red-500/10 rounded-full blur-3xl" />
+              <div className="relative rounded-2xl nf-glass-panel p-8 overflow-hidden border-white/[0.08]">
+                <div className="absolute top-0 right-0 w-56 h-56 bg-gradient-to-br from-red-600/20 to-orange-500/10 rounded-full blur-3xl" />
                 <div className="relative space-y-6">
                   <div className="flex items-center gap-2">
                     <Activity className="w-5 h-5 text-red-500" />
@@ -447,7 +489,7 @@ export default function HomePage() {
       </section>
 
       {/* Testimonial */}
-      <section className="py-32 bg-[#0a0a0a] relative overflow-hidden">
+      <section className="py-32 nf-bg-base relative overflow-hidden">
         <div
           className="absolute inset-0 opacity-20"
           style={{
@@ -477,7 +519,7 @@ export default function HomePage() {
       </section>
 
       {/* Industries */}
-      <section id="industries" className="py-32 bg-[#0a0a0a]">
+      <section id="industries" className="py-32 nf-bg-base">
         <div className="container mx-auto px-6">
           <motion.div
             initial="hidden"
@@ -486,10 +528,7 @@ export default function HomePage() {
             variants={stagger}
             className="text-center mb-20"
           >
-            <motion.p
-              variants={fadeUp}
-              className="text-xs font-mono text-red-500/90 uppercase tracking-[0.25em] mb-4"
-            >
+            <motion.p variants={fadeUp} className="nf-eyebrow mb-4">
               Sectors We Serve
             </motion.p>
             <motion.h2
@@ -516,7 +555,7 @@ export default function HomePage() {
                   borderColor: "rgba(220, 38, 38, 0.3)",
                   transition: { duration: 0.2 },
                 }}
-                className="group p-10 rounded-xl border border-white/5 bg-[#0d0d0d] hover:bg-[#111] transition-colors text-center"
+                className="group p-10 rounded-2xl border border-white/[0.07] nf-bg-raised nf-card-hover text-center"
               >
                 <motion.div
                   whileHover={{ scale: 1.15 }}
@@ -534,7 +573,7 @@ export default function HomePage() {
       </section>
 
       {/* Process - Connected Timeline */}
-      <section id="process" className="py-32 bg-[#0d0d0d] border-y border-white/5">
+      <section id="process" className="py-32 nf-bg-raised border-y border-white/[0.06]">
         <div className="container mx-auto px-6">
           <motion.div
             initial="hidden"
@@ -543,10 +582,7 @@ export default function HomePage() {
             variants={stagger}
             className="text-center mb-20"
           >
-            <motion.p
-              variants={fadeUp}
-              className="text-xs font-mono text-red-500/90 uppercase tracking-[0.25em] mb-4"
-            >
+            <motion.p variants={fadeUp} className="nf-eyebrow mb-4">
               Our Process
             </motion.p>
             <motion.h2
@@ -582,7 +618,7 @@ export default function HomePage() {
                   className="relative text-center"
                 >
                   <motion.div
-                    className="relative z-10 inline-flex items-center justify-center w-24 h-24 rounded-2xl border border-red-900/40 bg-[#0a0a0a] text-red-500 font-mono text-2xl font-bold mb-6 mx-auto"
+                    className="relative z-10 inline-flex items-center justify-center w-24 h-24 rounded-2xl border border-red-500/25 nf-bg-base text-transparent bg-clip-text bg-gradient-to-br from-orange-300 to-red-600 font-mono text-2xl font-bold mb-6 mx-auto shadow-[0_0_40px_rgba(220,38,38,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]"
                     whileHover={{
                       scale: 1.05,
                       borderColor: "rgba(220, 38, 38, 0.6)",
@@ -606,7 +642,7 @@ export default function HomePage() {
       <ComplianceAssessment />
 
       {/* CTA - Premium Glow */}
-      <section className="py-32 bg-[#0a0a0a]">
+      <section className="py-32 nf-bg-base relative">
         <div className="container mx-auto px-6">
           <SectionDivider />
         </div>
@@ -616,8 +652,8 @@ export default function HomePage() {
           viewport={{ once: true }}
           className="relative mx-6 md:mx-auto max-w-5xl mt-16"
         >
-          <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-red-500/30 via-red-600/50 to-red-500/30 blur-md opacity-70" />
-          <div className="relative overflow-hidden rounded-2xl border border-red-900/50 bg-[#0a0a0a]">
+          <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-orange-500/35 via-red-600/55 to-red-700/35 blur-md opacity-80" />
+          <div className="relative overflow-hidden rounded-2xl border border-red-500/30 nf-bg-base shadow-[0_0_80px_rgba(220,38,38,0.12)]">
             <div
               className="absolute inset-0 opacity-50"
               style={{
@@ -640,7 +676,7 @@ export default function HomePage() {
                   href="#contact"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
-                  className="inline-flex items-center gap-2 px-10 py-4 text-base font-semibold rounded-lg bg-red-600 text-white hover:bg-red-500 transition-colors shadow-[0_0_50px_rgba(220,38,38,0.4)]"
+                  className="inline-flex items-center gap-2 px-10 py-4 text-base font-semibold rounded-xl nf-btn-primary text-white transition-[filter]"
                 >
                   Book a Compliance Assessment
                   <ArrowRight className="w-5 h-5" />
@@ -654,68 +690,7 @@ export default function HomePage() {
         </motion.div>
       </section>
 
-      {/* Footer */}
-      <footer id="contact" className="bg-[#0a0a0a] border-t border-white/5 pt-20 pb-10">
-        <div className="container mx-auto px-6">
-          <div className="grid md:grid-cols-4 gap-16 mb-16">
-            <div>
-              <span className="text-2xl font-bold text-white font-[family-name:var(--font-syne)]">
-                Nova<span className="text-red-600">Fire</span>
-              </span>
-              <p className="mt-5 text-zinc-500 text-sm leading-relaxed max-w-xs">
-                Fire protection, compliance, and safety solutions. South Africa.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-5 text-sm uppercase tracking-wider">
-                Quick Links
-              </h4>
-              <ul className="space-y-4 text-sm text-zinc-400">
-                {[
-                  { label: "Services", href: "/services" },
-                  { label: "Training", href: "/training" },
-                  { label: "Why Nova Fire", href: "#whynovafire" },
-                  { label: "Industries", href: "#industries" },
-                  { label: "Process", href: "#process" },
-                ].map(({ label, href }) => (
-                  <li key={label}>
-                    <a
-                      href={href}
-                      className="hover:text-white transition-colors duration-200"
-                    >
-                      {label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-5 text-sm uppercase tracking-wider">
-                Contact
-              </h4>
-              <ul className="space-y-3 text-sm text-zinc-400">
-                <li><a href="tel:+27662700293" className="hover:text-white transition-colors">066 270 0293</a></li>
-                <li><a href="mailto:jacques@novafire.co.za" className="hover:text-white transition-colors">jacques@novafire.co.za</a></li>
-                <li>South Africa</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold text-white mb-5 text-sm uppercase tracking-wider">
-                Accreditations
-              </h4>
-              <ul className="space-y-3 text-sm text-zinc-400">
-                <li>BSI accredited</li>
-                <li>SANS 1475</li>
-                <li>SAQCC</li>
-                <li>ISO 9001</li>
-              </ul>
-            </div>
-          </div>
-          <div className="pt-8 border-t border-white/5 text-center text-zinc-600 text-sm">
-            © {new Date().getFullYear()} Nova Fire. All rights reserved.
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

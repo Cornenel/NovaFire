@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { ZohoFormEmbed } from "@/components/forms/zoho-form-embed";
+import { LegalNav } from "@/components/site-footer";
 import Link from "next/link";
 import {
   ClipboardList,
@@ -53,9 +54,9 @@ export default function TechPortalPage() {
   const [expandedSection, setExpandedSection] = useState<string | null>("jobcard");
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen nf-bg-base">
       {/* Header */}
-      <header className="border-b border-white/5 bg-[#0d0d0d]/95 backdrop-blur-sm sticky top-0 z-40">
+      <header className="border-b border-white/[0.06] nf-bg-raised/95 backdrop-blur-xl sticky top-0 z-40 shadow-[0_12px_40px_rgba(0,0,0,0.25)]">
         <div className="container mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -134,7 +135,7 @@ export default function TechPortalPage() {
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.05 }}
-                className="rounded-xl border border-white/10 bg-[#0d0d0d] overflow-hidden scroll-mt-24"
+                className="rounded-xl border border-white/[0.08] nf-glass-panel overflow-hidden scroll-mt-24"
               >
                 <button
                   onClick={() => setExpandedSection(isExpanded ? null : s.id)}
@@ -171,7 +172,7 @@ export default function TechPortalPage() {
                   >
                     <div className="p-6 pt-4">
                       {s.id === "jobcard" ? (
-                        <div className="rounded-lg border border-white/5 bg-[#0a0a0a] p-6 flex flex-col items-center justify-center gap-4">
+                        <div className="rounded-lg border border-white/[0.07] nf-bg-base p-6 flex flex-col items-center justify-center gap-4">
                           <p className="text-zinc-400 text-sm text-center">
                             Annual Service Job Card & Service Certificate
                           </p>
@@ -199,7 +200,7 @@ export default function TechPortalPage() {
                           </a>
                         </div>
                       ) : (
-                        <div className="rounded-lg border border-white/5 bg-[#0a0a0a] p-4 md:p-6">
+                        <div className="rounded-lg border border-white/[0.07] nf-bg-base p-4 md:p-6">
                           <ZohoFormEmbed
                             formId={`tech-${s.id}`}
                             minHeight={400}
@@ -229,7 +230,7 @@ export default function TechPortalPage() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           id="finalized-jobs"
-          className="mt-10 rounded-xl border border-white/10 bg-[#0d0d0d] overflow-hidden scroll-mt-24"
+          className="mt-10 rounded-xl border border-white/[0.08] nf-glass-panel overflow-hidden scroll-mt-24"
         >
           <div className="p-6 border-b border-white/5">
             <div className="flex items-center gap-3">
@@ -247,7 +248,7 @@ export default function TechPortalPage() {
             </div>
           </div>
           <div className="p-4 md:p-6">
-            <div className="rounded-lg border border-white/5 bg-[#0a0a0a] p-6 flex flex-col items-center justify-center gap-4">
+            <div className="rounded-lg border border-white/[0.07] nf-bg-base p-6 flex flex-col items-center justify-center gap-4">
               <p className="text-zinc-400 text-sm text-center">
                 Service History / New Updated Jobcard Report
               </p>
@@ -278,16 +279,19 @@ export default function TechPortalPage() {
         </motion.section>
 
         {/* Footer */}
-        <div className="mt-12 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <Link
-            href="https://novafire.co.za"
-            className="text-sm text-zinc-500 hover:text-white transition-colors"
-          >
-            ← Back to Nova Fire
-          </Link>
-          <p className="text-xs text-zinc-600">
-            Submissions are logged and routed per your config
-          </p>
+        <div className="mt-12 pt-8 border-t border-white/5 flex flex-col gap-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <Link
+              href="https://novafire.co.za"
+              className="text-sm text-zinc-500 hover:text-white transition-colors"
+            >
+              ← Back to Nova Fire
+            </Link>
+            <p className="text-xs text-zinc-600 text-center sm:text-right">
+              Submissions are logged and routed per your config
+            </p>
+          </div>
+          <LegalNav className="justify-center" />
         </div>
       </main>
     </div>

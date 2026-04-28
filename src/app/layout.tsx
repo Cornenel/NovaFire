@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit, JetBrains_Mono, Syne } from "next/font/google";
 import { OrganizationStructuredData } from "@/components/structured-data";
+import { CookieConsent } from "@/components/cookie-consent";
 import "./globals.css";
 import "./forms.css";
 
@@ -34,10 +35,11 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark scroll-smooth">
       <body
-        className={`${outfit.variable} ${syne.variable} ${jetbrainsMono.variable} font-sans antialiased bg-[#0a0a0a] text-white`}
+        className={`${outfit.variable} ${syne.variable} ${jetbrainsMono.variable} font-sans text-white selection:bg-red-950/80 selection:text-red-50`}
       >
         <OrganizationStructuredData />
         {children}
+        <CookieConsent />
       </body>
     </html>
   );

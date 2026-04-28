@@ -6,9 +6,9 @@
 
 /* Form embed container – ensures Zoho iframe inherits our theme hints */
 .novafire-form-embed {
-  --nf-input-bg: #171717;
-  --nf-input-border: rgba(255, 255, 255, 0.1);
-  --nf-input-focus-border: rgba(220, 38, 38, 0.6);
+  --nf-input-bg: #101014;
+  --nf-input-border: rgba(255, 255, 255, 0.09);
+  --nf-input-focus-border: rgba(249, 115, 22, 0.55);
   --nf-input-text: #fafafa;
   --nf-label-text: #a3a3a3;
 }

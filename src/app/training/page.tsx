@@ -6,6 +6,8 @@ import { Navbar } from "@/components/navbar";
 import { EmberBackground } from "@/components/ember-background";
 import { FormSection } from "@/components/forms";
 import { ZohoFormEmbed } from "@/components/forms/zoho-form-embed";
+import { FormLegalNotice } from "@/components/form-legal-notice";
+import { SiteFooter } from "@/components/site-footer";
 import Link from "next/link";
 import { GraduationCap } from "lucide-react";
 
@@ -20,7 +22,7 @@ import { GraduationCap } from "lucide-react";
 
 export default function TrainingPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen nf-bg-base flex flex-col">
       <Navbar />
       <section className="relative min-h-[40vh] flex items-center justify-center overflow-hidden pt-24">
         <EmberBackground />
@@ -53,7 +55,7 @@ export default function TrainingPage() {
         </div>
       </section>
 
-      <section className="py-20 bg-[#0d0d0d] border-y border-white/5">
+      <section className="py-20 nf-bg-raised border-y border-white/[0.06]">
         <div className="container mx-auto px-6 max-w-2xl">
           <FormSection
             title="Register for Training"
@@ -80,17 +82,12 @@ export default function TrainingPage() {
                 title="Nova Fire Training Registration"
               />
             </ZohoFormEmbed>
+            <FormLegalNotice className="mt-6" />
           </FormSection>
         </div>
       </section>
 
-      <footer className="bg-[#0a0a0a] border-t border-white/5 py-12">
-        <div className="container mx-auto px-6 text-center text-zinc-500 text-sm">
-          <Link href="/" className="text-red-500 hover:text-red-400 transition-colors">
-            ← Back to Home
-          </Link>
-        </div>
-      </footer>
+      <SiteFooter variant="compact" />
     </div>
   );
 }

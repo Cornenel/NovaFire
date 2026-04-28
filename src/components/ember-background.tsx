@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
 interface Particle {
@@ -26,20 +27,25 @@ const PARTICLES = (() => {
     const s = i * 7;
     p.push({
       id: i,
-      x: seededRandom(s) * 100 - 5,
-      y: seededRandom(s + 1) * 100 - 5,
-      size: 2 + seededRandom(s + 2) * 4,
-      duration: 3 + seededRandom(s + 3) * 5,
-      delay: seededRandom(s + 4) * 3,
-      opacity: 0.25 + seededRandom(s + 5) * 0.45,
-      drift: (seededRandom(s + 6) - 0.5) * 60,
-      blur: 1 + seededRandom(s + 7) * 5,
+      x: Number((seededRandom(s) * 100 - 5).toFixed(2)),
+      y: Number((seededRandom(s + 1) * 100 - 5).toFixed(2)),
+      size: Number((2 + seededRandom(s + 2) * 4).toFixed(2)),
+      duration: Number((3 + seededRandom(s + 3) * 5).toFixed(2)),
+      delay: Number((seededRandom(s + 4) * 3).toFixed(2)),
+      opacity: Number((0.25 + seededRandom(s + 5) * 0.45).toFixed(3)),
+      drift: Number(((seededRandom(s + 6) - 0.5) * 60).toFixed(2)),
+      blur: Number((1 + seededRandom(s + 7) * 5).toFixed(2)),
     });
   }
   return p;
 })();
 
 export function EmberBackground() {
+  /** Framer Motion applies different style precision on SSR vs first client paint for these particles; render only after mount. */
+  const [particlesReady, setParticlesReady] = useState(false);
+  useEffect(() => {
+    setParticlesReady(true);
+  }, []);
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -99,34 +105,35 @@ export function EmberBackground() {
         animate={{ y: ["100vh", "0vh"] }}
         transition={{ duration: 8, repeat: Infinity, ease: "linear", delay: 2 }}
       />
-      {/* Floating ember particles - layered, deterministic for hydration */}
-      {PARTICLES.map((particle) => (
-        <motion.div
-          key={particle.id}
-          className="absolute rounded-full"
-          style={{
-            left: `${particle.x}%`,
-            top: `${particle.y}%`,
-            width: particle.size,
-            height: particle.size,
-            background: `radial-gradient(circle, rgba(255,100,80,0.8) 0%, rgba(220,38,38,0.3) 40%, transparent 70%)`,
-            boxShadow: `0 0 ${particle.size * 6}px rgba(220, 38, 38, 0.4), 0 0 ${particle.size * 12}px rgba(220, 38, 38, 0.15)`,
-            filter: `blur(${particle.blur}px)`,
-          }}
-          animate={{
-            y: [0, -80, 0],
-            x: [0, particle.drift, 0],
-            opacity: [particle.opacity * 0.4, particle.opacity, particle.opacity * 0.4],
-            scale: [1, 1.4, 1],
-          }}
-          transition={{
-            duration: particle.duration,
-            delay: particle.delay,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        />
-      ))}
+      {/* Floating ember particles — client-only: Motion SSR rounds styles differently than the client */}
+      {particlesReady &&
+        PARTICLES.map((particle) => (
+          <motion.div
+            key={particle.id}
+            className="absolute rounded-full"
+            style={{
+              left: `${particle.x}%`,
+              top: `${particle.y}%`,
+              width: particle.size,
+              height: particle.size,
+              background: `radial-gradient(circle, rgba(255,100,80,0.8) 0%, rgba(220,38,38,0.3) 40%, transparent 70%)`,
+              boxShadow: `0 0 ${(particle.size * 6).toFixed(2)}px rgba(220, 38, 38, 0.4), 0 0 ${(particle.size * 12).toFixed(2)}px rgba(220, 38, 38, 0.15)`,
+              filter: `blur(${particle.blur}px)`,
+            }}
+            animate={{
+              y: [0, -80, 0],
+              x: [0, particle.drift, 0],
+              opacity: [particle.opacity * 0.4, particle.opacity, particle.opacity * 0.4],
+              scale: [1, 1.4, 1],
+            }}
+            transition={{
+              duration: particle.duration,
+              delay: particle.delay,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
       {/* Film grain overlay - premium texture */}
       <div
         className="absolute inset-0 opacity-[0.02] mix-blend-overlay pointer-events-none"

@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { EmberBackground } from "@/components/ember-background";
 import { Navbar } from "@/components/navbar";
 import { ZohoFormEmbed } from "@/components/forms/zoho-form-embed";
+import { FormLegalNotice } from "@/components/form-legal-notice";
+import { SiteFooter } from "@/components/site-footer";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -70,13 +72,13 @@ const stagger = {
 
 export default function ServicesPage() {
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
+    <div className="min-h-screen nf-bg-base flex flex-col">
       <Navbar />
 
       {/* Hero */}
       <section className="relative min-h-[45vh] flex items-center justify-center overflow-hidden pt-24 pb-16">
         <EmberBackground />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#0a0a0a]/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--nf-void)]/90" />
         <div className="relative z-10 container mx-auto px-6 text-center">
           <motion.p
             initial={{ opacity: 0, y: 12 }}
@@ -105,7 +107,7 @@ export default function ServicesPage() {
       </section>
 
       {/* Trust strip */}
-      <section className="py-6 border-y border-white/5 bg-[#0d0d0d]">
+      <section className="py-6 border-y border-white/[0.06] nf-bg-raised">
         <div className="container mx-auto px-6">
           <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-xs font-mono text-zinc-500 tracking-widest">
             {["SANS 1475", "SAQCC", "ISO 9001", "BSI Permit Holder"].map((badge) => (
@@ -116,7 +118,7 @@ export default function ServicesPage() {
       </section>
 
       {/* Core services – 2x2 grid */}
-      <section className="py-20 md:py-28 bg-[#0a0a0a]">
+      <section className="py-20 md:py-28 nf-bg-base">
         <div className="container mx-auto px-6 max-w-6xl">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -142,7 +144,7 @@ export default function ServicesPage() {
               <motion.div
                 key={s.title}
                 variants={fadeUp}
-                className="group relative p-8 md:p-10 rounded-2xl border border-white/5 bg-[#0d0d0d] hover:border-red-900/30 hover:bg-[#111] transition-all duration-300 overflow-hidden"
+                className="group relative p-8 md:p-10 rounded-2xl border border-white/[0.07] nf-glass-panel nf-card-hover overflow-hidden"
               >
                 <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="relative flex gap-6">
@@ -165,7 +167,7 @@ export default function ServicesPage() {
       </section>
 
       {/* Additional services – 3-col compact */}
-      <section className="py-16 md:py-24 bg-[#0d0d0d] border-y border-white/5">
+      <section className="py-16 md:py-24 nf-bg-raised border-y border-white/[0.06]">
         <div className="container mx-auto px-6 max-w-6xl">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -191,7 +193,7 @@ export default function ServicesPage() {
               <motion.div
                 key={s.title}
                 variants={fadeUp}
-                className="group p-6 rounded-xl border border-white/5 bg-[#0a0a0a]/60 hover:border-red-900/20 transition-all duration-300"
+                className="group p-6 rounded-xl border border-white/[0.07] nf-glass-panel nf-card-hover"
               >
                 <s.icon className="w-10 h-10 text-red-500/90 mb-4" strokeWidth={1.5} />
                 <h3 className="text-base font-semibold text-white font-[family-name:var(--font-syne)] mb-2">
@@ -207,7 +209,7 @@ export default function ServicesPage() {
       {/* Quote section – two-column layout */}
       <section
         id="request-quote"
-        className="relative py-20 md:py-28 bg-[#0a0a0a] scroll-mt-24"
+        className="relative py-20 md:py-28 nf-bg-base scroll-mt-24"
       >
         <div
           className="absolute inset-0 opacity-30"
@@ -245,7 +247,7 @@ export default function ServicesPage() {
               </ul>
             </div>
             <div className="lg:col-span-3">
-              <div className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-6 md:p-8">
+              <div className="rounded-2xl nf-glass-panel p-6 md:p-8 border-white/[0.08]">
                 {/* ZOHO FORM EMBED – Nova Fire Compliance Assessment / Quote Form */}
                 <ZohoFormEmbed
                   formId="quote-engine"
@@ -265,6 +267,7 @@ export default function ServicesPage() {
                     title="Nova Fire Quote & Compliance Assessment"
                   />
                 </ZohoFormEmbed>
+                <FormLegalNotice className="mt-6" />
               </div>
             </div>
           </div>
@@ -272,7 +275,7 @@ export default function ServicesPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 bg-[#0d0d0d] border-t border-white/5">
+      <section className="py-16 nf-bg-raised border-t border-white/[0.06]">
         <div className="container mx-auto px-6 text-center">
           <p className="text-zinc-400 mb-6">Need a custom solution or site-specific SLA?</p>
           <div className="flex flex-wrap justify-center gap-4">
@@ -289,13 +292,7 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      <footer className="bg-[#0a0a0a] border-t border-white/5 py-8">
-        <div className="container mx-auto px-6 text-center text-zinc-500 text-sm">
-          <Link href="/" className="text-red-500 hover:text-red-400 transition-colors">
-            ← Back to Home
-          </Link>
-        </div>
-      </footer>
+      <SiteFooter variant="compact" />
     </div>
   );
 }

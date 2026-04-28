@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Lock } from "lucide-react";
+import { Navbar } from "@/components/navbar";
+import { SiteFooter } from "@/components/site-footer";
 
 /**
  * Tech portal login – @novafire.co.za email + staff password
@@ -45,11 +47,12 @@ export default function TechLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen nf-bg-base flex flex-col">
+      <Navbar />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm"
+        className="w-full max-w-sm mx-auto flex-1 flex flex-col justify-center py-20 pt-32 px-6"
       >
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-xl bg-red-500/20 flex items-center justify-center mx-auto mb-4">
@@ -98,7 +101,7 @@ export default function TechLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg bg-red-600 text-white font-semibold hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 rounded-lg text-white font-semibold nf-btn-primary transition-[filter,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
@@ -108,6 +111,7 @@ export default function TechLoginPage() {
           Only @novafire.co.za addresses
         </p>
       </motion.div>
+      <SiteFooter variant="compact" />
     </div>
   );
 }

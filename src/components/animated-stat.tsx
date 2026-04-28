@@ -8,11 +8,13 @@ export function AnimatedStat({
   suffix = "",
   prefix = "",
   duration = 2,
+  className,
 }: {
   value: number;
   suffix?: string;
   prefix?: string;
   duration?: number;
+  className?: string;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
@@ -35,9 +37,9 @@ export function AnimatedStat({
   }, [isInView, value, duration]);
 
   return (
-    <span ref={ref}>
+    <span ref={ref} className={className}>
       {prefix}
-      {count.toLocaleString()}
+      {count.toLocaleString("en-ZA")}
       {suffix}
     </span>
   );
