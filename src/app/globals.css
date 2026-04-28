@@ -156,6 +156,15 @@
   }
 }
 
+/* Mobile browsers (especially iOS Safari) often flicker with background-attachment: fixed */
+@media (hover: none) and (pointer: coarse) {
+  @layer base {
+    body {
+      background-attachment: scroll;
+    }
+  }
+}
+
 @layer utilities {
   .nf-bg-base {
     background-color: color-mix(in oklab, var(--nf-base) 96%, transparent);

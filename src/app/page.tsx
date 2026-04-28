@@ -104,7 +104,7 @@ export default function HomePage() {
       {/* Hero */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* Optional hero video layer (place file at /public/hero.mp4) */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 z-0 pointer-events-none hidden sm:block">
           <video
             className="absolute inset-0 h-full w-full object-cover opacity-[0.22]"
             autoPlay
