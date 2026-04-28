@@ -146,21 +146,6 @@ export default function HomePage() {
             variants={stagger}
             className="max-w-4xl mx-auto"
           >
-            <motion.div
-              variants={fadeUp}
-              className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-white/[0.08] bg-gradient-to-r from-red-950/40 via-zinc-950/50 to-orange-950/30 mb-8 shadow-[0_0_40px_rgba(220,38,38,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]"
-              animate={{ opacity: [0.95, 1, 0.95] }}
-              transition={{ duration: 2.5, repeat: Infinity }}
-            >
-              <motion.span
-                className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-[0_0_12px_rgba(52,211,153,0.5)]"
-                animate={{ opacity: [1, 0.35, 1], scale: [1, 1.15, 1] }}
-                transition={{ duration: 1.5, repeat: Infinity }}
-              />
-              <span className="nf-eyebrow tracking-[0.22em] text-orange-200/90">
-                Mission Ready
-              </span>
-            </motion.div>
             <motion.p
               variants={fadeUp}
               className="nf-eyebrow tracking-[0.38em] mb-6 text-red-400/90"
