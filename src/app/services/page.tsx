@@ -252,6 +252,7 @@ export default function ServicesPage() {
                 <ZohoFormEmbed
                   formId="quote-engine"
                   minHeight={500}
+                  scriptSrc={process.env.NEXT_PUBLIC_ZOHO_FORM_QUOTE_SCRIPT_SRC}
                   fallback={
                     <div className="flex flex-col items-center justify-center py-12 gap-4">
                       <div className="w-10 h-10 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
@@ -263,7 +264,7 @@ export default function ServicesPage() {
                     aria-label="Nova Fire Compliance Assessment Form"
                     frameBorder="0"
                     className="w-full min-h-[500px] border-0"
-                    src="https://forms.zohopublic.com/AbakhisaGroup/form/NovaFireComplianceAssessmentForm/formperma/e21SwYu48K_cyg4hGor_mkLWhemphA-JE5hbx9qAYxE"
+                    src="https://forms.zohopublic.com/AbakhisaGroup/form/NovaFireComplianceAssessmentForm/formperma/e21SwYu48K_cyg4hGor_mkLWhemphA-JE5hbx9qAYxE?zf_rszfm=1"
                     title="Nova Fire Quote & Compliance Assessment"
                   />
                 </ZohoFormEmbed>

@@ -67,6 +67,7 @@ export default function TrainingPage() {
             <ZohoFormEmbed
               formId="training-registration"
               minHeight={500}
+              scriptSrc={process.env.NEXT_PUBLIC_ZOHO_FORM_TRAINING_SCRIPT_SRC}
               fallback={
                 <div className="flex flex-col items-center justify-center py-16 gap-4">
                   <div className="w-12 h-12 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
@@ -78,7 +79,7 @@ export default function TrainingPage() {
                 aria-label="Training Registration Form"
                 frameBorder="0"
                 className="w-full min-h-[500px] border-0"
-                src="https://forms.zohopublic.com/AbakhisaGroup/form/TrainingRegistrationForm/formperma/3GLSKdCC3uGP32l0v3dVkAyi9Kp0JXDF_-g7xLpC4I4"
+                src="https://forms.zohopublic.com/AbakhisaGroup/form/TrainingRegistrationForm/formperma/3GLSKdCC3uGP32l0v3dVkAyi9Kp0JXDF_-g7xLpC4I4?zf_rszfm=1"
                 title="Nova Fire Training Registration"
               />
             </ZohoFormEmbed>

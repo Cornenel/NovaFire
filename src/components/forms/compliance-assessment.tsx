@@ -76,6 +76,7 @@ export function ComplianceAssessment() {
               <ZohoFormEmbed
                 formId="compliance-self-assessment"
                 minHeight={500}
+                scriptSrc={process.env.NEXT_PUBLIC_ZOHO_FORM_COMPLIANCE_SCRIPT_SRC}
                 fallback={
                   <div className="flex flex-col items-center justify-center py-12 gap-4">
                     <div className="w-12 h-12 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
@@ -87,7 +88,7 @@ export function ComplianceAssessment() {
                   aria-label="Nova Fire – 2 Minute Fire Compliance Check"
                   frameBorder="0"
                   className="w-full min-h-[500px] border-0"
-                  src="https://forms.zohopublic.com/AbakhisaGroup/form/NovaFire2MinuteFireComplianceCheck/formperma/EWhSaaBOV0Rcq34Ly2tmxK_Q44T0y9qg0pakqjJuZ-M"
+                  src="https://forms.zohopublic.com/AbakhisaGroup/form/NovaFire2MinuteFireComplianceCheck/formperma/EWhSaaBOV0Rcq34Ly2tmxK_Q44T0y9qg0pakqjJuZ-M?zf_rszfm=1"
                   title="Nova Fire 2 Minute Fire Compliance Check"
                 />
               </ZohoFormEmbed>
