@@ -7,6 +7,7 @@ import { Navbar } from "@/components/navbar";
 import { ZohoFormEmbed } from "@/components/forms/zoho-form-embed";
 import { FormLegalNotice } from "@/components/form-legal-notice";
 import { SiteFooter } from "@/components/site-footer";
+import { ServiceAreaStructuredData } from "@/components/structured-data";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
@@ -20,11 +21,29 @@ import {
   Wrench,
 } from "lucide-react";
 
+const SERVICE_LINKS = [
+  {
+    href: "/services/fire-extinguisher-servicing",
+    title: "Fire extinguisher servicing",
+    desc: "Portable extinguisher inspections, maintenance and compliance documentation.",
+  },
+  {
+    href: "/services/fire-hose-reel-servicing",
+    title: "Fire hose reel servicing",
+    desc: "Fixed hose reel inspections, testing, maintenance and reporting.",
+  },
+  {
+    href: "/services/fire-hydrant-supply-installation",
+    title: "Fire hydrant supply & installation",
+    desc: "Site scoping, equipment specification, supply and installation support.",
+  },
+];
+
 const CORE_SERVICES = [
   {
     icon: Package,
     title: "Installations & Supply",
-    desc: "SABS-approved extinguishers, hose reels, suppression systems, and fire blankets—supplied and professionally installed. Full site surveys and equipment specification.",
+    desc: "SABS-approved fire extinguishers, hose reels, and fire hydrants—plus suppression systems and fire blankets—supplied and professionally installed. Full site surveys and equipment specification.",
   },
   {
     icon: Wrench,
@@ -71,8 +90,40 @@ const stagger = {
 };
 
 export default function ServicesPage() {
+  const faqItems = [
+    {
+      q: "Do you service portable and fixed fire equipment?",
+      a: "Yes. We service portable extinguishers and fixed installations such as hose reels and suppression systems, with scheduled inspections and compliant documentation.",
+    },
+    {
+      q: "Do you service fire detection and alarm systems?",
+      a: "Yes. We provide testing and servicing for fire detection and alarm systems, including fault finding and reporting to keep your system reliable and compliant.",
+    },
+    {
+      q: "Can you supply and install fire equipment?",
+      a: "Yes. We supply and install portable and fixed fire equipment based on your site requirements—typically extinguishers, hose reels, hydrants, and suppression systems—with professional installation and follow-up servicing schedules.",
+    },
+    {
+      q: "Which areas do you cover?",
+      a: "We provide on-site services across Mpumalanga and Limpopo provinces.",
+    },
+  ];
+
   return (
     <div className="min-h-screen nf-bg-base flex flex-col">
+      <ServiceAreaStructuredData
+        name="Fire equipment servicing, detection servicing, supply & installation"
+        url="https://novafire.co.za/services"
+        areas={["Mpumalanga", "Limpopo"]}
+        services={[
+          "Portable fire equipment servicing",
+          "Fixed fire equipment servicing",
+          "Fire detection and alarm servicing",
+          "Fire extinguisher supply and installation",
+          "Fire hose reel supply and installation",
+          "Fire hydrant supply and installation",
+        ]}
+      />
       <Navbar />
 
       {/* Hero */}
@@ -101,7 +152,9 @@ export default function ServicesPage() {
             transition={{ delay: 0.16 }}
             className="text-zinc-400 mt-5 max-w-xl mx-auto text-base md:text-lg"
           >
-            Fire protection, compliance, and safety solutions tailored to your site.
+            Portable and fixed fire equipment servicing, fire detection servicing, and supply &
+            installation across <span className="text-zinc-200">Mpumalanga</span> and{" "}
+            <span className="text-zinc-200">Limpopo</span>.
           </motion.p>
         </div>
       </section>
@@ -166,6 +219,48 @@ export default function ServicesPage() {
         </div>
       </section>
 
+      {/* Quick links for common services (SEO + UX) */}
+      <section className="py-14 nf-bg-base">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <div className="flex items-end justify-between gap-6 flex-wrap mb-8">
+            <div>
+              <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.2em] mb-3">
+                Popular Services
+              </p>
+              <h2 className="text-2xl md:text-3xl font-bold text-white font-[family-name:var(--font-syne)]">
+                Extinguishers, hose reels & hydrants
+              </h2>
+            </div>
+            <Link
+              href="/services#request-quote"
+              className="text-sm text-zinc-400 hover:text-white underline-offset-4 hover:underline"
+            >
+              Request a quote
+            </Link>
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {SERVICE_LINKS.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                className="group rounded-2xl border border-white/[0.07] nf-glass-panel p-7 nf-card-hover"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-base font-semibold text-white font-[family-name:var(--font-syne)]">
+                    {l.title}
+                  </h3>
+                  <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-red-400 transition-colors" />
+                </div>
+                <p className="mt-3 text-sm text-zinc-500 leading-relaxed">{l.desc}</p>
+                <p className="mt-4 text-xs font-mono text-zinc-500 uppercase tracking-[0.18em]">
+                  Mpumalanga • Limpopo
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Additional services – 3-col compact */}
       <section className="py-16 md:py-24 nf-bg-raised border-y border-white/[0.06]">
         <div className="container mx-auto px-6 max-w-6xl">
@@ -203,6 +298,116 @@ export default function ServicesPage() {
               </motion.div>
             ))}
           </motion.div>
+        </div>
+      </section>
+
+      {/* Areas served + keyword support */}
+      <section className="py-16 md:py-20 nf-bg-base">
+        <div className="container mx-auto px-6 max-w-6xl">
+          <div className="grid lg:grid-cols-3 gap-10 items-start">
+            <div className="lg:col-span-1">
+              <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.2em] mb-3">
+                Areas We Serve
+              </p>
+              <h2 className="text-2xl md:text-3xl font-bold text-white font-[family-name:var(--font-syne)]">
+                Mpumalanga & Limpopo
+              </h2>
+              <p className="text-zinc-400 mt-4 leading-relaxed">
+                We support lodges, estates, farms, warehouses, and commercial facilities with on-site
+                servicing and compliant installations.
+              </p>
+              <div className="mt-6 rounded-2xl border border-white/[0.07] nf-glass-panel p-6">
+                <p className="text-sm text-zinc-300 font-semibold mb-2">
+                  Popular search terms we cover
+                </p>
+                <ul className="text-sm text-zinc-500 space-y-1">
+                  <li>Portable fire extinguisher servicing</li>
+                  <li>Fire hose reel servicing</li>
+                  <li>Fire hydrant servicing</li>
+                  <li>Fire detection and alarm servicing</li>
+                  <li>Fire extinguisher supply & installation</li>
+                  <li>Fire hose reel supply & installation</li>
+                  <li>Fire hydrant supply & installation</li>
+                </ul>
+              </div>
+            </div>
+            <div className="lg:col-span-2 grid sm:grid-cols-2 gap-6">
+              <div className="rounded-2xl border border-white/[0.07] nf-glass-panel p-7">
+                <h3 className="text-lg font-semibold text-white font-[family-name:var(--font-syne)] mb-3">
+                  Mpumalanga
+                </h3>
+                <p className="text-sm text-zinc-500 leading-relaxed">
+                  Servicing and compliance support for sites across the province, including industrial,
+                  hospitality, and agricultural operations.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/[0.07] nf-glass-panel p-7">
+                <h3 className="text-lg font-semibold text-white font-[family-name:var(--font-syne)] mb-3">
+                  Limpopo
+                </h3>
+                <p className="text-sm text-zinc-500 leading-relaxed">
+                  On-site servicing and installations for lodges, estates, warehouses, and commercial
+                  facilities throughout Limpopo.
+                </p>
+              </div>
+              <div className="rounded-2xl border border-white/[0.07] nf-glass-panel p-7 sm:col-span-2">
+                <h3 className="text-lg font-semibold text-white font-[family-name:var(--font-syne)] mb-3">
+                  What “servicing” includes
+                </h3>
+                <p className="text-sm text-zinc-500 leading-relaxed">
+                  Scheduled inspections, testing, maintenance, replacement where required, and
+                  documentation aligned with SANS requirements—so your site stays audit-ready.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ – high-intent queries */}
+      <section className="py-16 md:py-20 nf-bg-raised border-y border-white/[0.06]">
+        <div className="container mx-auto px-6 max-w-4xl">
+          <script
+            type="application/ld+json"
+            // JSON-LD: FAQPage + services + service area. Keep it concise and accurate.
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                "@context": "https://schema.org",
+                "@type": "FAQPage",
+                mainEntity: faqItems.map((it) => ({
+                  "@type": "Question",
+                  name: it.q,
+                  acceptedAnswer: { "@type": "Answer", text: it.a },
+                })),
+              }),
+            }}
+          />
+          <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.2em] mb-3 text-center">
+            FAQ
+          </p>
+          <h2 className="text-2xl md:text-3xl font-bold text-white font-[family-name:var(--font-syne)] text-center">
+            Fire equipment servicing in Mpumalanga & Limpopo
+          </h2>
+          <div className="mt-10 space-y-4">
+            {faqItems.map((item) => (
+              <div
+                key={item.q}
+                className="rounded-2xl border border-white/[0.07] nf-glass-panel p-6"
+              >
+                <h3 className="text-base font-semibold text-white mb-2">
+                  {item.q}
+                </h3>
+                <p className="text-sm text-zinc-500 leading-relaxed">{item.a}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 text-center">
+            <Button asChild className="bg-red-600 hover:bg-red-500">
+              <Link href="/services#request-quote">
+                Request a Quote <ArrowRight className="w-4 h-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </section>
 

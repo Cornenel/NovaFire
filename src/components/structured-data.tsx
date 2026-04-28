@@ -6,11 +6,13 @@
 export function OrganizationStructuredData() {
   const data = {
     "@context": "https://schema.org",
-    "@type": "Organization",
+    "@type": ["Organization", "LocalBusiness"],
     name: "Nova Fire",
     url: "https://novafire.co.za",
-    logo: "https://novafire.co.za/logo.png",
-    description: "Fire protection, compliance, and safety solutions. South Africa.",
+    logo: "https://novafire.co.za/brand/logo.png",
+    image: "https://novafire.co.za/brand/logo.png",
+    description:
+      "Fire protection, fire equipment servicing, installations, compliance management, fire risk assessments, and staff fire training across South Africa.",
     address: {
       "@type": "PostalAddress",
       addressCountry: "ZA",
@@ -47,6 +49,39 @@ export function WebPageStructuredData({
     name,
     description,
     url,
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
+export function ServiceAreaStructuredData({
+  name,
+  url,
+  areas,
+  services,
+}: {
+  name: string;
+  url: string;
+  areas: string[];
+  services: string[];
+}) {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name,
+    url,
+    provider: {
+      "@type": "Organization",
+      name: "Nova Fire",
+      url: "https://novafire.co.za",
+    },
+    areaServed: areas.map((a) => ({ "@type": "AdministrativeArea", name: a })),
+    serviceType: services,
   };
 
   return (

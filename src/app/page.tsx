@@ -125,7 +125,7 @@ export default function HomePage() {
           />
         </div>
         <EmberBackground />
-        <div className="absolute inset-0 z-[1] flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 z-[1] flex items-center justify-center pointer-events-none hidden sm:flex">
           <motion.div
             className="w-[800px] h-[500px] rounded-full opacity-20"
             style={{
@@ -222,7 +222,7 @@ export default function HomePage() {
           </motion.div>
         </div>
         <motion.div
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10"
+          className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 hidden sm:block"
           animate={{ y: [0, 12, 0] }}
           transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         >
@@ -361,6 +361,21 @@ export default function HomePage() {
                 <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               </motion.div>
             ))}
+          </div>
+
+          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+            <a
+              href="/services"
+              className="inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl nf-btn-ghost text-white font-semibold transition-all duration-300"
+            >
+              View all services <ArrowRight className="w-4 h-4 opacity-80" />
+            </a>
+            <a
+              href="/services/fire-extinguisher-servicing"
+              className="inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl border border-white/[0.1] bg-white/[0.03] text-white font-semibold hover:bg-white/[0.06] transition-all duration-300"
+            >
+              Fire extinguisher servicing <ArrowRight className="w-4 h-4 opacity-80" />
+            </a>
           </div>
         </div>
       </section>

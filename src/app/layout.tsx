@@ -23,8 +23,41 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Nova Fire | Fire Protection, Compliance & Safety | South Africa",
-  description: "Nova Fire delivers fire protection systems, servicing, and compliance solutions. Keep your business operational and audit-ready. Trusted by lodges, estates, and commercial facilities across South Africa.",
+  metadataBase: new URL("https://novafire.co.za"),
+  title: {
+    default: "Nova Fire | Fire Protection, Compliance & Safety | South Africa",
+    template: "%s | Nova Fire",
+  },
+  description:
+    "Nova Fire delivers fire protection systems, fire equipment servicing, installations, and compliance solutions. Keep your business operational and audit-ready across South Africa.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: "https://novafire.co.za",
+    siteName: "Nova Fire",
+    title: "Nova Fire | Fire Protection, Compliance & Safety | South Africa",
+    description:
+      "Fire protection systems, servicing, installations, compliance management, risk assessments, and fire safety training across South Africa.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Nova Fire | Fire Protection, Compliance & Safety | South Africa",
+    description:
+      "Fire protection systems, servicing, installations, compliance management, risk assessments, and fire safety training across South Africa.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 export default function RootLayout({
