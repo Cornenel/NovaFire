@@ -146,6 +146,21 @@ export default function HomePage() {
             variants={stagger}
             className="max-w-4xl mx-auto"
           >
+            <motion.div
+              variants={fadeUp}
+              className="mx-auto mb-8 flex items-center justify-center"
+            >
+              <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border border-white/[0.08] nf-glass-panel shadow-[0_0_60px_rgba(220,38,38,0.12)]">
+                <Image
+                  src="/brand/logo.png"
+                  alt="Nova Fire"
+                  fill
+                  sizes="(max-width: 640px) 96px, 112px"
+                  className="p-4 object-contain"
+                  priority
+                />
+              </div>
+            </motion.div>
             <motion.p
               variants={fadeUp}
               className="nf-eyebrow tracking-[0.38em] mb-6 text-red-400/90"

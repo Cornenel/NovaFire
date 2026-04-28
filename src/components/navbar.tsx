@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import { Menu, X } from "lucide-react";
 
@@ -39,16 +38,6 @@ export function Navbar() {
       />
       <div className="container mx-auto flex items-center justify-between px-6 py-4">
         <Link href="/" className="group flex items-center gap-2.5">
-          <span className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/25 bg-gradient-to-br from-red-950/80 to-zinc-950/90 shadow-[0_0_24px_rgba(220,38,38,0.15)]">
-            <Image
-              src="/brand/logo.png"
-              alt="Nova Fire"
-              fill
-              sizes="36px"
-              className="p-1.5 object-contain"
-              priority
-            />
-          </span>
           <span className="text-xl sm:text-2xl font-bold tracking-tight text-white font-[family-name:var(--font-syne)]">
             Nova<span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-400 to-red-600 group-hover:from-red-300 group-hover:via-orange-300 group-hover:to-red-500 transition-all duration-300">Fire</span>
           </span>
