@@ -148,19 +148,6 @@ export default function HomePage() {
           >
             <motion.div
               variants={fadeUp}
-              className="relative mx-auto mb-8 w-28 h-28 sm:w-32 sm:h-32 rounded-2xl nf-glass-panel border-white/[0.08] shadow-[0_0_60px_rgba(220,38,38,0.12)]"
-            >
-              <Image
-                src="/brand/logo.png"
-                alt="Nova Fire logo"
-                fill
-                sizes="(max-width: 640px) 112px, 128px"
-                className="p-4 sm:p-5 object-contain"
-                priority
-              />
-            </motion.div>
-            <motion.div
-              variants={fadeUp}
               className="inline-flex items-center gap-2.5 px-5 py-2 rounded-full border border-white/[0.08] bg-gradient-to-r from-red-950/40 via-zinc-950/50 to-orange-950/30 mb-8 shadow-[0_0_40px_rgba(220,38,38,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]"
               animate={{ opacity: [0.95, 1, 0.95] }}
               transition={{ duration: 2.5, repeat: Infinity }}
