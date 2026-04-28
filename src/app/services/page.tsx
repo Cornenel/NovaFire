@@ -304,61 +304,60 @@ export default function ServicesPage() {
       {/* Areas served + keyword support */}
       <section className="py-16 md:py-20 nf-bg-base">
         <div className="container mx-auto px-6 max-w-6xl">
-          <div className="grid lg:grid-cols-3 gap-10 items-start">
-            <div className="lg:col-span-1">
-              <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.2em] mb-3">
-                Areas We Serve
+          <div className="text-center max-w-3xl mx-auto">
+            <p className="text-xs font-mono text-red-500/90 uppercase tracking-[0.2em] mb-3">
+              Areas We Serve
+            </p>
+            <h2 className="text-2xl md:text-3xl font-bold text-white font-[family-name:var(--font-syne)]">
+              Mpumalanga & Limpopo
+            </h2>
+            <p className="text-zinc-400 mt-4 leading-relaxed">
+              We support lodges, estates, farms, warehouses, and commercial facilities with on-site
+              servicing and compliant installations.
+            </p>
+          </div>
+
+          <div className="mt-10 grid md:grid-cols-2 gap-6 auto-rows-fr">
+            <div className="rounded-2xl border border-white/[0.07] nf-glass-panel p-7 h-full">
+              <h3 className="text-lg font-semibold text-white font-[family-name:var(--font-syne)] mb-3">
+                Mpumalanga
+              </h3>
+              <p className="text-sm text-zinc-500 leading-relaxed">
+                Servicing and compliance support for sites across the province, including industrial,
+                hospitality, and agricultural operations.
               </p>
-              <h2 className="text-2xl md:text-3xl font-bold text-white font-[family-name:var(--font-syne)]">
-                Mpumalanga & Limpopo
-              </h2>
-              <p className="text-zinc-400 mt-4 leading-relaxed">
-                We support lodges, estates, farms, warehouses, and commercial facilities with on-site
-                servicing and compliant installations.
-              </p>
-              <div className="mt-6 rounded-2xl border border-white/[0.07] nf-glass-panel p-6">
-                <p className="text-sm text-zinc-300 font-semibold mb-2">
-                  Popular search terms we cover
-                </p>
-                <ul className="text-sm text-zinc-500 space-y-1">
-                  <li>Portable fire extinguisher servicing</li>
-                  <li>Fire hose reel servicing</li>
-                  <li>Fire hydrant servicing</li>
-                  <li>Fire detection and alarm servicing</li>
-                  <li>Fire extinguisher supply & installation</li>
-                  <li>Fire hose reel supply & installation</li>
-                  <li>Fire hydrant supply & installation</li>
-                </ul>
-              </div>
             </div>
-            <div className="lg:col-span-2 grid sm:grid-cols-2 gap-6">
-              <div className="rounded-2xl border border-white/[0.07] nf-glass-panel p-7">
-                <h3 className="text-lg font-semibold text-white font-[family-name:var(--font-syne)] mb-3">
-                  Mpumalanga
-                </h3>
-                <p className="text-sm text-zinc-500 leading-relaxed">
-                  Servicing and compliance support for sites across the province, including industrial,
-                  hospitality, and agricultural operations.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/[0.07] nf-glass-panel p-7">
-                <h3 className="text-lg font-semibold text-white font-[family-name:var(--font-syne)] mb-3">
-                  Limpopo
-                </h3>
-                <p className="text-sm text-zinc-500 leading-relaxed">
-                  On-site servicing and installations for lodges, estates, warehouses, and commercial
-                  facilities throughout Limpopo.
-                </p>
-              </div>
-              <div className="rounded-2xl border border-white/[0.07] nf-glass-panel p-7 sm:col-span-2">
-                <h3 className="text-lg font-semibold text-white font-[family-name:var(--font-syne)] mb-3">
-                  What “servicing” includes
-                </h3>
-                <p className="text-sm text-zinc-500 leading-relaxed">
-                  Scheduled inspections, testing, maintenance, replacement where required, and
-                  documentation aligned with SANS requirements—so your site stays audit-ready.
-                </p>
-              </div>
+            <div className="rounded-2xl border border-white/[0.07] nf-glass-panel p-7 h-full">
+              <h3 className="text-lg font-semibold text-white font-[family-name:var(--font-syne)] mb-3">
+                Limpopo
+              </h3>
+              <p className="text-sm text-zinc-500 leading-relaxed">
+                On-site servicing and installations for lodges, estates, warehouses, and commercial
+                facilities throughout Limpopo.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/[0.07] nf-glass-panel p-7 h-full">
+              <h3 className="text-lg font-semibold text-white font-[family-name:var(--font-syne)] mb-3">
+                What “servicing” includes
+              </h3>
+              <p className="text-sm text-zinc-500 leading-relaxed">
+                Scheduled inspections, testing, maintenance, replacement where required, and
+                documentation aligned with SANS requirements—so your site stays audit-ready.
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/[0.07] nf-glass-panel p-7 h-full">
+              <h3 className="text-lg font-semibold text-white font-[family-name:var(--font-syne)] mb-3">
+                Popular search terms we cover
+              </h3>
+              <ul className="text-sm text-zinc-500 space-y-1">
+                <li>Portable fire extinguisher servicing</li>
+                <li>Fire hose reel servicing</li>
+                <li>Fire hydrant servicing</li>
+                <li>Fire detection and alarm servicing</li>
+                <li>Fire extinguisher supply & installation</li>
+                <li>Fire hose reel supply & installation</li>
+                <li>Fire hydrant supply & installation</li>
+              </ul>
             </div>
           </div>
         </div>
