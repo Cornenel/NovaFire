@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { SERVICE_AREAS } from "@/lib/service-areas";
 
 const siteUrl = "https://novafire.co.za";
 
@@ -12,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/services/fire-extinguisher-servicing", changeFrequency: "monthly", priority: 0.85 },
     { path: "/services/fire-hose-reel-servicing", changeFrequency: "monthly", priority: 0.85 },
     { path: "/services/fire-hydrant-supply-installation", changeFrequency: "monthly", priority: 0.85 },
+    { path: "/areas", changeFrequency: "monthly", priority: 0.7 },
     { path: "/training", changeFrequency: "monthly", priority: 0.7 },
     { path: "/legal/privacy", changeFrequency: "yearly", priority: 0.2 },
     { path: "/legal/terms", changeFrequency: "yearly", priority: 0.2 },
@@ -19,11 +21,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: "/legal/cookies", changeFrequency: "yearly", priority: 0.2 },
   ];
 
-  return routes.map((r) => ({
+  const areaRoutes: MetadataRoute.Sitemap = SERVICE_AREAS.map((a) => ({
+    url: `${siteUrl}/areas/${a.slug}`,
+    lastModified: now,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  return [
+    ...routes.map((r) => ({
     url: `${siteUrl}${r.path}`,
     lastModified: now,
     changeFrequency: r.changeFrequency,
     priority: r.priority,
-  }));
+    })),
+    ...areaRoutes,
+  ];
 }
 

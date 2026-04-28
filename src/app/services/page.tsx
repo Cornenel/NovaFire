@@ -315,6 +315,14 @@ export default function ServicesPage() {
               We support lodges, estates, farms, warehouses, and commercial facilities with on-site
               servicing and compliant installations.
             </p>
+            <div className="mt-6">
+              <Link
+                href="/areas"
+                className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white underline-offset-4 hover:underline"
+              >
+                View service areas <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
           </div>
 
           <div className="mt-10 grid md:grid-cols-2 gap-6 auto-rows-fr">
