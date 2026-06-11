@@ -3,13 +3,10 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Lock } from "lucide-react";
-import { Navbar } from "@/components/navbar";
-import { SiteFooter } from "@/components/site-footer";
+import { Flame } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
-/**
- * Tech portal login – @novafire.co.za email + staff password
- */
+/** Technician sign-in – Supabase Auth */
 
 export default function TechLoginPage() {
   const router = useRouter();
@@ -23,46 +20,42 @@ export default function TechLoginPage() {
     setError("");
     setLoading(true);
 
-    try {
-      const res = await fetch("/api/tech-auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
-      });
+    const supabase = createClient();
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Login failed");
-        setLoading(false);
-        return;
-      }
-
-      router.push("/tech");
-      router.refresh();
-    } catch {
-      setError("Something went wrong. Please try again.");
+    if (signInError) {
+      setError(
+        signInError.message === "Invalid login credentials"
+          ? "Invalid email or password"
+          : signInError.message
+      );
       setLoading(false);
+      return;
     }
+
+    router.push("/tech");
+    router.refresh();
   }
 
   return (
     <div className="min-h-screen nf-bg-base flex flex-col">
-      <Navbar />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-sm mx-auto flex-1 flex flex-col justify-center py-20 pt-32 px-6"
+        className="w-full max-w-sm mx-auto flex-1 flex flex-col justify-center py-20 px-6"
       >
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-xl bg-red-500/20 flex items-center justify-center mx-auto mb-4">
-            <Lock className="w-7 h-7 text-red-500" />
+            <Flame className="w-7 h-7 text-red-500" />
           </div>
           <h1 className="text-xl font-bold text-white font-[family-name:var(--font-syne)]">
-            Technician Portal
+            Nova<span className="text-red-600">Fire</span> Tech
           </h1>
           <p className="text-zinc-500 text-sm mt-2">
-            Sign in with your Nova Fire email
+            Sign in to access your jobs
           </p>
         </div>
 
@@ -74,6 +67,7 @@ export default function TechLoginPage() {
             <input
               id="email"
               type="email"
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@novafire.co.za"
@@ -88,30 +82,28 @@ export default function TechLoginPage() {
             <input
               id="password"
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Staff password"
+              placeholder="Your password"
               required
               className="w-full px-4 py-3 rounded-lg bg-[#171717] border border-white/10 text-white placeholder-zinc-500 focus:border-red-500/50 focus:outline-none focus:ring-2 focus:ring-red-500/20"
             />
           </div>
-          {error && (
-            <p className="text-sm text-red-400">{error}</p>
-          )}
+          {error && <p className="text-sm text-red-400">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-lg text-white font-semibold nf-btn-primary transition-[filter,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3.5 rounded-lg text-white font-semibold nf-btn-primary transition-[filter,box-shadow] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
 
         <p className="text-center text-zinc-600 text-xs mt-6">
-          Only @novafire.co.za addresses
+          Staff accounts only. Contact your administrator for access.
         </p>
       </motion.div>
-      <SiteFooter variant="compact" />
     </div>
   );
 }

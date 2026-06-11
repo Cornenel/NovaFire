@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
 /**
- * Subdomain routing
+ * Proxy (Next.js 16 middleware)
  *
- * firetech.novafire.co.za → /tech (staff/admin only – requires FIRETECH_ACCESS_SECRET)
- * client.novafire.co.za → /client-portal
- * training.novafire.co.za → /training
+ * 1. Subdomain routing:
+ *    firetech.novafire.co.za → /tech (staff only)
+ *    client.novafire.co.za   → /client-portal
+ *    training.novafire.co.za → /training
  *
- * Firetech: staff/admin only. Visit firetech.novafire.co.za?access=YOUR_SECRET to grant access.
- * Set FIRETECH_ACCESS_SECRET in env – share only with authorised personnel.
+ * 2. Supabase session refresh – keeps auth cookies fresh on every request.
+ *
+ * 3. Route guards:
+ *    /tech/* requires a signed-in user (role check happens in the page,
+ *    which redirects non-staff to /tech-restricted).
  */
 
 const SUBDOMAIN_ROUTES: Record<string, string> = {
@@ -17,58 +22,99 @@ const SUBDOMAIN_ROUTES: Record<string, string> = {
   training: "/training",
 };
 
-const FIRETECH_COOKIE = "nf_firetech";
+/** Root-level routes that must never be rewritten under a subdomain base path. */
+const REWRITE_EXEMPT_PREFIXES = [
+  "/api/",
+  "/auth/",
+  "/admin",
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  "/tech-login",
+  "/tech-restricted",
+  "/legal",
+  "/thank-you",
+  "/quote-confirmation",
+];
 
-export function proxy(request: NextRequest) {
-  const hostname = request.headers.get("host") ?? "";
+export async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
-
-  const cleanHost = hostname.replace(/:\d+$/, "");
-  const parts = cleanHost.split(".");
-  // co.za: novafire.co.za = apex (3 parts), www.novafire.co.za = 4 parts
+  const hostname = (request.headers.get("host") ?? "").replace(/:\d+$/, "");
+  const parts = hostname.split(".");
+  // co.za: novafire.co.za = apex (3 parts), firetech.novafire.co.za = 4 parts
   const subdomain = parts.length >= 4 ? parts[0] : null;
 
-  // firetech: staff/admin only – require access token
-  const firetechSecret = process.env.FIRETECH_ACCESS_SECRET;
-  const firetechAccessParam = url.searchParams.get("access");
-  const hasFiretechCookie = request.cookies.get(FIRETECH_COOKIE)?.value === firetechSecret;
+  // Resolve the effective path (after any subdomain rewrite)
+  let rewritePath: string | null = null;
+  let effectivePath = url.pathname;
 
-  if (subdomain === "firetech" && firetechSecret) {
-    if (firetechAccessParam === firetechSecret) {
-      const redirectUrl = new URL(request.url);
-      redirectUrl.searchParams.delete("access");
-      const res = NextResponse.redirect(redirectUrl);
-      res.cookies.set(FIRETECH_COOKIE, firetechSecret, { httpOnly: true, secure: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 30 });
-      return res;
-    }
-    if (!hasFiretechCookie) {
-      const path = url.pathname;
-      if (path === "/tech-login" || path.startsWith("/api/tech-auth")) {
-        return NextResponse.next();
-      }
-      return NextResponse.redirect(new URL("/tech-login", request.url));
-    }
-  }
-
-  // API routes – never rewrite, pass through to actual /api/* handlers
-  if (url.pathname.startsWith("/api/")) {
-    return NextResponse.next();
-  }
-
-  // Subdomains: firetech → /tech, client → /client-portal, training → /training
-  if (subdomain && SUBDOMAIN_ROUTES[subdomain]) {
+  if (
+    subdomain &&
+    SUBDOMAIN_ROUTES[subdomain] &&
+    !REWRITE_EXEMPT_PREFIXES.some((p) => url.pathname.startsWith(p))
+  ) {
     const basePath = SUBDOMAIN_ROUTES[subdomain];
-    const pathname = url.pathname === "/" ? basePath : `${basePath}${url.pathname}`;
-    return NextResponse.rewrite(new URL(pathname, request.url));
+    if (!url.pathname.startsWith(basePath)) {
+      rewritePath = url.pathname === "/" ? basePath : `${basePath}${url.pathname}`;
+      effectivePath = rewritePath;
+    }
   }
 
-  return NextResponse.next();
+  const makeResponse = () =>
+    rewritePath
+      ? NextResponse.rewrite(new URL(rewritePath, request.url), { request })
+      : NextResponse.next({ request });
+
+  let response = makeResponse();
+
+  // Supabase session refresh (skip gracefully if env not configured yet)
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return response;
+  }
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+        response = makeResponse();
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
+
+  // IMPORTANT: do not run code between createServerClient and getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Guard: technician portal and admin dashboard require a signed-in user
+  const isTechRoute =
+    effectivePath === "/tech" ||
+    effectivePath.startsWith("/tech/") ||
+    effectivePath === "/admin" ||
+    effectivePath.startsWith("/admin/");
+
+  if (isTechRoute && !user) {
+    const loginUrl = new URL("/tech-login", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return response;
 }
 
 export const config = {
   matcher: [
     /*
-     * Match all paths except static files and api routes.
+     * Match all paths except static files.
      */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],

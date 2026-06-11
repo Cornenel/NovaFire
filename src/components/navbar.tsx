@@ -11,7 +11,7 @@ const NAV_LINKS = [
   { label: "Industries", href: "/#industries" },
   { label: "Process", href: "/#process" },
   { label: "Training", href: "/training" },
-  { label: "Contact", href: "/#contact" },
+  { label: "Compliance Check", href: "/#compliance-assessment" },
 ];
 
 export function Navbar() {

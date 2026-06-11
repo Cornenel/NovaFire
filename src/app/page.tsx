@@ -213,7 +213,7 @@ export default function HomePage() {
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
               <motion.a
-                href="#contact"
+                href="#compliance-assessment"
                 className="group relative inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold rounded-xl overflow-hidden nf-btn-primary text-white transition-[filter,transform] duration-300"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
@@ -225,7 +225,7 @@ export default function HomePage() {
                 <span className="relative z-10">Get Compliant</span>
               </motion.a>
               <motion.a
-                href="#contact"
+                href="/services#request-quote"
                 className="group inline-flex items-center justify-center gap-2 px-8 py-4 text-base font-semibold rounded-xl nf-btn-ghost text-white transition-all duration-300"
                 whileHover={{ scale: 1.03, x: 4 }}
                 whileTap={{ scale: 0.98 }}
@@ -675,7 +675,7 @@ export default function HomePage() {
               </div>
               <div className="p-12 md:p-16 flex flex-col justify-center items-center md:items-end border-t md:border-t-0 md:border-l border-white/5">
                 <motion.a
-                  href="#contact"
+                  href="#compliance-assessment"
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
                   className="inline-flex items-center gap-2 px-10 py-4 text-base font-semibold rounded-xl nf-btn-primary text-white transition-[filter]"
