@@ -230,8 +230,6 @@ export async function confirmZohoJobcardImport(
               csv_row_number: item.csvRowNumber,
               site_id: site.id,
               customer_id: customer.id,
-              legacy_technician_name: item.job.technicianName,
-              legacy_technician_saqcc: item.job.saqccNumber,
             })
             .select("id")
             .single();
@@ -264,8 +262,6 @@ export async function confirmZohoJobcardImport(
                 import_warnings: importWarnings,
                 import_idempotency_key: defectKey,
                 csv_row_number: item.csvRowNumber,
-                legacy_technician_name: item.job.technicianName,
-                legacy_technician_saqcc: item.job.saqccNumber,
               })
               .select("id")
               .single();
