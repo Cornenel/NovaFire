@@ -12,6 +12,7 @@ const ITEMS = [
   { href: "/admin/defects", label: "Defects", exact: false },
   { href: "/admin/technicians", label: "Technicians", exact: false },
   { href: "/admin/stock", label: "Stock", exact: false },
+  { href: "/admin/imports", label: "Imports", exact: false },
   // Phase 5 additions – flag-gated, removed entirely when disabled
   ...(featureFlags.complianceDashboard
     ? [{ href: "/admin/compliance", label: "Compliance", exact: false }]

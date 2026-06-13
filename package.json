@@ -9,7 +9,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test:zoho-import": "node --import tsx scripts/test-zoho-import.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.2",
@@ -38,6 +39,7 @@
     "shadcn": "^2.5.0",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.2.9",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }
