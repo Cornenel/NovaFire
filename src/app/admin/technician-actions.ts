@@ -44,6 +44,29 @@ function strOrNull(formData: FormData, key: string): string | null {
   return v === "" ? null : v;
 }
 
+function technicianErrorRedirect(message: string): never {
+  redirect(`/admin/technicians?error=${encodeURIComponent(message)}`);
+}
+
+function getConfiguredAdminClient(): ReturnType<typeof createAdminClient> {
+  try {
+    return createAdminClient();
+  } catch (error) {
+    technicianErrorRedirect(
+      error instanceof Error
+        ? error.message
+        : "Supabase admin client is not configured."
+    );
+  }
+}
+
+function inviteErrorMessage(message: string): string {
+  if (message.toLowerCase().includes("invalid api key")) {
+    return "Technician invites require SUPABASE_SERVICE_ROLE_KEY in the deployment environment. Use the secret service-role key from the same Supabase project as NEXT_PUBLIC_SUPABASE_URL, then redeploy.";
+  }
+  return message;
+}
+
 /**
  * Create a technician:
  * 1. Invite via Supabase Auth (sends invite email – no manual password).
@@ -58,10 +81,10 @@ export async function createTechnician(formData: FormData) {
   const firstName = str(formData, "first_name");
   const lastName = str(formData, "last_name");
   if (!email || !firstName || !lastName) {
-    redirect("/admin/technicians?error=Email%2C+first+name+and+last+name+are+required");
+    technicianErrorRedirect("Email, first name and last name are required");
   }
 
-  const admin = createAdminClient();
+  const admin = getConfiguredAdminClient();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
   const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(
@@ -79,9 +102,7 @@ export async function createTechnician(formData: FormData) {
   );
 
   if (error || !invited.user) {
-    redirect(
-      `/admin/technicians?error=${encodeURIComponent(error?.message ?? "Invite failed")}`
-    );
+    technicianErrorRedirect(inviteErrorMessage(error?.message ?? "Invite failed"));
   }
 
   // Enrich profile (created by the signup trigger) with technician fields.
@@ -115,7 +136,7 @@ export async function updateTechnician(formData: FormData) {
   const lastName = str(formData, "last_name");
   if (!id || !firstName || !lastName) return;
 
-  const admin = createAdminClient();
+  const admin = getConfiguredAdminClient();
   await admin
     .from("profiles")
     .update({
@@ -141,7 +162,7 @@ export async function updateTechnician(formData: FormData) {
 export async function setTechnicianActive(id: string, active: boolean) {
   await requireDispatcher();
 
-  const admin = createAdminClient();
+  const admin = getConfiguredAdminClient();
   await admin.from("profiles").update({ is_active: active }).eq("id", id);
 
   revalidatePath(`/admin/technicians/${id}`);
