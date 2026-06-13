@@ -16,8 +16,6 @@ import { cn } from "@/lib/utils";
 
 const EXTINGUISHER_TYPES: AssetType[] = [
   "fire_extinguisher",
-  "co2_unit",
-  "dcp_unit",
 ];
 
 export function InspectionForm({

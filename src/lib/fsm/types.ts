@@ -110,6 +110,8 @@ export interface Asset {
   size_capacity: string | null;
   serial_number: string | null;
   location_description: string | null;
+  /** Fire extinguisher medium (DCP, CO2, Foam, etc.) – additive migration 00006 */
+  asset_medium?: string | null;
   manufacture_date: string | null;
   last_service_date: string | null;
   next_service_date: string | null;

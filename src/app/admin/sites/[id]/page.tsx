@@ -2,13 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { createAsset } from "@/app/admin/actions";
 import { AssetQr } from "@/components/admin/asset-qr";
+import { AssetCreateForm } from "@/components/admin/asset-create-form";
 import {
   ASSET_STATUS_LABELS,
   ASSET_STATUS_STYLES,
-  ASSET_TYPE_LABELS,
 } from "@/lib/fsm/labels";
+import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type { Asset } from "@/lib/fsm/types";
 import { featureFlags } from "@/lib/fsm/feature-flags";
 import {
@@ -17,10 +17,6 @@ import {
 } from "@/lib/fsm/compliance";
 import { ComplianceScoreBadge } from "@/components/admin/compliance-score-badge";
 import { cn } from "@/lib/utils";
-
-const inputCls =
-  "w-full px-3.5 py-2.5 rounded-lg bg-[#171717] border border-white/10 text-white placeholder-zinc-600 text-sm focus:border-red-500/50 focus:outline-none focus:ring-2 focus:ring-red-500/20";
-const labelCls = "block text-xs text-zinc-400 mb-1.5";
 
 export default async function AdminSiteDetailPage({
   params,
@@ -126,8 +122,7 @@ export default async function AdminSiteDetailPage({
                       <span className="font-mono text-xs text-zinc-500 mr-2">
                         {a.asset_code}
                       </span>
-                      {ASSET_TYPE_LABELS[a.asset_type]}
-                      {a.size_capacity ? ` · ${a.size_capacity}` : ""}
+                      {formatAssetDisplayName(a)}
                     </p>
                     <p className="text-xs text-zinc-500 truncate">
                       {a.location_description ?? "No location"}
@@ -147,7 +142,7 @@ export default async function AdminSiteDetailPage({
                     <AssetQr
                       qrToken={a.qr_token}
                       assetCode={a.asset_code}
-                      label={`${ASSET_TYPE_LABELS[a.asset_type]}${a.size_capacity ? ` ${a.size_capacity}` : ""}`}
+                      label={formatAssetDisplayName(a)}
                     />
                   </div>
                 </div>
@@ -159,49 +154,7 @@ export default async function AdminSiteDetailPage({
         {/* Add asset */}
         <div>
           <h2 className="text-sm font-semibold text-zinc-300 mb-3">New Asset</h2>
-          <form
-            action={createAsset}
-            className="rounded-xl border border-white/[0.08] nf-glass-panel p-4 space-y-3"
-          >
-            <input type="hidden" name="site_id" value={site.id} />
-            <div>
-              <label className={labelCls}>Type *</label>
-              <select name="asset_type" required className={inputCls}>
-                {Object.entries(ASSET_TYPE_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <input name="size_capacity" placeholder="Size / capacity (e.g. 9kg)" className={inputCls} />
-            <input name="serial_number" placeholder="Serial number" className={inputCls} />
-            <input name="location_description" placeholder="Location on site" className={inputCls} />
-            <div>
-              <label className={labelCls}>Last service date</label>
-              <input type="date" name="last_service_date" className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>Next service date</label>
-              <input type="date" name="next_service_date" className={inputCls} />
-            </div>
-            {/* Phase 5: optional – used by Smart Asset Insights */}
-            {featureFlags.assetInsights && (
-              <div>
-                <label className={labelCls}>Hydro test due date (optional)</label>
-                <input type="date" name="hydro_test_due_date" className={inputCls} />
-              </div>
-            )}
-            <button
-              type="submit"
-              className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-sm transition-colors"
-            >
-              Add Asset
-            </button>
-            <p className="text-[10px] text-zinc-600">
-              An asset ID and QR code are generated automatically.
-            </p>
-          </form>
+          <AssetCreateForm siteId={site.id} />
         </div>
       </div>
     </div>

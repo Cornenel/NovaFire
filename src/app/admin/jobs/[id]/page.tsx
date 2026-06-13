@@ -4,7 +4,6 @@ import { ArrowLeft, MapPin, FileDown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { JobAdminControls } from "@/components/admin/job-admin-controls";
 import {
-  ASSET_TYPE_LABELS,
   DEFECT_SEVERITY_LABELS,
   DEFECT_SEVERITY_STYLES,
   JOB_PRIORITY_LABELS,
@@ -13,6 +12,7 @@ import {
   JOB_STATUS_STYLES,
   JOB_TYPE_LABELS,
 } from "@/lib/fsm/labels";
+import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type {
   AssetType,
   DefectSeverity,
@@ -30,7 +30,12 @@ interface InspectionRow {
   requires_pressure_test: boolean;
   notes: string | null;
   created_at: string;
-  asset: { asset_code: string; asset_type: AssetType } | null;
+  asset: {
+    asset_code: string;
+    asset_type: AssetType;
+    size_capacity: string | null;
+    asset_medium?: string | null;
+  } | null;
 }
 
 interface DefectRow {
@@ -93,7 +98,7 @@ export default async function AdminJobDetailPage({
     supabase
       .from("inspections")
       .select(
-        "id, result, requires_refill, requires_pressure_test, notes, created_at, asset:assets(asset_code, asset_type)"
+        "id, result, requires_refill, requires_pressure_test, notes, created_at, asset:assets(asset_code, asset_type, size_capacity, asset_medium)"
       )
       .eq("job_id", id)
       .order("created_at"),
@@ -304,7 +309,7 @@ export default async function AdminJobDetailPage({
                         <span className="font-mono text-xs text-zinc-500 mr-2">
                           {i.asset?.asset_code}
                         </span>
-                        {i.asset ? ASSET_TYPE_LABELS[i.asset.asset_type] : "Asset"}
+                        {i.asset ? formatAssetDisplayName(i.asset) : "Asset"}
                       </p>
                       <p className="text-xs text-zinc-500 truncate">
                         {fmt(i.created_at)}

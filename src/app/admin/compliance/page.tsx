@@ -35,7 +35,7 @@ export default async function ComplianceDashboardPage() {
     supabase
       .from("assets")
       .select(
-        "id, status, next_service_date, asset_type, location_description, size_capacity, site_id, site:sites(name, customer:customers(name))"
+        "id, status, next_service_date, asset_type, location_description, size_capacity, asset_medium, site_id, site:sites(name, customer:customers(name))"
       ),
     supabase.from("defects").select("id, asset:assets(site_id)").eq("status", "open"),
   ]);
@@ -48,6 +48,7 @@ export default async function ComplianceDashboardPage() {
     | "asset_type"
     | "location_description"
     | "size_capacity"
+    | "asset_medium"
     | "site_id"
   > & { site: { name: string; customer: { name: string } | null } | null };
 

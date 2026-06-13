@@ -2,10 +2,10 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DefectStatusSelect } from "@/components/admin/defect-status-select";
 import {
-  ASSET_TYPE_LABELS,
   DEFECT_SEVERITY_LABELS,
   DEFECT_SEVERITY_STYLES,
 } from "@/lib/fsm/labels";
+import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type { AssetType, DefectSeverity, DefectStatus } from "@/lib/fsm/types";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,8 @@ interface DefectRow {
   asset: {
     asset_code: string;
     asset_type: AssetType;
+    size_capacity: string | null;
+    asset_medium?: string | null;
     site: { name: string; customer: { name: string } | null } | null;
   } | null;
   job: { id: string; job_number: string } | null;
@@ -34,7 +36,7 @@ export default async function AdminDefectsPage() {
     .from("defects")
     .select(
       `id, defect_type, severity, status, description, recommended_action, quote_required, created_at,
-       asset:assets(asset_code, asset_type, site:sites(name, customer:customers(name))),
+       asset:assets(asset_code, asset_type, size_capacity, asset_medium, site:sites(name, customer:customers(name))),
        job:jobs(id, job_number),
        technician:profiles(full_name)`
     )
@@ -83,7 +85,7 @@ export default async function AdminDefectsPage() {
                       <>
                         <span className="font-mono">{d.asset.asset_code}</span>
                         {" · "}
-                        {ASSET_TYPE_LABELS[d.asset.asset_type]}
+                        {formatAssetDisplayName(d.asset)}
                         {d.asset.site && (
                           <>
                             {" · "}

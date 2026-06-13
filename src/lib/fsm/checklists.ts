@@ -56,8 +56,6 @@ export const GENERAL_CHECKLIST: ChecklistItem[] = [
 export function getChecklistForAssetType(type: AssetType): ChecklistItem[] {
   switch (type) {
     case "fire_extinguisher":
-    case "co2_unit":
-    case "dcp_unit":
       return FIRE_EXTINGUISHER_CHECKLIST;
     case "hose_reel":
       return HOSE_REEL_CHECKLIST;

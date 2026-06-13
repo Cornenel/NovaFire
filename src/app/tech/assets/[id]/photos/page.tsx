@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PhotoUpload } from "@/components/tech/photo-upload";
-import { ASSET_TYPE_LABELS } from "@/lib/fsm/labels";
+import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type { Asset, PhotoStage } from "@/lib/fsm/types";
 
 interface PhotoRow {
@@ -72,7 +72,7 @@ export default async function AssetPhotosPage({
       <div className="mb-5">
         <p className="text-[11px] font-mono text-zinc-500">{asset.asset_code}</p>
         <h1 className="text-xl font-bold text-white font-[family-name:var(--font-syne)]">
-          Photos – {ASSET_TYPE_LABELS[asset.asset_type]}
+          Photos – {formatAssetDisplayName(asset)}
         </h1>
       </div>
 

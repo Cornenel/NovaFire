@@ -564,13 +564,7 @@ function parsePortableDescription(description: string): {
   const text = description.toLowerCase();
   const capacity = description.match(/(\d+(?:\.\d+)?)\s*kg/i)?.[0] ?? null;
   const medium = text.includes("co2") ? "CO2" : text.includes("dcp") ? "DCP" : null;
-  if (text.includes("co2")) {
-    return { assetType: "co2_unit", capacity, medium, unknown: false };
-  }
-  if (text.includes("dcp")) {
-    return { assetType: "dcp_unit", capacity, medium, unknown: false };
-  }
-  if (text.includes("extinguisher")) {
+  if (text.includes("co2") || text.includes("dcp") || text.includes("extinguisher")) {
     return { assetType: "fire_extinguisher", capacity, medium, unknown: false };
   }
   if (text.includes("blanket")) {

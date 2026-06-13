@@ -156,6 +156,57 @@ const hundred = parseZohoJobcardCsv(hundredJobCsv);
 assert.equal(hundred.summary.detectedJobs, 100, "should detect 100 historical jobs");
 assert.equal(hundred.summary.portableAssets, 100, "should detect 100 portable records");
 
+const extinguisherCsv = [
+  headers.join(","),
+  ...[
+    ["Extinguisher 9kg DCP Service", "9kg", "DCP"],
+    ["Extinguisher 4.5kg DCP Service", "4.5kg", "DCP"],
+    ["Extinguisher 5kg CO2 Service", "5kg", "CO2"],
+    ["Extinguisher 2kg CO2 Service", "2kg", "CO2"],
+    ["DCP Unit", null, "DCP"],
+    ["CO2 Unit", null, "CO2"],
+  ].map(([description, capacity, medium], index) =>
+    row({
+      "Unique ID": `EXT-${index + 1}`,
+      Date: "01/01/2025",
+      "Customer Name": "Extinguisher Test",
+      "Portable Fire Equipment": description,
+      "Unnamed: 7": capacity ?? "",
+      "Unnamed: 8": `Location ${index + 1}`,
+      "Unnamed: 10": "Yes",
+      "Unnamed: 11": "Yes",
+      "Unnamed: 12": "Yes",
+      "Unnamed: 13": "Yes",
+      "Unnamed: 14": "Yes",
+      "Unnamed: 16": "Yes",
+    })
+  ),
+].join("\n");
+
+const extinguisherMappings = parseZohoJobcardCsv(extinguisherCsv).equipment;
+for (const [index, item] of extinguisherMappings.entries()) {
+  assert.equal(
+    item.asset.assetType,
+    "fire_extinguisher",
+    `row ${index + 1} should import as Fire Extinguisher`
+  );
+  assert.notEqual(item.asset.assetType, "dcp_unit", "DCP Unit must not be produced");
+  assert.notEqual(item.asset.assetType, "co2_unit", "CO2 Unit must not be produced");
+}
+assert.deepEqual(
+  extinguisherMappings.slice(0, 4).map((item) => [
+    item.asset.sizeCapacity,
+    item.asset.medium,
+  ]),
+  [
+    ["9kg", "DCP"],
+    ["4.5kg", "DCP"],
+    ["5kg", "CO2"],
+    ["2kg", "CO2"],
+  ],
+  "known Zoho extinguisher descriptions should map to normalized capacity/medium"
+);
+
 const firstRunKeys = new Set(parsed.equipment.map((item) => item.idempotencyKey));
 const secondRunKeys = new Set(parseZohoJobcardCsv(fixture).equipment.map((item) => item.idempotencyKey));
 assert.deepEqual(secondRunKeys, firstRunKeys, "idempotency keys must be stable across runs");

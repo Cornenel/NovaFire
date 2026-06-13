@@ -83,15 +83,24 @@ export async function createAsset(formData: FormData) {
   const siteId = str(formData, "site_id");
   const assetType = str(formData, "asset_type");
   if (!siteId || !assetType) return;
+  const assetMedium = strOrNull(formData, "asset_medium");
+  const sizeCapacity = strOrNull(formData, "size_capacity");
+  const locationDescription = strOrNull(formData, "location_description");
+
+  // Fire extinguishers must be normalized as one asset type with medium/capacity.
+  if (assetType === "fire_extinguisher" && (!assetMedium || !sizeCapacity || !locationDescription)) {
+    return;
+  }
 
   const { data } = await supabase
     .from("assets")
     .insert({
       site_id: siteId,
       asset_type: assetType,
-      size_capacity: strOrNull(formData, "size_capacity"),
+      size_capacity: sizeCapacity,
+      asset_medium: assetMedium,
       serial_number: strOrNull(formData, "serial_number"),
-      location_description: strOrNull(formData, "location_description"),
+      location_description: locationDescription,
       last_service_date: strOrNull(formData, "last_service_date"),
       next_service_date: strOrNull(formData, "next_service_date"),
       // Phase 5 (additive, optional – nullable column added in migration 00003)

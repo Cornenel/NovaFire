@@ -57,9 +57,42 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   fire_blanket: "Fire Blanket",
   signage: "Signage",
   fire_detection: "Fire Detection",
-  co2_unit: "CO2 Unit",
-  dcp_unit: "DCP Unit",
+  // Legacy enum values kept for backward compatibility only. The app no
+  // longer creates or displays DCP/CO2 as top-level asset types.
+  co2_unit: "Fire Extinguisher",
+  dcp_unit: "Fire Extinguisher",
 };
+
+export const MAIN_ASSET_TYPE_LABELS: Partial<Record<AssetType, string>> = {
+  fire_extinguisher: "Fire Extinguisher",
+  hose_reel: "Hose Reel",
+  hydrant: "Hydrant",
+  fire_blanket: "Fire Blanket",
+  signage: "Signage",
+  fire_detection: "Fire Detection",
+};
+
+export const FIRE_EXTINGUISHER_MEDIUMS = [
+  "DCP",
+  "CO2",
+  "Foam",
+  "Water",
+  "Wet Chemical",
+  "Other",
+] as const;
+
+export const FIRE_EXTINGUISHER_CAPACITIES = [
+  "1kg",
+  "2kg",
+  "2.5kg",
+  "4.5kg",
+  "5kg",
+  "6kg",
+  "9kg",
+  "25kg",
+  "50kg",
+  "Other",
+] as const;
 
 export const ASSET_STATUS_LABELS: Record<AssetStatus, string> = {
   compliant: "Compliant",

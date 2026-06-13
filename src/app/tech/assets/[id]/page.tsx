@@ -16,10 +16,10 @@ import { computeAssetInsights } from "@/lib/fsm/insights";
 import {
   ASSET_STATUS_LABELS,
   ASSET_STATUS_STYLES,
-  ASSET_TYPE_LABELS,
   DEFECT_SEVERITY_LABELS,
   DEFECT_SEVERITY_STYLES,
 } from "@/lib/fsm/labels";
+import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type { Asset, AssetEvent, Defect, Inspection } from "@/lib/fsm/types";
 import { cn } from "@/lib/utils";
 
@@ -125,7 +125,8 @@ export default async function AssetDetailPage({
 
   const details: Array<[string, string | null]> = [
     ["Asset ID", asset.asset_code],
-    ["Type", ASSET_TYPE_LABELS[asset.asset_type]],
+    ["Type", formatAssetDisplayName(asset)],
+    ["Medium", asset.asset_medium ?? null],
     ["Size / capacity", asset.size_capacity],
     ["Serial number", asset.serial_number],
     ["Location", asset.location_description],
@@ -153,8 +154,7 @@ export default async function AssetDetailPage({
       <div className="mb-4">
         <p className="text-[11px] font-mono text-zinc-500">{asset.asset_code}</p>
         <h1 className="text-xl font-bold text-white font-[family-name:var(--font-syne)]">
-          {ASSET_TYPE_LABELS[asset.asset_type]}
-          {asset.size_capacity ? ` · ${asset.size_capacity}` : ""}
+          {formatAssetDisplayName(asset)}
         </h1>
         <div className="flex items-center gap-2 mt-2">
           <span

@@ -57,6 +57,7 @@ type AssetRow = {
   site_id: string;
   asset_type: string;
   size_capacity: string | null;
+  asset_medium?: string | null;
   location_description: string | null;
   legacy_description?: string | null;
   import_idempotency_key?: string | null;
@@ -336,7 +337,7 @@ async function loadImportContext(admin: ReturnType<typeof createAdminClient>) {
       admin.from("customers").select("id, name, email, phone"),
       admin.from("sites").select("id, customer_id, name, address, access_notes"),
       admin.from("assets").select(
-        "id, site_id, asset_type, size_capacity, location_description, legacy_description, import_idempotency_key"
+        "id, site_id, asset_type, size_capacity, asset_medium, location_description, legacy_description, import_idempotency_key"
       ),
       admin
         .from("profiles")
@@ -525,6 +526,7 @@ async function findOrCreateAsset(
     item.section,
     normalizeText(item.asset.assetType),
     normalizeText(item.asset.sizeCapacity),
+    normalizeText(item.asset.medium),
     normalizeText(item.asset.locationDescription),
     normalizeText(item.asset.originalDescription),
   ].join("|");
@@ -536,6 +538,7 @@ async function findOrCreateAsset(
         a.site_id === siteId &&
         a.asset_type === item.asset.assetType &&
         normalizeText(a.size_capacity) === normalizeText(item.asset.sizeCapacity) &&
+        normalizeText(a.asset_medium) === normalizeText(item.asset.medium) &&
         normalizeText(a.location_description) ===
           normalizeText(item.asset.locationDescription) &&
         normalizeText(a.legacy_description) ===
@@ -553,6 +556,7 @@ async function findOrCreateAsset(
       site_id: siteId,
       asset_type: item.asset.assetType,
       size_capacity: item.asset.sizeCapacity,
+      asset_medium: item.asset.medium,
       location_description: item.asset.locationDescription,
       last_service_date: item.asset.lastServiceDate ?? item.job.date,
       next_service_date: item.job.nextServiceDate,
@@ -567,7 +571,7 @@ async function findOrCreateAsset(
       imported_unverified: item.asset.importedUnverified,
     })
     .select(
-      "id, site_id, asset_type, size_capacity, location_description, legacy_description, import_idempotency_key"
+      "id, site_id, asset_type, size_capacity, asset_medium, location_description, legacy_description, import_idempotency_key"
     )
     .single();
 

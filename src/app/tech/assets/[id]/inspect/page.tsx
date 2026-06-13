@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { InspectionForm } from "@/components/tech/inspection-form";
-import { ASSET_TYPE_LABELS } from "@/lib/fsm/labels";
+import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type { Asset } from "@/lib/fsm/types";
 
 export default async function InspectAssetPage({
@@ -39,7 +39,7 @@ export default async function InspectAssetPage({
       <div className="mb-5">
         <p className="text-[11px] font-mono text-zinc-500">{asset.asset_code}</p>
         <h1 className="text-xl font-bold text-white font-[family-name:var(--font-syne)]">
-          Inspect {ASSET_TYPE_LABELS[asset.asset_type]}
+          Inspect {formatAssetDisplayName(asset)}
         </h1>
         {asset.location_description && (
           <p className="text-sm text-zinc-500 mt-1">{asset.location_description}</p>

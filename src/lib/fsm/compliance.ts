@@ -9,7 +9,15 @@ import { todayInSA } from "./dates";
 import type { Asset } from "./types";
 
 export interface ComplianceInput {
-  assets: Pick<Asset, "status" | "next_service_date" | "asset_type" | "location_description" | "size_capacity">[];
+  assets: Pick<
+    Asset,
+    | "status"
+    | "next_service_date"
+    | "asset_type"
+    | "location_description"
+    | "size_capacity"
+    | "asset_medium"
+  >[];
   openDefects: number;
 }
 
@@ -116,9 +124,9 @@ const OPPORTUNITY_RULES: OpportunityRule[] = [
       assets.some(
         (a) =>
           a.status !== "removed" &&
-          (a.asset_type === "co2_unit" ||
-            (a.asset_type === "fire_extinguisher" &&
-              (a.size_capacity ?? "").toLowerCase().includes("co2")))
+          a.asset_type === "fire_extinguisher" &&
+          ((a.asset_medium ?? "").toLowerCase() === "co2" ||
+            (a.size_capacity ?? "").toLowerCase().includes("co2"))
       ),
     recommendation:
       "No CO2 extinguisher recorded – recommend installing a CO2 unit for electrical risk.",

@@ -15,13 +15,13 @@ import { JobWorkflow } from "@/components/tech/job-workflow";
 import {
   ASSET_STATUS_STYLES,
   ASSET_STATUS_LABELS,
-  ASSET_TYPE_LABELS,
   JOB_PRIORITY_LABELS,
   JOB_PRIORITY_STYLES,
   JOB_STATUS_LABELS,
   JOB_STATUS_STYLES,
   JOB_TYPE_LABELS,
 } from "@/lib/fsm/labels";
+import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type { Asset, JobWithRelations } from "@/lib/fsm/types";
 import { cn } from "@/lib/utils";
 
@@ -211,8 +211,7 @@ export default async function JobDetailPage({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-white truncate">
-                    {ASSET_TYPE_LABELS[asset.asset_type]}
-                    {asset.size_capacity ? ` · ${asset.size_capacity}` : ""}
+                    {formatAssetDisplayName(asset)}
                   </p>
                   {inspectedAssetIds.has(asset.id) && (
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
