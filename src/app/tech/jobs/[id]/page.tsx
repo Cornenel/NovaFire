@@ -211,6 +211,10 @@ export default async function JobDetailPage({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium text-white truncate">
+                    <span className="font-mono text-xs text-zinc-500 mr-2">
+                      {asset.asset_code}
+                    </span>
+                    <span className="text-zinc-600 mr-2">|</span>
                     {formatAssetDisplayName(asset)}
                   </p>
                   {inspectedAssetIds.has(asset.id) && (
@@ -218,10 +222,7 @@ export default async function JobDetailPage({
                   )}
                 </div>
                 <p className="text-xs text-zinc-500 truncate">
-                  {asset.asset_code}
-                  {asset.location_description
-                    ? ` · ${asset.location_description}`
-                    : ""}
+                  {asset.location_description ?? "No location"}
                 </p>
               </div>
               <span

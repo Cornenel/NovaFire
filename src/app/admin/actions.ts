@@ -98,6 +98,7 @@ export async function createAsset(formData: FormData) {
       site_id: siteId,
       asset_type: assetType,
       size_capacity: sizeCapacity,
+      customer_asset_number: strOrNull(formData, "customer_asset_number"),
       asset_medium: assetMedium,
       serial_number: strOrNull(formData, "serial_number"),
       location_description: locationDescription,

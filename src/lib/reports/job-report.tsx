@@ -8,11 +8,11 @@ import {
 } from "@react-pdf/renderer";
 import { getChecklistForAssetType } from "@/lib/fsm/checklists";
 import {
-  ASSET_TYPE_LABELS,
   DEFECT_SEVERITY_LABELS,
   JOB_PRIORITY_LABELS,
   JOB_TYPE_LABELS,
 } from "@/lib/fsm/labels";
+import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type {
   AssetType,
   DefectSeverity,
@@ -41,7 +41,12 @@ export interface JobReportData {
   technicianName: string;
   inspections: Array<{
     assetCode: string;
+    customerAssetNumber: string | null;
     assetType: AssetType;
+    sizeCapacity: string | null;
+    assetMedium: string | null;
+    assetLocation: string | null;
+    legacyDescription: string | null;
     result: InspectionResult;
     checklist: Record<string, boolean | string>;
     requiresRefill: boolean;
@@ -254,10 +259,10 @@ export function JobReportDocument({ data }: { data: JobReportData }) {
         ) : (
           <View>
             <View style={s.tableHeader}>
-              <Text style={[s.th, { width: "16%" }]}>Asset ID</Text>
-              <Text style={[s.th, { width: "20%" }]}>Type</Text>
+              <Text style={[s.th, { width: "20%" }]}>Asset IDs</Text>
+              <Text style={[s.th, { width: "24%" }]}>Asset</Text>
               <Text style={[s.th, { width: "10%" }]}>Result</Text>
-              <Text style={[s.th, { width: "54%" }]}>Issues / Notes</Text>
+              <Text style={[s.th, { width: "46%" }]}>Issues / Notes</Text>
             </View>
             {data.inspections.map((i, idx) => {
               const issues = failedItems(i.assetType, i.checklist);
@@ -271,9 +276,21 @@ export function JobReportDocument({ data }: { data: JobReportData }) {
                 .join(" · ");
               return (
                 <View key={idx} style={s.tableRow} wrap={false}>
-                  <Text style={[s.cell, { width: "16%" }]}>{i.assetCode}</Text>
                   <Text style={[s.cell, { width: "20%" }]}>
-                    {ASSET_TYPE_LABELS[i.assetType]}
+                    {i.assetCode}
+                    {i.customerAssetNumber
+                      ? `\nCustomer #${i.customerAssetNumber}`
+                      : ""}
+                  </Text>
+                  <Text style={[s.cell, { width: "24%" }]}>
+                    {formatAssetDisplayName({
+                      asset_type: i.assetType,
+                      size_capacity: i.sizeCapacity,
+                      customer_asset_number: null,
+                      asset_medium: i.assetMedium,
+                      legacy_description: i.legacyDescription,
+                    })}
+                    {i.assetLocation ? `\n${i.assetLocation}` : ""}
                   </Text>
                   <Text
                     style={[
@@ -284,7 +301,7 @@ export function JobReportDocument({ data }: { data: JobReportData }) {
                   >
                     {i.result.toUpperCase()}
                   </Text>
-                  <Text style={[s.cell, { width: "54%" }]}>{extras || "—"}</Text>
+                  <Text style={[s.cell, { width: "46%" }]}>{extras || "—"}</Text>
                 </View>
               );
             })}

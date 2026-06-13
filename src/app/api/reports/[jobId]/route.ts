@@ -52,7 +52,7 @@ export async function GET(
     supabase
       .from("inspections")
       .select(
-        "result, checklist, requires_refill, requires_pressure_test, notes, asset:assets(asset_code, asset_type)"
+        "result, checklist, requires_refill, requires_pressure_test, notes, asset:assets(asset_code, customer_asset_number, asset_type, size_capacity, asset_medium, location_description, legacy_description)"
       )
       .eq("job_id", jobId)
       .order("created_at"),
@@ -97,7 +97,12 @@ export async function GET(
     technicianName: (job as any).technician?.full_name ?? "Unassigned",
     inspections: ((inspections ?? []) as any[]).map((i) => ({
       assetCode: i.asset?.asset_code ?? "—",
+      customerAssetNumber: i.asset?.customer_asset_number ?? null,
       assetType: i.asset?.asset_type ?? "fire_extinguisher",
+      sizeCapacity: i.asset?.size_capacity ?? null,
+      assetMedium: i.asset?.asset_medium ?? null,
+      assetLocation: i.asset?.location_description ?? null,
+      legacyDescription: i.asset?.legacy_description ?? null,
       result: i.result,
       checklist: i.checklist ?? {},
       requiresRefill: i.requires_refill,

@@ -108,6 +108,8 @@ export interface Asset {
   qr_token: string;
   asset_type: AssetType;
   size_capacity: string | null;
+  /** Customer/client's legacy equipment number, separate from NovaFire asset_code */
+  customer_asset_number?: string | null;
   serial_number: string | null;
   location_description: string | null;
   /** Fire extinguisher medium (DCP, CO2, Foam, etc.) – additive migration 00006 */

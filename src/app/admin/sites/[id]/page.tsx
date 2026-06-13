@@ -122,6 +122,7 @@ export default async function AdminSiteDetailPage({
                       <span className="font-mono text-xs text-zinc-500 mr-2">
                         {a.asset_code}
                       </span>
+                      <span className="text-zinc-600 mr-2">|</span>
                       {formatAssetDisplayName(a)}
                     </p>
                     <p className="text-xs text-zinc-500 truncate">

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { parseZohoJobcardCsv } from "../src/lib/imports/zoho-jobcard.ts";
+import { formatAssetDisplayName } from "../src/lib/fsm/asset-display.ts";
 
 const headers = [
   "Unique ID",
@@ -163,6 +164,7 @@ const extinguisherCsv = [
     ["Extinguisher 4.5kg DCP Service", "4.5kg", "DCP"],
     ["Extinguisher 5kg CO2 Service", "5kg", "CO2"],
     ["Extinguisher 2kg CO2 Service", "2kg", "CO2"],
+    ["Extinguisher DCP Service", "6", "DCP"],
     ["DCP Unit", null, "DCP"],
     ["CO2 Unit", null, "CO2"],
   ].map(([description, capacity, medium], index) =>
@@ -205,6 +207,36 @@ assert.deepEqual(
     ["2kg", "CO2"],
   ],
   "known Zoho extinguisher descriptions should map to normalized capacity/medium"
+);
+assert.equal(
+  extinguisherMappings[4].asset.customerAssetNumber,
+  "6",
+  "plain number 6 should import as customer_asset_number"
+);
+assert.equal(
+  extinguisherMappings[4].asset.sizeCapacity,
+  null,
+  "plain number 6 must not import as capacity"
+);
+assert.equal(
+  formatAssetDisplayName({
+    asset_type: "fire_extinguisher",
+    customer_asset_number: "6",
+    size_capacity: null,
+    asset_medium: "DCP",
+  }),
+  "Asset #6 - DCP Fire Extinguisher",
+  "display should show customer asset number separately from capacity"
+);
+assert.equal(
+  formatAssetDisplayName({
+    asset_type: "fire_extinguisher",
+    customer_asset_number: "6",
+    size_capacity: "9kg",
+    asset_medium: "DCP",
+  }),
+  "Asset #6 - 9kg DCP Fire Extinguisher",
+  "valid 9kg should still display as capacity"
 );
 
 const firstRunKeys = new Set(parsed.equipment.map((item) => item.idempotencyKey));

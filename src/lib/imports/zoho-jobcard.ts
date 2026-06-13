@@ -73,6 +73,7 @@ export interface ZohoMappedEquipment {
     assetType: AssetType;
     originalDescription: string;
     sizeCapacity: string | null;
+    customerAssetNumber: string | null;
     medium: string | null;
     locationDescription: string | null;
     lastServiceDate: string | null;
@@ -481,9 +482,11 @@ function mapEquipment(
 
   const location =
     section === "portable" ? clean(row["Unnamed: 8"]) : clean(row["Unnamed: 18"]);
+  const portableNumberOrCapacity =
+    section === "portable" ? splitCustomerNumberAndCapacity(row["Unnamed: 7"]) : null;
   const sizeCapacity =
     section === "portable"
-      ? clean(row["Unnamed: 7"]) ?? parsed.capacity
+      ? portableNumberOrCapacity?.capacity ?? parsed.capacity
       : parsed.capacity;
   const compliance =
     section === "portable" ? clean(row["Unnamed: 16"]) : clean(row["Unnamed: 35"]);
@@ -531,6 +534,7 @@ function mapEquipment(
       assetType: parsed.assetType,
       originalDescription,
       sizeCapacity,
+      customerAssetNumber: portableNumberOrCapacity?.customerAssetNumber ?? null,
       medium: parsed.medium,
       locationDescription: location,
       lastServiceDate:
@@ -571,6 +575,40 @@ function parsePortableDescription(description: string): {
     return { assetType: "fire_blanket", capacity: null, medium: null, unknown: false };
   }
   return { assetType: "fire_extinguisher", capacity, medium, unknown: true };
+}
+
+const VALID_EXTINGUISHER_CAPACITIES = new Set([
+  "1kg",
+  "2kg",
+  "2.5kg",
+  "4.5kg",
+  "5kg",
+  "6kg",
+  "9kg",
+  "25kg",
+  "50kg",
+]);
+
+function splitCustomerNumberAndCapacity(value: string | null | undefined): {
+  capacity: string | null;
+  customerAssetNumber: string | null;
+} {
+  const text = clean(value);
+  if (!text) return { capacity: null, customerAssetNumber: null };
+
+  const normalizedCapacity = text.toLowerCase().replace(/\s+/g, "");
+  if (VALID_EXTINGUISHER_CAPACITIES.has(normalizedCapacity)) {
+    return {
+      capacity: normalizedCapacity.replace("kg", "kg"),
+      customerAssetNumber: null,
+    };
+  }
+
+  if (/^\d+$/.test(text)) {
+    return { capacity: null, customerAssetNumber: text };
+  }
+
+  return { capacity: null, customerAssetNumber: text };
 }
 
 function parseFixedDescription(description: string): {

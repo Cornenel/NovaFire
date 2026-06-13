@@ -4,6 +4,7 @@ import type { AssetType } from "./types";
 export interface AssetDisplayInput {
   asset_type: AssetType;
   size_capacity?: string | null;
+  customer_asset_number?: string | null;
   asset_medium?: string | null;
   legacy_description?: string | null;
 }
@@ -25,10 +26,16 @@ export function formatAssetDisplayName(asset: AssetDisplayInput): string {
           ? "CO2"
           : inferMedium(asset.legacy_description));
     const capacity = asset.size_capacity ?? inferCapacity(asset.legacy_description);
-    return [capacity, medium, "Fire Extinguisher"].filter(Boolean).join(" ");
+    const name = [capacity, medium, "Fire Extinguisher"].filter(Boolean).join(" ");
+    return asset.customer_asset_number
+      ? `Asset #${asset.customer_asset_number} - ${name}`
+      : name;
   }
 
-  return asset.size_capacity ? `${typeLabel} · ${asset.size_capacity}` : typeLabel;
+  const name = asset.size_capacity ? `${typeLabel} · ${asset.size_capacity}` : typeLabel;
+  return asset.customer_asset_number
+    ? `Asset #${asset.customer_asset_number} - ${name}`
+    : name;
 }
 
 export function inferMedium(value?: string | null): string | null {

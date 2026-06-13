@@ -73,6 +73,11 @@ export function AssetCreateForm({ siteId }: { siteId: string }) {
         />
       )}
 
+      <input
+        name="customer_asset_number"
+        placeholder="Customer Asset Number / Client Equipment Number (optional)"
+        className={inputCls}
+      />
       <input name="serial_number" placeholder="Serial number" className={inputCls} />
       <input
         name="location_description"
