@@ -11,7 +11,7 @@ export default async function AdminCustomersPage() {
 
   const { data: customers } = await supabase
     .from("customers")
-    .select("id, name, contact_person, phone, is_sla_client, sites(id)")
+    .select("id, name, contact_person, phone, is_sla_client, status, import_source, legacy_zoho_customer_id, notes, sites(id)")
     .order("name");
 
   return (
@@ -39,6 +39,18 @@ export default async function AdminCustomersPage() {
                       {c.is_sla_client && (
                         <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                           SLA
+                        </span>
+                      )}
+                      {c.status === "inactive" && (
+                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
+                          Inactive
+                        </span>
+                      )}
+                      {(c.import_source === "zoho_import" ||
+                        c.legacy_zoho_customer_id ||
+                        (c.notes ?? "").toLowerCase().includes("imported from zoho")) && (
+                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/20">
+                          Zoho
                         </span>
                       )}
                     </p>

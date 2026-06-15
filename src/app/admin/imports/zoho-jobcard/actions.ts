@@ -42,6 +42,7 @@ type CustomerRow = {
   name: string;
   email: string | null;
   phone: string | null;
+  import_source?: string | null;
 };
 
 type SiteRow = {
@@ -335,7 +336,7 @@ export async function confirmZohoJobcardImport(
 async function loadImportContext(admin: ReturnType<typeof createAdminClient>) {
   const [{ data: customers }, { data: sites }, { data: assets }, { data: technicians }] =
     await Promise.all([
-      admin.from("customers").select("id, name, email, phone"),
+      admin.from("customers").select("id, name, email, phone, import_source"),
       admin.from("sites").select("id, customer_id, name, address, access_notes"),
       admin.from("assets").select(
         "id, site_id, asset_type, size_capacity, customer_asset_number, asset_medium, location_description, legacy_description, import_idempotency_key"
@@ -393,8 +394,14 @@ async function findOrCreateCustomer(
       email,
       phone: item.job.phone,
       notes: "Imported from Zoho Jobcard CSV. Existing records were not overwritten.",
+      import_source: ZOHO_IMPORT_SOURCE,
+      import_raw_data: {
+        legacy_zoho_jobcard_id: item.legacyZohoJobcardId,
+        csv_row_number: item.csvRowNumber,
+        raw_row: item.rawRow,
+      },
     })
-    .select("id, name, email, phone")
+    .select("id, name, email, phone, import_source")
     .single();
 
   if (error || !data) throw new Error(error?.message ?? "Customer import failed.");

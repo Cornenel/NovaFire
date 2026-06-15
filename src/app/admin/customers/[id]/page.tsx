@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createSite } from "@/app/admin/actions";
+import { CustomerEditPanel } from "@/components/admin/customer-edit-form";
 
 const inputCls =
   "w-full px-3.5 py-2.5 rounded-lg bg-[#171717] border border-white/10 text-white placeholder-zinc-600 text-sm focus:border-red-500/50 focus:outline-none focus:ring-2 focus:ring-red-500/20";
@@ -15,12 +16,46 @@ export default async function AdminCustomerDetailPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: customer } = await supabase
-    .from("customers")
-    .select("*, sites(id, name, address, contact_person, assets(id))")
-    .eq("id", id)
-    .single();
+  const [
+    { data: customer },
+    {
+      data: { user },
+    },
+    { count: importedRowsCount },
+    { count: importedJobsCount },
+  ] = await Promise.all([
+    supabase
+      .from("customers")
+      .select("*, sites(id, name, address, contact_person, assets(id))")
+      .eq("id", id)
+      .single(),
+    supabase.auth.getUser(),
+    supabase
+      .from("import_rows")
+      .select("id", { count: "exact", head: true })
+      .eq("customer_id", id),
+    supabase
+      .from("jobs")
+      .select("id", { count: "exact", head: true })
+      .eq("customer_id", id)
+      .eq("import_source", "zoho_import"),
+  ]);
   if (!customer) notFound();
+
+  const { data: profile } = user
+    ? await supabase
+        .from("profiles")
+        .select("role, is_active")
+        .eq("id", user.id)
+        .single()
+    : { data: null };
+  const isAdmin = profile?.is_active && profile.role === "admin";
+  const isImportedFromZoho =
+    customer.import_source === "zoho_import" ||
+    Boolean(customer.legacy_zoho_customer_id) ||
+    (customer.notes ?? "").toLowerCase().includes("imported from zoho") ||
+    (importedRowsCount ?? 0) > 0 ||
+    (importedJobsCount ?? 0) > 0;
 
   return (
     <div>
@@ -32,25 +67,69 @@ export default async function AdminCustomerDetailPage({
         Customers
       </Link>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white font-[family-name:var(--font-syne)]">
-          {customer.name}
-          {customer.is_sla_client && (
-            <span className="ml-3 text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 align-middle">
-              SLA
-            </span>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white font-[family-name:var(--font-syne)]">
+            {customer.name}
+            {customer.is_sla_client && (
+              <span className="ml-3 text-xs px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 align-middle">
+                SLA
+              </span>
+            )}
+            {customer.status === "inactive" && (
+              <span className="ml-3 text-xs px-2 py-0.5 rounded bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 align-middle">
+                Inactive
+              </span>
+            )}
+            {isImportedFromZoho && (
+              <span className="ml-3 text-xs px-2 py-0.5 rounded bg-sky-500/10 text-sky-300 border border-sky-500/20 align-middle">
+                Imported from Zoho
+              </span>
+            )}
+          </h1>
+          {customer.trading_name && (
+            <p className="text-sm text-zinc-400 mt-1">
+              Trading as {customer.trading_name}
+            </p>
           )}
-        </h1>
-        <p className="text-sm text-zinc-500 mt-1">
-          {customer.contact_person ?? "No contact"}
-          {customer.email ? ` · ${customer.email}` : ""}
-          {customer.phone ? ` · ${customer.phone}` : ""}
-        </p>
+          <p className="text-sm text-zinc-500 mt-1">
+            {customer.contact_person ?? "No contact"}
+            {customer.email ? ` · ${customer.email}` : ""}
+            {customer.phone ? ` · ${customer.phone}` : ""}
+          </p>
+        </div>
+        {isAdmin && <CustomerEditPanel customer={customer} />}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Sites */}
         <div className="lg:col-span-2">
+          <div className="rounded-xl border border-white/[0.08] nf-glass-panel p-4 mb-6">
+            <h2 className="text-sm font-semibold text-zinc-300 mb-3">
+              Customer Details
+            </h2>
+            <dl className="grid sm:grid-cols-2 gap-3 text-sm">
+              <Detail label="VAT number" value={customer.vat_number} />
+              <Detail
+                label="Registration number"
+                value={customer.registration_number}
+              />
+              <Detail label="Billing address" value={customer.billing_address} />
+              <Detail
+                label="Physical / site address"
+                value={customer.physical_address}
+              />
+            </dl>
+            {customer.notes && (
+              <div className="mt-3 pt-3 border-t border-white/5">
+                <p className="text-xs text-zinc-500 mb-1">Notes</p>
+                <p className="text-sm text-zinc-300 whitespace-pre-wrap">
+                  {customer.notes}
+                </p>
+              </div>
+            )}
+          </div>
+
           <h2 className="text-sm font-semibold text-zinc-300 mb-3">
             Sites ({(customer.sites ?? []).length})
           </h2>
@@ -116,6 +195,21 @@ export default async function AdminCustomerDetailPage({
           </form>
         </div>
       </div>
+    </div>
+  );
+}
+
+function Detail({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null;
+}) {
+  return (
+    <div>
+      <dt className="text-xs text-zinc-500 mb-1">{label}</dt>
+      <dd className="text-zinc-300 whitespace-pre-wrap">{value || "—"}</dd>
     </div>
   );
 }

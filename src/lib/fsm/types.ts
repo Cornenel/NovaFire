@@ -83,10 +83,20 @@ export interface Profile {
 export interface Customer {
   id: string;
   name: string;
+  trading_name?: string | null;
   contact_person: string | null;
   email: string | null;
   phone: string | null;
+  billing_address?: string | null;
+  vat_number?: string | null;
+  registration_number?: string | null;
+  physical_address?: string | null;
+  notes?: string | null;
+  status?: "active" | "inactive";
   is_sla_client: boolean;
+  legacy_zoho_customer_id?: string | null;
+  import_source?: string | null;
+  import_raw_data?: Record<string, unknown> | null;
 }
 
 export interface Site {

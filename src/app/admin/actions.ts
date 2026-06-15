@@ -13,6 +13,30 @@ async function requireDispatcher() {
   return { supabase, user };
 }
 
+async function requireAdmin() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { supabase, user: null, error: "Please sign in again." };
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.is_active || profile.role !== "admin") {
+    return {
+      supabase,
+      user,
+      error: "Only admins can update customer master data.",
+    };
+  }
+
+  return { supabase, user, error: null };
+}
+
 function str(formData: FormData, key: string): string {
   return (formData.get(key) as string | null)?.trim() ?? "";
 }
@@ -23,6 +47,66 @@ function strOrNull(formData: FormData, key: string): string | null {
 }
 
 // ── Customers ──────────────────────────────────────────────────────────────
+
+export interface CustomerDuplicateCandidate {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  reasons: string[];
+}
+
+export interface UpdateCustomerState {
+  ok: boolean;
+  error?: string;
+  duplicates?: CustomerDuplicateCandidate[];
+}
+
+const editableCustomerFields = [
+  "name",
+  "trading_name",
+  "contact_person",
+  "phone",
+  "email",
+  "vat_number",
+  "registration_number",
+  "billing_address",
+  "physical_address",
+  "notes",
+  "status",
+] as const;
+
+type EditableCustomerField = (typeof editableCustomerFields)[number];
+type EditableCustomerValues = Record<EditableCustomerField, string | null>;
+
+const initialUpdateCustomerState: UpdateCustomerState = { ok: false };
+
+function normalizeTextForMatch(value: string | null | undefined): string {
+  return (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizePhoneForMatch(value: string | null | undefined): string {
+  const digits = (value ?? "").replace(/\D/g, "");
+  if (digits.startsWith("0027")) return `0${digits.slice(4)}`;
+  if (digits.startsWith("27")) return `0${digits.slice(2)}`;
+  return digits;
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isValidSouthAfricanPhone(value: string): boolean {
+  const trimmed = value.trim();
+  if (!/^(\+?27|0027|0)[0-9\s().-]+$/.test(trimmed)) return false;
+
+  const digits = trimmed.replace(/\D/g, "");
+  return (
+    (digits.length === 10 && digits.startsWith("0")) ||
+    (digits.length === 11 && digits.startsWith("27")) ||
+    (digits.length === 13 && digits.startsWith("0027"))
+  );
+}
 
 export async function createCustomer(formData: FormData) {
   const { supabase, user } = await requireDispatcher();
@@ -46,6 +130,119 @@ export async function createCustomer(formData: FormData) {
 
   if (error || !data) return;
   redirect(`/admin/customers/${data.id}`);
+}
+
+export async function updateCustomer(
+  _prevState: UpdateCustomerState = initialUpdateCustomerState,
+  formData: FormData
+): Promise<UpdateCustomerState> {
+  const { supabase, error: authError } = await requireAdmin();
+  if (authError) return { ok: false, error: authError };
+
+  const customerId = str(formData, "customer_id");
+  if (!customerId) return { ok: false, error: "Missing customer id." };
+
+  const values: EditableCustomerValues = {
+    name: str(formData, "name"),
+    trading_name: strOrNull(formData, "trading_name"),
+    contact_person: strOrNull(formData, "contact_person"),
+    phone: strOrNull(formData, "phone"),
+    email: strOrNull(formData, "email"),
+    vat_number: strOrNull(formData, "vat_number"),
+    registration_number: strOrNull(formData, "registration_number"),
+    billing_address: strOrNull(formData, "billing_address"),
+    physical_address: strOrNull(formData, "physical_address"),
+    notes: strOrNull(formData, "notes"),
+    status: str(formData, "status") === "inactive" ? "inactive" : "active",
+  };
+
+  if (!values.name) return { ok: false, error: "Customer name is required." };
+  if (values.email && !isValidEmail(values.email)) {
+    return { ok: false, error: "Enter a valid email address." };
+  }
+  if (values.phone && !isValidSouthAfricanPhone(values.phone)) {
+    return { ok: false, error: "Enter a valid South African phone number." };
+  }
+
+  const { data: current, error: loadError } = await supabase
+    .from("customers")
+    .select(editableCustomerFields.join(","))
+    .eq("id", customerId)
+    .single();
+
+  if (loadError || !current) {
+    return { ok: false, error: "Customer could not be loaded." };
+  }
+
+  const { data: otherCustomers } = await supabase
+    .from("customers")
+    .select("id, name, email, phone")
+    .neq("id", customerId);
+
+  const normalizedName = normalizeTextForMatch(values.name);
+  const normalizedEmail = normalizeTextForMatch(values.email);
+  const normalizedPhone = normalizePhoneForMatch(values.phone);
+
+  const duplicates = (otherCustomers ?? [])
+    .map((candidate) => {
+      const reasons: string[] = [];
+      if (
+        normalizedName &&
+        normalizeTextForMatch(candidate.name) === normalizedName
+      ) {
+        reasons.push("name");
+      }
+      if (
+        normalizedEmail &&
+        normalizeTextForMatch(candidate.email) === normalizedEmail
+      ) {
+        reasons.push("email");
+      }
+      if (
+        normalizedPhone &&
+        normalizePhoneForMatch(candidate.phone) === normalizedPhone
+      ) {
+        reasons.push("phone");
+      }
+
+      return {
+        id: candidate.id as string,
+        name: candidate.name as string,
+        email: candidate.email as string | null,
+        phone: candidate.phone as string | null,
+        reasons,
+      };
+    })
+    .filter((candidate) => candidate.reasons.length > 0);
+
+  if (duplicates.length > 0 && formData.get("confirm_duplicates") !== "true") {
+    return { ok: false, duplicates };
+  }
+
+  const currentValues = current as Partial<EditableCustomerValues>;
+  const oldValues = Object.fromEntries(
+    editableCustomerFields.map((field) => [field, currentValues[field] ?? null])
+  ) as EditableCustomerValues;
+  const changedFields = editableCustomerFields.filter(
+    (field) => (oldValues[field] ?? null) !== (values[field] ?? null)
+  );
+
+  if (changedFields.length === 0) {
+    return { ok: true };
+  }
+
+  const { error: updateError } = await supabase
+    .from("customers")
+    .update(values)
+    .eq("id", customerId);
+
+  if (updateError) {
+    return { ok: false, error: "Customer could not be updated." };
+  }
+
+  revalidatePath(`/admin/customers/${customerId}`);
+  revalidatePath("/admin/customers");
+  return { ok: true };
 }
 
 // ── Sites ──────────────────────────────────────────────────────────────────
