@@ -19,14 +19,30 @@ export default async function TechniciansPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const { data: techsData } = await supabase
-    .from("profiles")
-    .select("*")
-    .in("role", ["technician", "dispatcher", "admin"])
-    .order("is_active", { ascending: false })
-    .order("full_name");
+  const [
+    { data: techsData },
+    {
+      data: { user },
+    },
+  ] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("*")
+      .in("role", ["technician", "dispatcher", "admin"])
+      .order("is_active", { ascending: false })
+      .order("full_name"),
+    supabase.auth.getUser(),
+  ]);
 
   const technicians = (techsData ?? []) as Profile[];
+  const { data: currentProfile } = user
+    ? await supabase
+        .from("profiles")
+        .select("role, is_active")
+        .eq("id", user.id)
+        .single()
+    : { data: null };
+  const canInviteAdmin = currentProfile?.is_active && currentProfile.role === "admin";
 
   // Open-job counts per technician (single query, grouped client-side)
   const { data: openJobs } = await supabase
@@ -123,15 +139,27 @@ export default async function TechniciansPage({
           )}
         </div>
 
-        {/* Add technician */}
+        {/* Add staff */}
         <div>
           <h2 className="text-sm font-semibold text-zinc-300 mb-3">
-            Add Technician
+            Add Staff Member
           </h2>
           <form
             action={createTechnician}
             className="rounded-xl border border-white/[0.08] nf-glass-panel p-4 space-y-3"
           >
+            <div>
+              <label className={labelCls}>Role *</label>
+              <select name="role" defaultValue="technician" required className={inputCls}>
+                <option value="technician">Technician</option>
+                {canInviteAdmin && <option value="admin">Admin</option>}
+              </select>
+              {!canInviteAdmin && (
+                <p className="text-[10px] text-zinc-600 mt-1">
+                  Only admins can invite another admin.
+                </p>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className={labelCls}>First name *</label>
@@ -149,12 +177,12 @@ export default async function TechniciansPage({
             <input name="phone" placeholder="Phone number" className={inputCls} />
             <input
               name="vehicle_number"
-              placeholder="Vehicle / van number (optional)"
+              placeholder="Vehicle / van number (technicians)"
               className={inputCls}
             />
             <input
               name="saqcc_number"
-              placeholder="SAQCC number (optional)"
+              placeholder="SAQCC number (technicians)"
               className={inputCls}
             />
             <input
@@ -166,10 +194,10 @@ export default async function TechniciansPage({
               type="submit"
               className="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-sm transition-colors"
             >
-              Invite Technician
+              Invite Staff Member
             </button>
             <p className="text-[10px] text-zinc-600">
-              An invite email is sent automatically – the technician sets their
+              An invite email is sent automatically – the staff member sets their
               own password. No manual password needed.
             </p>
           </form>

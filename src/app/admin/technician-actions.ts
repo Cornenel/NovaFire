@@ -35,6 +35,22 @@ async function requireDispatcher() {
   return { supabase, user };
 }
 
+async function requireAdmin() {
+  const { supabase, user } = await requireDispatcher();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, is_active")
+    .eq("id", user.id)
+    .single();
+
+  if (!profile?.is_active || profile.role !== "admin") {
+    redirect("/tech-restricted");
+  }
+
+  return { supabase, user };
+}
+
 function str(formData: FormData, key: string): string {
   return (formData.get(key) as string | null)?.trim() ?? "";
 }
@@ -68,14 +84,18 @@ function inviteErrorMessage(message: string): string {
 }
 
 /**
- * Create a technician:
+ * Create a staff account:
  * 1. Invite via Supabase Auth (sends invite email – no manual password).
- * 2. The handle_new_user trigger creates the profile with role=technician
- *    (via invited_role metadata).
+ * 2. The handle_new_user trigger creates the profile.
  * 3. Enrich the profile with the remaining fields.
  */
 export async function createTechnician(formData: FormData) {
-  await requireDispatcher();
+  const role = str(formData, "role") === "admin" ? "admin" : "technician";
+  if (role === "admin") {
+    await requireAdmin();
+  } else {
+    await requireDispatcher();
+  }
 
   const email = str(formData, "email").toLowerCase();
   const firstName = str(formData, "first_name");
@@ -95,7 +115,9 @@ export async function createTechnician(formData: FormData) {
         last_name: lastName,
         full_name: `${firstName} ${lastName}`,
         phone: strOrNull(formData, "phone"),
-        invited_role: "technician",
+        // The signup trigger only honours non-admin invited roles; the
+        // service-role profile update below applies admin role after invite.
+        invited_role: role === "admin" ? "technician" : role,
       },
       redirectTo: `${siteUrl}/auth/set-password`,
     }
@@ -118,7 +140,7 @@ export async function createTechnician(formData: FormData) {
       vehicle_number: strOrNull(formData, "vehicle_number"),
       saqcc_number: strOrNull(formData, "saqcc_number"),
       photo_url: strOrNull(formData, "photo_url"),
-      role: "technician",
+      role,
       is_active: true,
     })
     .eq("id", invited.user.id);
