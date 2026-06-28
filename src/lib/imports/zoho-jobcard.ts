@@ -759,20 +759,32 @@ function buildDefect(
 ): ZohoMappedEquipment["defect"] {
   const parts =
     section === "portable" ? clean(row["Unnamed: 15"]) : clean(row["Unnamed: 34"]);
-  const combined = [
+  const rowFailed = !isCompliant(compliance, checklist);
+  const hasChecklistFailure = Object.values(checklist).some((value) => value === false);
+  const rowSpecificText = [
     compliance,
     parts,
-    report,
     ...Object.entries(checklist)
       .filter(([, value]) => value === false)
       .map(([key]) => key),
   ]
     .filter(Boolean)
     .join(" ");
+  const combined = [
+    rowSpecificText,
+    report,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  // Technician report is job-level text and is repeated across every imported
+  // equipment row. Do not let report-only keywords create duplicate defects
+  // for rows whose own compliance/checklist/parts data passed.
   const shouldCreate =
-    !isCompliant(compliance, checklist) ||
+    rowFailed ||
     Boolean(parts) ||
-    containsAny(combined, [
+    hasChecklistFailure ||
+    containsAny(rowSpecificText, [
       "pressure test",
       "pressure testing required",
       "refill",

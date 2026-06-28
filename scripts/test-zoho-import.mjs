@@ -162,6 +162,35 @@ const hundred = parseZohoJobcardCsv(hundredJobCsv);
 assert.equal(hundred.summary.detectedJobs, 100, "should detect 100 historical jobs");
 assert.equal(hundred.summary.portableAssets, 100, "should detect 100 portable records");
 
+const repeatedReportCsv = [
+  headers.join(","),
+  ...Array.from({ length: 5 }, (_, i) =>
+    row({
+      "Unique ID": "DUP-REPORT-1",
+      Date: "01/01/2026",
+      "Customer Name": "Generator Site",
+      "Portable Fire Equipment": `Extinguisher 9kg DCP Service ${i + 1}`,
+      "Unnamed: 7": "9kg",
+      "Unnamed: 8": `Generator ${i + 1}`,
+      "Unnamed: 10": "Yes",
+      "Unnamed: 11": "Yes",
+      "Unnamed: 12": "Yes",
+      "Unnamed: 13": "Yes",
+      "Unnamed: 14": "Yes",
+      "Unnamed: 16": "Yes",
+      "Technicians Report":
+        "2.5kg fire extinguisher at Generator is too small for the Generator 9kg dcp required. no visible damage rust or corrosion",
+    })
+  ),
+].join("\n");
+
+const repeatedReport = parseZohoJobcardCsv(repeatedReportCsv);
+assert.equal(
+  repeatedReport.summary.likelyDefects,
+  0,
+  "shared technician report text must not create duplicate defects on compliant rows"
+);
+
 const extinguisherCsv = [
   headers.join(","),
   ...[
