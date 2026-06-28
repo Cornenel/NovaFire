@@ -9,14 +9,17 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { featureFlags } from "@/lib/fsm/feature-flags";
+import { fireComplianceConfig } from "@/lib/compliance/fireCompliance";
 import {
   calculateComplianceScore,
   detectRevenueOpportunities,
   type RevenueOpportunity,
 } from "@/lib/fsm/compliance";
 import { ComplianceScoreBadge } from "@/components/admin/compliance-score-badge";
+import { ComplianceRecheckButton } from "@/components/admin/compliance-recheck-button";
 import { todayInSA } from "@/lib/fsm/dates";
 import type { Asset } from "@/lib/fsm/types";
+import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Compliance | NovaFire Admin" };
 
@@ -25,9 +28,14 @@ export const metadata = { title: "Compliance | NovaFire Admin" };
  * Phase 5 (F8): Revenue opportunity detection across sites.
  * Dashboard only; no impact on operational workflows.
  */
-export default async function ComplianceDashboardPage() {
+export default async function ComplianceDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
   if (!featureFlags.complianceDashboard) notFound();
 
+  const { filter = "all" } = await searchParams;
   const supabase = await createClient();
   const today = todayInSA();
 
@@ -35,7 +43,7 @@ export default async function ComplianceDashboardPage() {
     supabase
       .from("assets")
       .select(
-        "id, status, next_service_date, annual_service_due_date, pressure_test_due_date, calculated_compliance_status, asset_type, location_description, size_capacity, asset_medium, site_id, site:sites(name, customer:customers(name))"
+        "id, asset_code, status, next_service_date, annual_service_due_date, pressure_test_due_date, calculated_compliance_status, compliance_reasons, asset_type, location_description, size_capacity, asset_medium, site_id, site:sites(name, customer:customers(name))"
       ),
     supabase.from("defects").select("id, asset:assets(site_id)").eq("status", "open"),
   ]);
@@ -43,11 +51,13 @@ export default async function ComplianceDashboardPage() {
   type AssetRow = Pick<
     Asset,
     | "id"
+    | "asset_code"
     | "status"
     | "next_service_date"
     | "annual_service_due_date"
     | "pressure_test_due_date"
     | "calculated_compliance_status"
+    | "compliance_reasons"
     | "asset_type"
     | "location_description"
     | "size_capacity"
@@ -60,6 +70,7 @@ export default async function ComplianceDashboardPage() {
     id: string;
     asset: { site_id: string } | null;
   }>;
+  const warningCutoff = addDays(today, fireComplianceConfig.warningDays);
 
   // Global figures
   const active = assets.filter((a) => a.status !== "removed");
@@ -117,6 +128,9 @@ export default async function ComplianceDashboardPage() {
   const allOpportunities = siteScores.flatMap((s) =>
     s.opportunities.map((o) => ({ ...o, siteName: s.name, siteId: s.siteId }))
   );
+  const filteredAssets = active.filter((asset) =>
+    matchesFilter(asset, filter, today, warningCutoff)
+  );
 
   const stats = [
     { label: "Total assets", value: totals.total, icon: Package, color: "text-zinc-300" },
@@ -126,6 +140,17 @@ export default async function ComplianceDashboardPage() {
     { label: "Pressure tests due", value: totals.pressureDue, icon: CalendarX, color: "text-amber-400" },
     { label: "Open defects", value: totals.openDefects, icon: AlertTriangle, color: "text-amber-400" },
   ];
+  const filters = [
+    ["all", "All"],
+    ["compliant", "Compliant"],
+    ["non_compliant", "Non-compliant"],
+    ["warning", "Warning"],
+    ["unknown", "Unknown"],
+    ["pressure_overdue", "Pressure test overdue"],
+    ["pressure_due_soon", "Pressure test due soon"],
+    ["annual_overdue", "Annual service overdue"],
+    ["missing_data", "Missing required data"],
+  ] as const;
 
   return (
     <div>
@@ -136,8 +161,10 @@ export default async function ComplianceDashboardPage() {
         Read-only overview – calculated live from the asset register.
       </p>
 
+      <ComplianceRecheckButton />
+
       {/* Overview cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
         {stats.map((s) => (
           <div
             key={s.label}
@@ -147,6 +174,23 @@ export default async function ComplianceDashboardPage() {
             <p className="text-2xl font-bold text-white">{s.value}</p>
             <p className="text-xs text-zinc-500">{s.label}</p>
           </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-6">
+        {filters.map(([value, label]) => (
+          <Link
+            key={value}
+            href={value === "all" ? "/admin/compliance" : `/admin/compliance?filter=${value}`}
+            className={cn(
+              "text-xs px-3 py-1.5 rounded-full border transition-colors",
+              filter === value
+                ? "bg-red-600 text-white border-red-500"
+                : "bg-white/[0.04] text-zinc-400 border-white/10 hover:text-white hover:bg-white/[0.08]"
+            )}
+          >
+            {label}
+          </Link>
         ))}
       </div>
 
@@ -185,7 +229,41 @@ export default async function ComplianceDashboardPage() {
         </div>
 
         {/* Phase 5 (F8): revenue opportunities */}
-        {featureFlags.revenueOpportunities && (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-sm font-semibold text-zinc-300 mb-3">
+              Filtered Equipment ({filteredAssets.length})
+            </h2>
+            {filteredAssets.length === 0 ? (
+              <p className="text-zinc-500 text-sm">No equipment matches this filter.</p>
+            ) : (
+              <div className="rounded-xl border border-white/[0.08] nf-glass-panel divide-y divide-white/5">
+                {filteredAssets.slice(0, 15).map((asset) => (
+                  <Link
+                    key={asset.id}
+                    href={`/admin/sites/${asset.site_id}`}
+                    className="block px-4 py-3 hover:bg-white/[0.03] transition-colors"
+                  >
+                    <p className="text-sm text-white truncate">
+                      {asset.asset_code} · {asset.location_description ?? "No location"}
+                    </p>
+                    <p className="text-xs text-zinc-500 truncate">
+                      {asset.site?.customer?.name ?? "Unknown customer"} ·{" "}
+                      {asset.site?.name ?? "Unknown site"} ·{" "}
+                      {asset.calculated_compliance_status ?? asset.status}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+            {filteredAssets.length > 15 && (
+              <p className="text-[10px] text-zinc-600 mt-2">
+                Showing first 15 matching records.
+              </p>
+            )}
+          </div>
+
+          {featureFlags.revenueOpportunities && (
           <div>
             <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-300 mb-3">
               <TrendingUp className="w-4 h-4 text-emerald-400" />
@@ -218,8 +296,56 @@ export default async function ComplianceDashboardPage() {
               Recommendation engine only – no automatic customer communication.
             </p>
           </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
+}
+
+function matchesFilter(
+  asset: Pick<
+    Asset,
+    | "status"
+    | "calculated_compliance_status"
+    | "pressure_test_due_date"
+    | "annual_service_due_date"
+    | "next_service_date"
+    | "compliance_reasons"
+  >,
+  filter: string,
+  today: string,
+  warningCutoff: string
+) {
+  const status = asset.calculated_compliance_status ?? legacyStatus(asset.status);
+  const pressureDue = asset.pressure_test_due_date;
+  const annualDue = asset.annual_service_due_date ?? asset.next_service_date;
+  if (filter === "all") return true;
+  if (filter === "compliant") return status === "COMPLIANT";
+  if (filter === "non_compliant") return status === "NON_COMPLIANT";
+  if (filter === "warning") return status === "WARNING";
+  if (filter === "unknown") return status === "UNKNOWN";
+  if (filter === "pressure_overdue") return Boolean(pressureDue && pressureDue <= today);
+  if (filter === "pressure_due_soon") {
+    return Boolean(pressureDue && pressureDue > today && pressureDue <= warningCutoff);
+  }
+  if (filter === "annual_overdue") return Boolean(annualDue && annualDue <= today);
+  if (filter === "missing_data") {
+    return (asset.compliance_reasons ?? []).some((reason) =>
+      reason.toLowerCase().includes("missing required identifying data")
+    );
+  }
+  return true;
+}
+
+function legacyStatus(status: Asset["status"]) {
+  if (status === "compliant" || status === "replaced") return "COMPLIANT";
+  if (status === "defective" || status === "missing") return "NON_COMPLIANT";
+  return "UNKNOWN";
+}
+
+function addDays(iso: string, days: number) {
+  const date = new Date(`${iso}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }

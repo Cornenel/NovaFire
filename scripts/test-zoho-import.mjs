@@ -5,6 +5,7 @@ import {
   evaluateFireExtinguisherCompliance,
   fireComplianceConfig,
 } from "../src/lib/compliance/fireCompliance.ts";
+import { evaluateExistingAssetCompliance } from "../src/lib/compliance/recheck.ts";
 
 const headers = [
   "Unique ID",
@@ -369,6 +370,139 @@ assert.equal(
 assert.ok(
   rawOverride.sourceFieldsUsed.includes("rawImportedStatus"),
   "raw imported status should remain part of audit source fields"
+);
+
+const historicalBase = {
+  asset: {
+    id: "asset-1",
+    asset_code: "NF-A-001",
+    asset_type: "fire_extinguisher",
+    status: "defective",
+    location_description: "Kitchen",
+    size_capacity: "9kg",
+    asset_medium: "DCP",
+    last_service_date: null,
+    next_service_date: null,
+    last_pressure_test_date: "2024-01-15",
+    import_raw_data: {
+      "Unnamed: 16": "Not compliant - pressure test not due",
+    },
+    calculated_compliance_status: "NON_COMPLIANT",
+    compliance_reasons: ["Old rule marked this non-compliant"],
+    compliance_next_actions: [],
+    annual_service_due_date: null,
+    pressure_test_due_date: null,
+  },
+  latestInspection: {
+    id: "inspection-1",
+    result: "pass",
+    created_at: "2026-01-15",
+    checklist: {
+      compliant_result: "Not compliant - pressure test not due",
+      last_pressure_test_date: "2024-01-15",
+    },
+    job: {
+      id: "job-1",
+      status: "completed",
+      completed_at: "2026-01-15T10:00:00Z",
+      legacy_technician_saqcc: "SAQCC-1",
+      legacy_zoho_jobcard_id: "ZJ-HIST-1",
+      import_source: "zoho_import",
+    },
+  },
+};
+
+const historicalRecheck = evaluateExistingAssetCompliance(
+  historicalBase,
+  "2026-06-01T00:00:00.000Z"
+);
+assert.equal(
+  historicalRecheck.result.status,
+  "COMPLIANT",
+  "historical completed extinguisher work with pressure test not due should update to compliant"
+);
+assert.equal(
+  historicalRecheck.rawImportedStatus,
+  "Not compliant - pressure test not due",
+  "raw imported status must remain visible for audit"
+);
+assert.equal(
+  historicalRecheck.history.previous_calculated_status,
+  "NON_COMPLIANT",
+  "history should capture previous calculated status"
+);
+assert.equal(
+  historicalRecheck.history.source_reference.job_id,
+  "job-1",
+  "history should include source job/report reference"
+);
+
+const historicalOverdue = evaluateExistingAssetCompliance(
+  {
+    ...historicalBase,
+    asset: {
+      ...historicalBase.asset,
+      id: "asset-2",
+      last_pressure_test_date: "2020-01-15",
+      calculated_compliance_status: "NON_COMPLIANT",
+      pressure_test_due_date: "2025-01-15",
+      compliance_reasons: ["Pressure test is due or overdue."],
+    },
+    latestInspection: {
+      ...historicalBase.latestInspection,
+      checklist: {
+        compliant_result: "Compliant",
+        last_pressure_test_date: "2020-01-15",
+      },
+    },
+  },
+  "2026-06-01T00:00:00.000Z"
+);
+assert.equal(
+  historicalOverdue.result.status,
+  "NON_COMPLIANT",
+  "historical pressure test overdue should remain non-compliant"
+);
+
+const historicalMissingDates = evaluateExistingAssetCompliance(
+  {
+    asset: {
+      id: "asset-3",
+      asset_code: "NF-A-003",
+      asset_type: "fire_extinguisher",
+      status: "compliant",
+      location_description: "Stores",
+      size_capacity: "9kg",
+      asset_medium: "DCP",
+      calculated_compliance_status: null,
+    },
+  },
+  "2026-06-01T00:00:00.000Z"
+);
+assert.equal(
+  historicalMissingDates.result.status,
+  "UNKNOWN",
+  "historical record with missing dates should become unknown"
+);
+
+const idempotentRecheck = evaluateExistingAssetCompliance(
+  {
+    ...historicalBase,
+    asset: {
+      ...historicalBase.asset,
+      calculated_compliance_status: historicalRecheck.payload.calculated_compliance_status,
+      compliance_reasons: historicalRecheck.payload.compliance_reasons,
+      compliance_next_actions: historicalRecheck.payload.compliance_next_actions,
+      annual_service_due_date: historicalRecheck.payload.annual_service_due_date,
+      pressure_test_due_date: historicalRecheck.payload.pressure_test_due_date,
+    },
+  },
+  "2026-06-01T00:00:00.000Z"
+);
+assert.equal(
+  idempotentRecheck.changed,
+  false,
+  "re-running historical recheck should be idempotent and avoid duplicate history"
 );
 
 console.log("Zoho Jobcard import parser tests passed.");

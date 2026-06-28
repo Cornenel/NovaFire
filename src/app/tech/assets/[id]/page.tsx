@@ -9,9 +9,11 @@ import {
   Camera,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { AssetStatusActions } from "@/components/tech/asset-status-actions";
 import { AssetInsights } from "@/components/tech/asset-insights";
 import { AssetComplianceBadge } from "@/components/admin/asset-compliance-badge";
+import { evaluateExistingAssetCompliance } from "@/lib/compliance/recheck";
 import { featureFlags } from "@/lib/fsm/feature-flags";
 import { computeAssetInsights } from "@/lib/fsm/insights";
 import {
@@ -46,6 +48,9 @@ export default async function AssetDetailPage({
   const { id } = await params;
   const { job: jobIdParam } = await searchParams;
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data } = await supabase
     .from("assets")
@@ -60,9 +65,6 @@ export default async function AssetDetailPage({
   // at this site (covers arriving here via QR scan).
   let jobId = jobIdParam ?? null;
   if (!jobId) {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
     const { data: openJob } = await supabase
       .from("jobs")
       .select("id")
@@ -95,7 +97,7 @@ export default async function AssetDetailPage({
       .limit(10),
     supabase
       .from("inspections")
-      .select("*")
+      .select("*, job:jobs(id, status, scheduled_date, completed_at, legacy_technician_saqcc, legacy_zoho_jobcard_id, import_source)")
       .eq("asset_id", id)
       .order("created_at", { ascending: false })
       .limit(10),
@@ -105,6 +107,36 @@ export default async function AssetDetailPage({
       .select("id", { count: "exact", head: true })
       .eq("asset_id", id),
   ]);
+
+  if (!asset.calculated_compliance_status) {
+    try {
+      const latestInspection = (inspections ?? [])[0] as
+        | (Inspection & { job?: Record<string, unknown> | null })
+        | undefined;
+      const evaluation = evaluateExistingAssetCompliance({
+        asset,
+        latestInspection,
+        unresolvedDefects: ((defects ?? []) as Defect[]).map((defect) => ({
+          status: defect.status,
+          severity: defect.severity,
+          description: defect.description,
+          defectType: defect.defect_type,
+          recommendedAction: defect.recommended_action,
+        })),
+      });
+      Object.assign(asset, evaluation.payload);
+      if (evaluation.changed) {
+        const admin = createAdminClient();
+        await admin.from("assets").update(evaluation.payload).eq("id", asset.id);
+        await admin.from("asset_compliance_recheck_history").insert({
+          ...evaluation.history,
+          created_by: user?.id ?? null,
+        });
+      }
+    } catch {
+      // Lazy recalculation must never block QR access or technician workflow.
+    }
+  }
 
   // Phase 5 (F1): Smart Asset Insights – computed from data already loaded
   const insights = featureFlags.assetInsights
