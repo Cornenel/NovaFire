@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { evaluateFireExtinguisherCompliance } from "@/lib/compliance/fireCompliance";
 import {
   ZOHO_IMPORT_SOURCE,
   jobTypeForImportedEquipment,
@@ -557,6 +558,10 @@ async function findOrCreateAsset(
     );
 
   if (match) {
+    await admin
+      .from("assets")
+      .update(compliancePayloadForImportedAsset(item))
+      .eq("id", match.id);
     result.assetsMatched++;
     return match;
   }
@@ -570,8 +575,10 @@ async function findOrCreateAsset(
       customer_asset_number: item.asset.customerAssetNumber,
       asset_medium: item.asset.medium,
       location_description: item.asset.locationDescription,
+      manufacture_date: item.asset.manufactureDate,
       last_service_date: item.asset.lastServiceDate ?? item.job.date,
       next_service_date: item.job.nextServiceDate,
+      last_pressure_test_date: item.asset.lastPressureTestDate,
       status: item.inspection.result === "pass" ? "compliant" : "defective",
       notes: item.asset.medium ? `Imported medium: ${item.asset.medium}` : null,
       legacy_zoho_jobcard_id: item.legacyZohoJobcardId,
@@ -581,6 +588,7 @@ async function findOrCreateAsset(
       import_idempotency_key: assetKey,
       legacy_description: item.asset.originalDescription,
       imported_unverified: item.asset.importedUnverified,
+      ...compliancePayloadForImportedAsset(item),
     })
     .select(
       "id, site_id, asset_type, size_capacity, customer_asset_number, asset_medium, location_description, legacy_description, import_idempotency_key"
@@ -592,6 +600,55 @@ async function findOrCreateAsset(
   context.assets.push(match);
   result.assetsCreated++;
   return match;
+}
+
+function compliancePayloadForImportedAsset(item: ZohoMappedEquipment) {
+  const rawImportedStatus =
+    typeof item.inspection.checklist.compliant_result === "string"
+      ? item.inspection.checklist.compliant_result
+      : null;
+  const compliance = evaluateFireExtinguisherCompliance({
+    assetType: item.asset.assetType,
+    assetStatus: item.inspection.result === "pass" ? "compliant" : "defective",
+    customerAssetNumber: item.asset.customerAssetNumber,
+    location: item.asset.locationDescription,
+    sizeCapacity: item.asset.sizeCapacity,
+    medium: item.asset.medium,
+    manufactureDate: item.asset.manufactureDate,
+    lastServiceDate: item.asset.lastServiceDate,
+    nextServiceDate: item.job.nextServiceDate,
+    lastPressureTestDate: item.asset.lastPressureTestDate,
+    nextPressureTestDate: item.asset.nextPressureTestDate,
+    workCompletedDate: item.job.addedTime ?? item.job.date,
+    workStatus: `completed ${rawImportedStatus ?? item.inspection.result}`,
+    rawImportedStatus,
+    condition: item.asset.originalDescription,
+    notes: [item.job.technicianReport, item.inspection.notes].filter(Boolean).join(" "),
+    technicianName: item.job.technicianName,
+    technicianSaqccNumber: item.job.saqccNumber,
+    unresolvedDefects: item.defect
+      ? [
+          {
+            status: "open",
+            severity: item.defect.severity,
+            description: item.defect.description,
+            recommendedAction: item.defect.recommendedAction,
+            defectType: "Zoho Import Finding",
+          },
+        ]
+      : [],
+  });
+
+  return {
+    calculated_compliance_status: compliance.status,
+    compliance_reasons: compliance.reasons,
+    compliance_next_actions: compliance.nextActions,
+    compliance_source_fields: compliance.sourceFieldsUsed,
+    compliance_calculated_at: new Date().toISOString(),
+    annual_service_due_date: compliance.calculatedDates.annualServiceDueDate ?? null,
+    pressure_test_due_date: compliance.calculatedDates.pressureTestDueDate ?? null,
+    hydro_test_due_date: compliance.calculatedDates.pressureTestDueDate ?? null,
+  };
 }
 
 async function rowExists(

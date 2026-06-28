@@ -17,6 +17,9 @@ export interface ComplianceInput {
     | "location_description"
     | "size_capacity"
     | "asset_medium"
+    | "calculated_compliance_status"
+    | "annual_service_due_date"
+    | "pressure_test_due_date"
   >[];
   openDefects: number;
 }
@@ -28,6 +31,7 @@ export interface ComplianceResult {
   defectiveAssets: number;
   missingAssets: number;
   expiredAssets: number;
+  pressureTestsDue: number;
   openDefects: number;
   totalAssets: number;
   missingEquipment: string[];
@@ -59,13 +63,23 @@ export function calculateComplianceScore(
   const active = input.assets.filter((a) => a.status !== "removed");
   const total = active.length;
 
-  const compliant = active.filter(
-    (a) => a.status === "compliant" || a.status === "replaced"
+  const compliant = active.filter((a) => effectiveComplianceStatus(a) === "COMPLIANT").length;
+  const defective = active.filter(
+    (a) =>
+      effectiveComplianceStatus(a) === "NON_COMPLIANT" ||
+      (!a.calculated_compliance_status && a.status === "defective")
   ).length;
-  const defective = active.filter((a) => a.status === "defective").length;
   const missing = active.filter((a) => a.status === "missing").length;
   const expired = active.filter(
-    (a) => a.next_service_date !== null && a.next_service_date < today
+    (a) =>
+      (a.annual_service_due_date ?? a.next_service_date) !== null &&
+      (a.annual_service_due_date ?? a.next_service_date)! < today
+  ).length;
+  const pressureDue = active.filter(
+    (a) =>
+      a.pressure_test_due_date !== null &&
+      a.pressure_test_due_date !== undefined &&
+      a.pressure_test_due_date <= today
   ).length;
 
   const missingEquipment = detectMissingEquipment(input.assets);
@@ -88,10 +102,20 @@ export function calculateComplianceScore(
     defectiveAssets: defective,
     missingAssets: missing,
     expiredAssets: expired,
+    pressureTestsDue: pressureDue,
     openDefects: input.openDefects,
     totalAssets: total,
     missingEquipment,
   };
+}
+
+function effectiveComplianceStatus(
+  asset: ComplianceInput["assets"][number]
+): "COMPLIANT" | "NON_COMPLIANT" | "WARNING" | "UNKNOWN" {
+  if (asset.calculated_compliance_status) return asset.calculated_compliance_status;
+  if (asset.status === "compliant" || asset.status === "replaced") return "COMPLIANT";
+  if (asset.status === "defective" || asset.status === "missing") return "NON_COMPLIANT";
+  return "UNKNOWN";
 }
 
 // ── F8: Revenue opportunity rules ──────────────────────────────────────────

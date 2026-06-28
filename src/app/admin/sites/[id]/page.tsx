@@ -4,10 +4,7 @@ import { ArrowLeft, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { AssetQr } from "@/components/admin/asset-qr";
 import { AssetCreateForm } from "@/components/admin/asset-create-form";
-import {
-  ASSET_STATUS_LABELS,
-  ASSET_STATUS_STYLES,
-} from "@/lib/fsm/labels";
+import { AssetComplianceBadge } from "@/components/admin/asset-compliance-badge";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type { Asset } from "@/lib/fsm/types";
 import { featureFlags } from "@/lib/fsm/feature-flags";
@@ -16,7 +13,6 @@ import {
   detectRevenueOpportunities,
 } from "@/lib/fsm/compliance";
 import { ComplianceScoreBadge } from "@/components/admin/compliance-score-badge";
-import { cn } from "@/lib/utils";
 
 export default async function AdminSiteDetailPage({
   params,
@@ -132,14 +128,7 @@ export default async function AdminSiteDetailPage({
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <span
-                      className={cn(
-                        "text-[10px] px-2 py-0.5 rounded-full border",
-                        ASSET_STATUS_STYLES[a.status]
-                      )}
-                    >
-                      {ASSET_STATUS_LABELS[a.status]}
-                    </span>
+                    <AssetComplianceBadge asset={a} />
                     <AssetQr
                       qrToken={a.qr_token}
                       assetCode={a.asset_code}

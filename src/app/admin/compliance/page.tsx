@@ -35,7 +35,7 @@ export default async function ComplianceDashboardPage() {
     supabase
       .from("assets")
       .select(
-        "id, status, next_service_date, asset_type, location_description, size_capacity, asset_medium, site_id, site:sites(name, customer:customers(name))"
+        "id, status, next_service_date, annual_service_due_date, pressure_test_due_date, calculated_compliance_status, asset_type, location_description, size_capacity, asset_medium, site_id, site:sites(name, customer:customers(name))"
       ),
     supabase.from("defects").select("id, asset:assets(site_id)").eq("status", "open"),
   ]);
@@ -45,6 +45,9 @@ export default async function ComplianceDashboardPage() {
     | "id"
     | "status"
     | "next_service_date"
+    | "annual_service_due_date"
+    | "pressure_test_due_date"
+    | "calculated_compliance_status"
     | "asset_type"
     | "location_description"
     | "size_capacity"
@@ -62,11 +65,17 @@ export default async function ComplianceDashboardPage() {
   const active = assets.filter((a) => a.status !== "removed");
   const totals = {
     total: active.length,
-    compliant: active.filter((a) => a.status === "compliant").length,
-    defective: active.filter((a) => a.status === "defective").length,
+    compliant: active.filter((a) => a.calculated_compliance_status === "COMPLIANT" || (!a.calculated_compliance_status && a.status === "compliant")).length,
+    defective: active.filter((a) => a.calculated_compliance_status === "NON_COMPLIANT" || (!a.calculated_compliance_status && a.status === "defective")).length,
     expired: active.filter(
-      (a) => a.next_service_date !== null && a.next_service_date < today
+      (a) =>
+        (a.annual_service_due_date ?? a.next_service_date) !== null &&
+        (a.annual_service_due_date ?? a.next_service_date)! < today
     ).length,
+    pressureDue: active.filter((a) => {
+      const dueDate = a.pressure_test_due_date;
+      return Boolean(dueDate && dueDate <= today);
+    }).length,
     openDefects: openDefects.length,
   };
 
@@ -114,6 +123,7 @@ export default async function ComplianceDashboardPage() {
     { label: "Compliant", value: totals.compliant, icon: ShieldCheck, color: "text-emerald-400" },
     { label: "Defective", value: totals.defective, icon: AlertTriangle, color: "text-red-400" },
     { label: "Expired service", value: totals.expired, icon: CalendarX, color: "text-amber-400" },
+    { label: "Pressure tests due", value: totals.pressureDue, icon: CalendarX, color: "text-amber-400" },
     { label: "Open defects", value: totals.openDefects, icon: AlertTriangle, color: "text-amber-400" },
   ];
 

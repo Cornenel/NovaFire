@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { parseZohoJobcardCsv } from "../src/lib/imports/zoho-jobcard.ts";
 import { formatAssetDisplayName } from "../src/lib/fsm/asset-display.ts";
+import {
+  evaluateFireExtinguisherCompliance,
+  fireComplianceConfig,
+} from "../src/lib/compliance/fireCompliance.ts";
 
 const headers = [
   "Unique ID",
@@ -242,5 +246,129 @@ assert.equal(
 const firstRunKeys = new Set(parsed.equipment.map((item) => item.idempotencyKey));
 const secondRunKeys = new Set(parseZohoJobcardCsv(fixture).equipment.map((item) => item.idempotencyKey));
 assert.deepEqual(secondRunKeys, firstRunKeys, "idempotency keys must be stable across runs");
+
+const baseComplianceInput = {
+  assetType: "fire_extinguisher",
+  assetCode: "NF-A-1",
+  location: "Kitchen",
+  sizeCapacity: "9kg",
+  medium: "DCP",
+  workStatus: "completed serviced passed",
+  workCompletedDate: "2026-01-15",
+  technicianSaqccNumber: "SAQCC-1",
+  today: "2026-06-01",
+};
+
+assert.equal(
+  evaluateFireExtinguisherCompliance({
+    ...baseComplianceInput,
+    lastPressureTestDate: "2024-01-15",
+  }).status,
+  "COMPLIANT",
+  "completed service with pressure test not due should be compliant"
+);
+
+assert.equal(
+  evaluateFireExtinguisherCompliance({
+    ...baseComplianceInput,
+    lastPressureTestDate: "2020-01-15",
+  }).status,
+  "NON_COMPLIANT",
+  "completed service with overdue pressure test should be non-compliant"
+);
+
+assert.equal(
+  evaluateFireExtinguisherCompliance({
+    ...baseComplianceInput,
+    lastServiceDate: "2026-01-15",
+    lastPressureTestDate: "2024-01-15",
+  }).status,
+  "COMPLIANT",
+  "completed service with annual service still valid should be compliant"
+);
+
+assert.equal(
+  evaluateFireExtinguisherCompliance({
+    ...baseComplianceInput,
+    lastPressureTestDate: "2024-01-15",
+    unresolvedDefects: [
+      {
+        status: "open",
+        severity: "critical",
+        description: "Cylinder leaking from valve",
+      },
+    ],
+  }).status,
+  "NON_COMPLIANT",
+  "unresolved leaking defect should make unit non-compliant"
+);
+
+assert.notEqual(
+  evaluateFireExtinguisherCompliance({
+    ...baseComplianceInput,
+    rawImportedStatus: "Not compliant - pressure test not due",
+    notes: "No pressure test required yet",
+    lastPressureTestDate: "2024-01-15",
+  }).status,
+  "NON_COMPLIANT",
+  '"pressure test not due" must not trigger non-compliance because it contains due'
+);
+
+assert.equal(
+  evaluateFireExtinguisherCompliance({
+    ...baseComplianceInput,
+    lastServiceDate: null,
+    workCompletedDate: "2026-03-10",
+    lastPressureTestDate: "2024-01-15",
+  }).calculatedDates.annualServiceDueDate,
+  "2027-03-10",
+  "missing service date should fall back to completed work date"
+);
+
+assert.equal(
+  evaluateFireExtinguisherCompliance({
+    assetType: "fire_extinguisher",
+    assetCode: "NF-A-2",
+    location: "Stores",
+    sizeCapacity: "9kg",
+    medium: "DCP",
+    today: "2026-06-01",
+  }).status,
+  "UNKNOWN",
+  "missing all service/work dates should be unknown"
+);
+
+assert.equal(
+  evaluateFireExtinguisherCompliance({
+    ...baseComplianceInput,
+    medium: "CO2",
+    lastPressureTestDate: "2020-01-15",
+    config: {
+      ...fireComplianceConfig,
+      pressureTestIntervals: {
+        ...fireComplianceConfig.pressureTestIntervals,
+        co2: 10,
+      },
+    },
+  }).calculatedDates.pressureTestDueDate,
+  "2030-01-15",
+  "CO2 pressure test interval should be configurable"
+);
+
+const rawOverride = evaluateFireExtinguisherCompliance({
+  ...baseComplianceInput,
+  rawImportedStatus: "Not compliant - pressure test not due",
+  notes: "Service completed; pressure test not due",
+  lastPressureTestDate: "2024-01-15",
+});
+assert.equal(
+  rawOverride.status,
+  "COMPLIANT",
+  "raw imported non-compliant status can be overridden when evidence supports compliance"
+);
+assert.ok(
+  rawOverride.sourceFieldsUsed.includes("rawImportedStatus"),
+  "raw imported status should remain part of audit source fields"
+);
 
 console.log("Zoho Jobcard import parser tests passed.");

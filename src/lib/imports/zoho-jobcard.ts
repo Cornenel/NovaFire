@@ -76,8 +76,10 @@ export interface ZohoMappedEquipment {
     customerAssetNumber: string | null;
     medium: string | null;
     locationDescription: string | null;
+    manufactureDate: string | null;
     lastServiceDate: string | null;
     lastPressureTestDate: string | null;
+    nextPressureTestDate: string | null;
     importedUnverified: boolean;
   };
   inspection: {
@@ -490,6 +492,41 @@ function mapEquipment(
       : parsed.capacity;
   const compliance =
     section === "portable" ? clean(row["Unnamed: 16"]) : clean(row["Unnamed: 35"]);
+  const manufactureDate = parseDate(
+    firstAliasedValue(row, [
+      "Manufacture Date",
+      "Manufactured Date",
+      "Date Manufactured",
+      "Cylinder Manufacture Date",
+      "MFG Date",
+    ])
+  );
+  const lastPressureTestDate = parseDate(
+    section === "portable"
+      ? clean(row["Unnamed: 9"]) ??
+          firstAliasedValue(row, [
+            "Last Pressure Test Date",
+            "Pressure Test Date",
+            "Last Hydro Test Date",
+            "Hydro Test Date",
+            "Cylinder Test Date",
+          ])
+      : firstAliasedValue(row, [
+          "Last Pressure Test Date",
+          "Pressure Test Date",
+          "Last Hydro Test Date",
+          "Hydro Test Date",
+        ])
+  );
+  const nextPressureTestDate = parseDate(
+    firstAliasedValue(row, [
+      "Next Pressure Test Date",
+      "Pressure Test Due Date",
+      "Next Hydro Test Date",
+      "Hydro Test Due Date",
+      "Next Cylinder Test Date",
+    ])
+  );
   const report = job.technicianReport;
   const checklist =
     section === "portable"
@@ -537,10 +574,11 @@ function mapEquipment(
       customerAssetNumber: portableNumberOrCapacity?.customerAssetNumber ?? null,
       medium: parsed.medium,
       locationDescription: location,
+      manufactureDate,
       lastServiceDate:
         section === "fixed" ? parseDate(clean(row["Unnamed: 19"])) : null,
-      lastPressureTestDate:
-        section === "portable" ? parseDate(clean(row["Unnamed: 9"])) : null,
+      lastPressureTestDate,
+      nextPressureTestDate,
       importedUnverified: parsed.unknown || !location,
     },
     inspection: {
@@ -687,6 +725,17 @@ function yesNo(value: string | null | undefined): boolean | null {
   if (["yes", "y", "true", "pass", "ok", "compliant"].includes(text)) return true;
   if (["no", "n", "false", "fail", "not compliant"].includes(text)) return false;
   if (text.includes("pressure testing required")) return false;
+  return null;
+}
+
+function firstAliasedValue(row: CsvRow, aliases: string[]): string | null {
+  const normalizedAliases = aliases.map(normalizeText);
+  for (const [key, value] of Object.entries(row)) {
+    if (normalizedAliases.includes(normalizeText(key))) {
+      const cleaned = clean(value);
+      if (cleaned) return cleaned;
+    }
+  }
   return null;
 }
 

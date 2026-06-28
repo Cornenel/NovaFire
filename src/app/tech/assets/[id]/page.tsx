@@ -11,6 +11,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { AssetStatusActions } from "@/components/tech/asset-status-actions";
 import { AssetInsights } from "@/components/tech/asset-insights";
+import { AssetComplianceBadge } from "@/components/admin/asset-compliance-badge";
 import { featureFlags } from "@/lib/fsm/feature-flags";
 import { computeAssetInsights } from "@/lib/fsm/insights";
 import {
@@ -138,6 +139,18 @@ export default async function AssetDetailPage({
       "Next service",
       asset.next_service_date ? fmtDate(asset.next_service_date) : null,
     ],
+    [
+      "Annual service due",
+      asset.annual_service_due_date ? fmtDate(asset.annual_service_due_date) : null,
+    ],
+    [
+      "Last pressure test",
+      asset.last_pressure_test_date ? fmtDate(asset.last_pressure_test_date) : null,
+    ],
+    [
+      "Pressure test due",
+      asset.pressure_test_due_date ? fmtDate(asset.pressure_test_due_date) : null,
+    ],
   ];
 
   return (
@@ -174,6 +187,10 @@ export default async function AssetDetailPage({
 
       {/* Phase 5 (F1): read-only insights – collapsible, flag-gated */}
       {insights && <AssetInsights data={insights} />}
+
+      <div className="mb-6">
+        <AssetComplianceBadge asset={asset} showDetails />
+      </div>
 
       {/* Details */}
       <div className="rounded-xl border border-white/[0.08] nf-glass-panel divide-y divide-white/5 mb-6">

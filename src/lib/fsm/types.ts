@@ -127,8 +127,17 @@ export interface Asset {
   manufacture_date: string | null;
   last_service_date: string | null;
   next_service_date: string | null;
+  last_pressure_test_date?: string | null;
   /** Phase 5 (additive, nullable) – hydro/pressure test due date */
   hydro_test_due_date?: string | null;
+  calculated_compliance_status?: "COMPLIANT" | "NON_COMPLIANT" | "WARNING" | "UNKNOWN" | null;
+  compliance_reasons?: string[] | null;
+  compliance_next_actions?: string[] | null;
+  compliance_source_fields?: string[] | null;
+  compliance_calculated_at?: string | null;
+  annual_service_due_date?: string | null;
+  pressure_test_due_date?: string | null;
+  import_raw_data?: Record<string, unknown> | null;
   status: AssetStatus;
   notes: string | null;
 }
