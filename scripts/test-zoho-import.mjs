@@ -741,6 +741,7 @@ const jcFixture = [
       "Unnamed: 13": "Yes",
       "Unnamed: 14": "Yes",
       "Unnamed: 16": "Pressure testing required",
+      "Next Service Date": "Yes",
     })
   ),
 ].join("\n");
@@ -786,6 +787,12 @@ assert.equal(
   jcParsed.equipment[0].partsUsed?.servicePartsUsed.length,
   4,
   "replacement parts should split into used service parts"
+);
+assert.equal(
+  jcParsed.warnings.filter((warning) => warning.code === "invalid_next_service_date")
+    .length,
+  0,
+  "child asset rows must not treat checklist Yes values as next service date"
 );
 
 assert.throws(

@@ -241,11 +241,44 @@ function getNextServiceCell(
   headers: string[],
   columnMap: ZohoColumnMap
 ): string | null {
-  return (
-    getZohoCell(row, headers, columnMap.nextServiceDate) ??
-    clean(row["Next Service Date"]) ??
-    clean(row["Unnamed: 35"])
-  );
+  for (const candidate of [
+    getZohoCell(row, headers, columnMap.nextServiceDate),
+    clean(row["Next Service Date"]),
+    clean(row["Unnamed: 35"]),
+  ]) {
+    if (candidate && isLikelyDateValue(candidate)) return candidate;
+  }
+  return null;
+}
+
+function isLikelyDateValue(value: string | null | undefined): boolean {
+  const text = clean(value);
+  if (!text) return false;
+  const normalized = normalizeText(text);
+  if (
+    [
+      "yes",
+      "y",
+      "no",
+      "n",
+      "true",
+      "false",
+      "pass",
+      "fail",
+      "ok",
+      "compliant",
+      "not compliant",
+    ].includes(normalized)
+  ) {
+    return false;
+  }
+  if (
+    normalized.includes("pressure test") ||
+    normalized.includes("pressure testing")
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export type EquipmentSection = "portable" | "fixed";
@@ -466,7 +499,6 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
         });
         continue;
       }
-      mergeFooterFieldsIntoJob(currentJobcard, row, headers, columnMap);
     }
 
     if (!currentJobcard?.uniqueId) {
@@ -480,7 +512,13 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
     }
 
     const rowWarnings: ZohoWarning[] = [];
-    const job = mapJob(currentJobcard, columnMap, csvRowNumber, rowWarnings);
+    const job = mapJob(
+      currentJobcard,
+      columnMap,
+      csvRowNumber,
+      rowWarnings,
+      startsNewJobcard || letterLayoutJobRow
+    );
     const sections: EquipmentSection[] = [];
     if (hasPortableEquipment(row, columnMap, headers)) sections.push("portable");
     if (hasFixedEquipment(row, columnMap, headers)) sections.push("fixed");
@@ -739,30 +777,6 @@ function buildJobStateFromRow(
   return state;
 }
 
-function mergeFooterFieldsIntoJob(
-  state: JobState,
-  row: CsvRow,
-  headers: string[],
-  columnMap: ZohoColumnMap
-): void {
-  const assign = (key: keyof JobState, index: number | null | undefined) => {
-    const value = getZohoCell(row, headers, index);
-    if (value) state[key] = value;
-  };
-
-  assign("nextServiceDate", columnMap.nextServiceDate);
-  assign("technicianName", columnMap.technicianName);
-  assign("saqccNumber", columnMap.saqccNumber);
-  assign("addedTime", columnMap.addedTime);
-  assign("submittersLocation", columnMap.submittersLocation);
-  assign("technicianReport", columnMap.technicianNotes);
-  assign("marketingOptIn", columnMap.optInMarketing);
-  assign("customerName", columnMap.customerName);
-
-  const rowNextService = getNextServiceCell(row, headers, columnMap);
-  if (rowNextService) state.nextServiceDate = rowNextService;
-}
-
 function mergeJobFieldsFromRow(
   row: CsvRow,
   headers: string[],
@@ -798,7 +812,7 @@ function mergeJobFieldsFromRow(
         state.email = value;
         break;
       case "Next Service Date":
-        state.nextServiceDate = value;
+        if (isLikelyDateValue(value)) state.nextServiceDate = value;
         break;
       case "Technicians Name":
         state.technicianName = value;
@@ -897,7 +911,8 @@ function mapJob(
   state: JobState,
   columnMap: ZohoColumnMap,
   csvRowNumber: number,
-  warnings: ZohoWarning[]
+  warnings: ZohoWarning[],
+  validateJobFields = true
 ): ZohoMappedJob {
   const uniqueId = clean(state.uniqueId);
   if (!uniqueId) {
@@ -912,7 +927,7 @@ function mapJob(
   const customerName = clean(state.customerName);
   const email = clean(state.email);
 
-  if (!customerName) {
+  if (validateJobFields && !customerName) {
     warnings.push({
       code: "missing_customer_name",
       message: "Missing customer name on jobcard row.",
@@ -920,7 +935,7 @@ function mapJob(
       severity: "error",
     });
   }
-  if (email && !normalizeEmail(email)) {
+  if (validateJobFields && email && !normalizeEmail(email)) {
     warnings.push({
       code: "invalid_email",
       message: `Invalid email format: ${email}`,
@@ -930,7 +945,7 @@ function mapJob(
   }
 
   const date = parseDate(clean(state.date));
-  if (clean(state.date) && !date) {
+  if (validateJobFields && clean(state.date) && !date) {
     warnings.push({
       code: "invalid_date",
       message: `Could not parse job date: ${state.date}`,
@@ -940,7 +955,11 @@ function mapJob(
   }
 
   const nextServiceDate = parseDate(clean(state.nextServiceDate));
-  if (clean(state.nextServiceDate) && !nextServiceDate) {
+  if (
+    validateJobFields &&
+    isLikelyDateValue(state.nextServiceDate) &&
+    !nextServiceDate
+  ) {
     warnings.push({
       code: "invalid_next_service_date",
       message: `Could not parse next service date (column AK): ${state.nextServiceDate}`,
