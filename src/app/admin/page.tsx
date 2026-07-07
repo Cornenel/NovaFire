@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { MapPin, AlertTriangle, Plus } from "lucide-react";
+import { MapPin, AlertTriangle, Plus, BarChart3, ShieldCheck, Flame, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { JOB_STATUS_LABELS, JOB_STATUS_STYLES } from "@/lib/fsm/labels";
+import { featureFlags } from "@/lib/fsm/feature-flags";
 import type { JobStatus } from "@/lib/fsm/types";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +66,21 @@ export default async function AdminOverviewPage() {
     { label: "Awaiting parts", value: byStatus("awaiting_parts") },
   ];
 
+  const quickLinks = [
+    ...(featureFlags.complianceDashboard
+      ? [{ href: "/admin/compliance", label: "Compliance", icon: ShieldCheck }]
+      : []),
+    ...(featureFlags.executiveDashboard
+      ? [{ href: "/admin/executive", label: "Executive", icon: BarChart3 }]
+      : []),
+    ...(featureFlags.fireRiskRegister
+      ? [{ href: "/admin/fire-risks", label: "Fire Risks", icon: Flame }]
+      : []),
+    ...(featureFlags.customerPortal
+      ? [{ href: "/client-portal/login", label: "Client Portal", icon: ExternalLink }]
+      : []),
+  ];
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -76,14 +92,40 @@ export default async function AdminOverviewPage() {
             Today&apos;s Operations
           </h1>
         </div>
-        <Link
-          href="/admin/jobs/new"
-          className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New Job
-        </Link>
+        <div className="flex items-center gap-2">
+          {featureFlags.executiveDashboard ? (
+            <Link
+              href="/admin/executive"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-zinc-200 text-sm font-medium transition-colors"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Executive
+            </Link>
+          ) : null}
+          <Link
+            href="/admin/jobs/new"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New Job
+          </Link>
+        </div>
       </div>
+
+      {quickLinks.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+          {quickLinks.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-3 rounded-xl border border-white/[0.08] nf-glass-panel px-4 py-3 hover:bg-white/[0.03] transition-colors"
+            >
+              <item.icon className="w-4 h-4 text-red-400 shrink-0" />
+              <span className="text-sm font-medium text-white">{item.label}</span>
+            </Link>
+          ))}
+        </div>
+      ) : null}
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">

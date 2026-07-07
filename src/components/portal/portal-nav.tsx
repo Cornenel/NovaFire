@@ -12,6 +12,9 @@ const ITEMS = [
   { href: "/client-portal/compliance", label: "Compliance", exact: false },
   { href: "/client-portal/reports", label: "Reports", exact: false },
   { href: "/client-portal/defects", label: "Defects", exact: false },
+  ...(featureFlags.fireRiskRegister
+    ? [{ href: "/client-portal/risks", label: "Fire Risks", exact: false }]
+    : []),
   ...(featureFlags.quotePreparation
     ? [{ href: "/client-portal/quotes", label: "Quotes", exact: false }]
     : []),
@@ -22,7 +25,7 @@ export function PortalNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-1 overflow-x-auto">
+    <nav className="flex items-center gap-1 min-w-max">
       {ITEMS.map((item) => {
         const isActive = item.exact
           ? pathname === item.href

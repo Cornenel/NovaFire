@@ -32,4 +32,9 @@ export const featureFlags = {
     process.env.NEXT_PUBLIC_FF_REVENUE_OPPORTUNITIES !== "false",
   /** Phase 2: Customer portal (read-only client access) */
   customerPortal: process.env.NEXT_PUBLIC_FF_CUSTOMER_PORTAL !== "false",
+  /** Phase 3: Executive operations dashboard */
+  executiveDashboard:
+    process.env.NEXT_PUBLIC_FF_EXECUTIVE_DASHBOARD !== "false",
+  /** Phase 4: Site fire risk register */
+  fireRiskRegister: process.env.NEXT_PUBLIC_FF_FIRE_RISK_REGISTER !== "false",
 } as const;

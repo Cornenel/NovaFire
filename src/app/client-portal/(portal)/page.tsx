@@ -3,11 +3,14 @@ import { MapPin, ShieldCheck, AlertTriangle, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ComplianceScoreBadge } from "@/components/admin/compliance-score-badge";
 import { featureFlags } from "@/lib/fsm/feature-flags";
-import { calculateComplianceScore } from "@/lib/fsm/compliance";
+import { loadPortalCompliance } from "@/lib/fsm/customer-compliance";
+import { isUnresolvedFireRisk } from "@/lib/fsm/fire-risks";
+import type { FireRiskStatus } from "@/lib/fsm/types";
 import { requirePortalSession } from "@/lib/portal/session";
 import {
   loadPortalAssets,
   loadPortalDefects,
+  loadPortalFireRisks,
   loadPortalJobs,
   loadPortalSites,
 } from "@/lib/portal/queries";
@@ -16,21 +19,23 @@ export default async function PortalDashboardPage() {
   const session = await requirePortalSession();
   const supabase = await createClient();
 
-  const [sites, assets, jobs, defects] = await Promise.all([
+  const [sites, assets, jobs, defects, fireRisks, compliance] = await Promise.all([
     loadPortalSites(supabase, session),
     loadPortalAssets(supabase, session),
     loadPortalJobs(supabase, session),
     loadPortalDefects(supabase, session),
+    featureFlags.fireRiskRegister
+      ? loadPortalFireRisks(supabase, session)
+      : Promise.resolve([]),
+    featureFlags.complianceScore
+      ? loadPortalCompliance(supabase, session.customer.id, session.siteScopeId)
+      : Promise.resolve(null),
   ]);
 
   const openDefects = defects.filter((d) => d.status === "open").length;
-  const compliance =
-    featureFlags.complianceScore && assets.length > 0
-      ? calculateComplianceScore({
-          assets,
-          openDefects,
-        })
-      : null;
+  const openFireRisks = fireRisks.filter((risk) =>
+    isUnresolvedFireRisk(risk.status as FireRiskStatus)
+  ).length;
 
   const stats = [
     { label: "Sites", value: sites.length, href: "/client-portal/sites" },
@@ -40,6 +45,15 @@ export default async function PortalDashboardPage() {
       value: openDefects,
       href: "/client-portal/defects",
     },
+    ...(featureFlags.fireRiskRegister
+      ? [
+          {
+            label: "Open fire risks",
+            value: openFireRisks,
+            href: "/client-portal/risks",
+          },
+        ]
+      : []),
     {
       label: "Service reports",
       value: jobs.length,

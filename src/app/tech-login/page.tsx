@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -102,6 +103,14 @@ export default function TechLoginPage() {
 
         <p className="text-center text-zinc-600 text-xs mt-6">
           Staff accounts only. Contact your administrator for access.
+        </p>
+        <p className="text-center text-sm mt-4">
+          <Link
+            href="/client-portal/login"
+            className="text-violet-400 hover:text-violet-300 transition-colors"
+          >
+            Customer? Sign in to the Client Portal →
+          </Link>
         </p>
       </motion.div>
     </div>

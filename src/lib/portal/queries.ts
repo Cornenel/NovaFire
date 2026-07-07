@@ -68,6 +68,27 @@ export async function loadPortalJobs(
   return data ?? [];
 }
 
+export async function loadPortalFireRisks(
+  supabase: SupabaseClient,
+  session: PortalSession
+) {
+  let query = supabase
+    .from("fire_risks")
+    .select(
+      "id, risk_type, severity, description, recommended_action, status, location_description, created_at, site:sites(name)"
+    )
+    .eq("customer_id", session.customer.id)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (session.siteScopeId) {
+    query = query.eq("site_id", session.siteScopeId);
+  }
+
+  const { data } = await query;
+  return data ?? [];
+}
+
 export async function loadPortalDefects(
   supabase: SupabaseClient,
   session: PortalSession

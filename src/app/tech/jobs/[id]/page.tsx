@@ -9,9 +9,11 @@ import {
   ChevronRight,
   CheckCircle2,
   FileDown,
+  Flame,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { JobWorkflow } from "@/components/tech/job-workflow";
+import { featureFlags } from "@/lib/fsm/feature-flags";
 import {
   ASSET_STATUS_STYLES,
   ASSET_STATUS_LABELS,
@@ -145,6 +147,15 @@ export default async function JobDetailPage({
             <FileDown className="w-4 h-4" />
             Service Report (PDF)
           </a>
+        )}
+        {featureFlags.fireRiskRegister && job.status !== "cancelled" && (
+          <Link
+            href={`/tech/jobs/${job.id}/risk`}
+            className="mt-3 w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-red-500/20 bg-red-500/[0.04] text-red-300 text-sm font-medium hover:bg-red-500/[0.08] transition-colors"
+          >
+            <Flame className="w-4 h-4" />
+            Log Fire Risk
+          </Link>
         )}
       </div>
 

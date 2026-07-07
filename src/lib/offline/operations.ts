@@ -64,6 +64,21 @@ export type OfflineOp =
       };
     }
   | {
+      type: "fire_risk";
+      payload: {
+        id: string;
+        jobId: string;
+        customerId: string;
+        siteId: string;
+        technicianId: string;
+        riskType: string;
+        severity: string;
+        locationDescription: string | null;
+        description: string;
+        recommendedAction: string | null;
+      };
+    }
+  | {
       type: "photo";
       payload: {
         id: string;
@@ -272,6 +287,28 @@ export async function executeOp(op: OfflineOp): Promise<void> {
         event_type: p.action,
         details: {},
       });
+      break;
+    }
+
+    case "fire_risk": {
+      const p = op.payload;
+      const { error } = await supabase.from("fire_risks").upsert(
+        {
+          id: p.id,
+          customer_id: p.customerId,
+          site_id: p.siteId,
+          job_id: p.jobId,
+          technician_id: p.technicianId,
+          location_description: p.locationDescription,
+          risk_type: p.riskType,
+          severity: p.severity,
+          description: p.description,
+          recommended_action: p.recommendedAction,
+          status: "open",
+        },
+        { onConflict: "id", ignoreDuplicates: true }
+      );
+      throwIfError(error, "Fire risk");
       break;
     }
 

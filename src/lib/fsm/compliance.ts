@@ -22,6 +22,10 @@ export interface ComplianceInput {
     | "pressure_test_due_date"
   >[];
   openDefects: number;
+  /** Phase 4: unresolved critical site fire risks */
+  criticalFireRisks?: number;
+  /** Phase 4: all unresolved site fire risks */
+  unresolvedFireRisks?: number;
 }
 
 export interface ComplianceResult {
@@ -93,6 +97,10 @@ export function calculateComplianceScore(
       100 * (0.55 * healthRatio + 0.25 * currencyRatio + 0.2 * defectFactor);
   }
   score -= missingEquipment.length * 5;
+  const criticalRisks = input.criticalFireRisks ?? 0;
+  const unresolvedRisks = input.unresolvedFireRisks ?? 0;
+  score -= criticalRisks * 8;
+  score -= Math.max(0, unresolvedRisks - criticalRisks) * 3;
   score = Math.max(0, Math.min(100, Math.round(score)));
 
   return {

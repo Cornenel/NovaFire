@@ -54,6 +54,26 @@ export type InspectionResult = "pass" | "fail";
 
 export type PhotoStage = "before" | "after" | "general" | "defect";
 
+export type FireRiskType =
+  | "fire_hazard"
+  | "blocked_exit"
+  | "missing_signage"
+  | "combustible_storage"
+  | "electrical_risk"
+  | "emergency_lighting_issue"
+  | "evacuation_concern"
+  | "access_obstruction"
+  | "thatch_fire_spread_risk"
+  | "other";
+
+export type FireRiskSeverity = "low" | "medium" | "high" | "critical";
+
+export type FireRiskStatus =
+  | "open"
+  | "in_progress"
+  | "resolved"
+  | "accepted_risk";
+
 export type AssetEventType =
   | "installed"
   | "inspected"
@@ -222,4 +242,22 @@ export interface VanStockRow {
   stock_item_id: string;
   quantity: number;
   stock_item: StockItem;
+}
+
+export interface FireRisk {
+  id: string;
+  customer_id: string;
+  site_id: string;
+  job_id: string | null;
+  asset_id: string | null;
+  technician_id: string | null;
+  location_description: string | null;
+  risk_type: FireRiskType;
+  severity: FireRiskSeverity;
+  description: string;
+  recommended_action: string | null;
+  status: FireRiskStatus;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
 }

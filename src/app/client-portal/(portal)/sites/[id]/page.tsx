@@ -6,7 +6,7 @@ import { ComplianceScoreBadge } from "@/components/admin/compliance-score-badge"
 import { AssetComplianceBadge } from "@/components/admin/asset-compliance-badge";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import { featureFlags } from "@/lib/fsm/feature-flags";
-import { calculateComplianceScore } from "@/lib/fsm/compliance";
+import { loadSiteCompliance } from "@/lib/fsm/customer-compliance";
 import { requirePortalSession } from "@/lib/portal/session";
 import { loadPortalAssets } from "@/lib/portal/queries";
 
@@ -29,16 +29,9 @@ export default async function PortalSiteDetailPage({
   if (session.siteScopeId && session.siteScopeId !== site.id) notFound();
 
   const assets = await loadPortalAssets(supabase, session, site.id);
-  const { count: openDefects } = await supabase
-    .from("defects")
-    .select("id, asset:assets!inner(site_id)", { count: "exact", head: true })
-    .eq("status", "open")
-    .eq("asset.site_id", site.id);
-
-  const compliance =
-    featureFlags.complianceScore && assets.length > 0
-      ? calculateComplianceScore({ assets, openDefects: openDefects ?? 0 })
-      : null;
+  const compliance = featureFlags.complianceScore
+    ? await loadSiteCompliance(supabase, site.id, session.customer.id)
+    : null;
 
   return (
     <div>

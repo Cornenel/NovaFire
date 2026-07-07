@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -95,6 +96,15 @@ export default function PortalLoginPage() {
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
+
+        <p className="text-center text-sm mt-6">
+          <Link
+            href="/tech-login"
+            className="text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            Nova Fire staff? Sign in here →
+          </Link>
+        </p>
       </motion.div>
     </div>
   );

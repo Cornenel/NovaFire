@@ -12,6 +12,8 @@ const NAV_LINKS = [
   { label: "Process", href: "/#process" },
   { label: "Training", href: "/training" },
   { label: "Compliance Check", href: "/#compliance-assessment" },
+  { label: "Client Portal", href: "/client-portal/login" },
+  { label: "Staff Login", href: "/tech-login" },
 ];
 
 export function Navbar() {

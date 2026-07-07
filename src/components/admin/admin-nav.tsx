@@ -17,6 +17,12 @@ const ITEMS = [
   ...(featureFlags.complianceDashboard
     ? [{ href: "/admin/compliance", label: "Compliance", exact: false }]
     : []),
+  ...(featureFlags.executiveDashboard
+    ? [{ href: "/admin/executive", label: "Executive", exact: false }]
+    : []),
+  ...(featureFlags.fireRiskRegister
+    ? [{ href: "/admin/fire-risks", label: "Fire Risks", exact: false }]
+    : []),
   ...(featureFlags.quotePreparation
     ? [{ href: "/admin/quotes", label: "Quotes", exact: false }]
     : []),
@@ -26,7 +32,7 @@ export function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-1 overflow-x-auto">
+    <nav className="flex items-center gap-1 min-w-max">
       {ITEMS.map((item) => {
         const isActive = item.exact
           ? pathname === item.href

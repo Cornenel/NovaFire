@@ -5,7 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createSite } from "@/app/admin/actions";
 import { CustomerEditPanel } from "@/components/admin/customer-edit-form";
 import { PortalUsersPanel } from "@/components/admin/portal-users-panel";
+import { ComplianceScoreBadge } from "@/components/admin/compliance-score-badge";
 import { featureFlags } from "@/lib/fsm/feature-flags";
+import { loadCustomerCompliance } from "@/lib/fsm/customer-compliance";
 
 const inputCls =
   "w-full px-3.5 py-2.5 rounded-lg bg-[#171717] border border-white/10 text-white placeholder-zinc-600 text-sm focus:border-red-500/50 focus:outline-none focus:ring-2 focus:ring-red-500/20";
@@ -62,6 +64,11 @@ export default async function AdminCustomerDetailPage({
     (importedRowsCount ?? 0) > 0 ||
     (importedJobsCount ?? 0) > 0;
 
+  const compliance =
+    featureFlags.complianceScore
+      ? await loadCustomerCompliance(supabase, customer.id)
+      : null;
+
   return (
     <div>
       <Link
@@ -102,6 +109,11 @@ export default async function AdminCustomerDetailPage({
             {customer.email ? ` · ${customer.email}` : ""}
             {customer.phone ? ` · ${customer.phone}` : ""}
           </p>
+          {compliance ? (
+            <div className="mt-3">
+              <ComplianceScoreBadge result={compliance} size="lg" />
+            </div>
+          ) : null}
         </div>
         {isAdmin && <CustomerEditPanel customer={customer} />}
       </div>

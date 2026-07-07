@@ -14,6 +14,8 @@ const DEFAULT_QUICK = [
   { label: "Why Nova Fire", href: "/#whynovafire" },
   { label: "Industries", href: "/#industries" },
   { label: "Process", href: "/#process" },
+  { label: "Client Portal", href: "/client-portal/login" },
+  { label: "Staff Login", href: "/tech-login" },
 ] as const;
 
 export function LegalNav({ className }: { className?: string }) {

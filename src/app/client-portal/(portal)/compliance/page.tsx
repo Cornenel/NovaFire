@@ -2,10 +2,11 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ComplianceScoreBadge } from "@/components/admin/compliance-score-badge";
 import { featureFlags } from "@/lib/fsm/feature-flags";
+import { detectRevenueOpportunities } from "@/lib/fsm/compliance";
 import {
-  calculateComplianceScore,
-  detectRevenueOpportunities,
-} from "@/lib/fsm/compliance";
+  loadPortalCompliance,
+  loadSiteCompliance,
+} from "@/lib/fsm/customer-compliance";
 import { requirePortalSession } from "@/lib/portal/session";
 import { loadPortalAssets, loadPortalSites } from "@/lib/portal/queries";
 
@@ -20,31 +21,22 @@ export default async function PortalCompliancePage() {
   const siteScores = await Promise.all(
     sites.map(async (site) => {
       const siteAssets = assets.filter((a) => a.site_id === site.id);
-      const { count: openDefects } = await supabase
-        .from("defects")
-        .select("id, asset:assets!inner(site_id)", { count: "exact", head: true })
-        .eq("status", "open")
-        .eq("asset.site_id", site.id);
-
       const score =
-        featureFlags.complianceScore && siteAssets.length > 0
-          ? calculateComplianceScore({
-              assets: siteAssets,
-              openDefects: openDefects ?? 0,
-            })
+        featureFlags.complianceScore
+          ? await loadSiteCompliance(supabase, site.id, session.customer.id)
           : null;
 
       return { site, score, opportunities: detectRevenueOpportunities(siteAssets) };
     })
   );
 
-  const totalOpenDefects = siteScores.reduce(
-    (sum, row) => sum + (row.score?.openDefects ?? 0),
-    0
-  );
   const overall =
-    featureFlags.complianceScore && assets.length > 0
-      ? calculateComplianceScore({ assets, openDefects: totalOpenDefects })
+    featureFlags.complianceScore
+      ? await loadPortalCompliance(
+          supabase,
+          session.customer.id,
+          session.siteScopeId
+        )
       : null;
 
   return (
@@ -57,6 +49,9 @@ export default async function PortalCompliancePage() {
         <div className="mb-8 rounded-xl border border-white/[0.08] nf-glass-panel p-4">
           <p className="text-xs text-zinc-500 mb-2">Overall compliance</p>
           <ComplianceScoreBadge result={overall} size="lg" />
+          <p className="text-xs text-zinc-600 mt-2">
+            Score includes asset health, service currency, open defects, and unresolved fire risks.
+          </p>
         </div>
       ) : (
         <p className="text-sm text-zinc-500 mb-6">

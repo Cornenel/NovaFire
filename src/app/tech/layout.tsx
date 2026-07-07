@@ -54,10 +54,11 @@ export default async function TechLayout({
             {["dispatcher", "admin"].includes(profile.role) && (
               <Link
                 href="/admin"
-                className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors text-xs"
                 aria-label="Admin dashboard"
               >
                 <LayoutDashboard className="w-4 h-4" />
+                <span className="hidden sm:inline">Admin</span>
               </Link>
             )}
             <span className="text-sm text-zinc-400 truncate max-w-[120px]">

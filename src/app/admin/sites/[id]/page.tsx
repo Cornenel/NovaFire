@@ -8,10 +8,8 @@ import { AssetComplianceBadge } from "@/components/admin/asset-compliance-badge"
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type { Asset } from "@/lib/fsm/types";
 import { featureFlags } from "@/lib/fsm/feature-flags";
-import {
-  calculateComplianceScore,
-  detectRevenueOpportunities,
-} from "@/lib/fsm/compliance";
+import { detectRevenueOpportunities } from "@/lib/fsm/compliance";
+import { loadSiteCompliance } from "@/lib/fsm/customer-compliance";
 import { ComplianceScoreBadge } from "@/components/admin/compliance-score-badge";
 
 export default async function AdminSiteDetailPage({
@@ -38,16 +36,8 @@ export default async function AdminSiteDetailPage({
 
   // Phase 5 (F5): read-only compliance score for this site
   let compliance = null;
-  if (featureFlags.complianceScore && assets.length > 0) {
-    const { count: openDefects } = await supabase
-      .from("defects")
-      .select("id, asset:assets!inner(site_id)", { count: "exact", head: true })
-      .eq("status", "open")
-      .eq("asset.site_id", id);
-    compliance = calculateComplianceScore({
-      assets,
-      openDefects: openDefects ?? 0,
-    });
+  if (featureFlags.complianceScore) {
+    compliance = await loadSiteCompliance(supabase, id, site.customer.id);
   }
 
   // Phase 5 (F8): recommendation engine only – no customer communication
