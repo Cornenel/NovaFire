@@ -136,14 +136,17 @@ export function ZohoJobcardImporter() {
 }
 
 function SummaryCards({ preview }: { preview: NonNullable<ZohoImportActionState["preview"]> }) {
+  const validation = preview.validation;
   const cards = [
-    ["Detected jobs", preview.summary.detectedJobs],
-    ["Portable assets", preview.summary.portableAssets],
-    ["Fixed assets", preview.summary.fixedAssets],
-    ["Likely defects", preview.summary.likelyDefects],
-    ["Skipped rows", preview.skippedRows],
-    ["Warning rows", preview.warningRows],
-    ["Duplicate rows", preview.duplicateRows],
+    ["Jobcards", validation.jobcards_created],
+    ["Portable assets", validation.portable_assets_imported],
+    ["Fixed assets", validation.fixed_assets_imported],
+    ["Service records", validation.service_records_created],
+    ["Pressure tests due", validation.pressure_tests_required],
+    ["Parts used", validation.parts_used_records_created],
+    ["Quote required", validation.quote_required_records_created],
+    ["Duplicates skipped", validation.duplicate_rows_skipped],
+    ["Errors", validation.errors.length],
   ] as const;
 
   return (
@@ -252,6 +255,7 @@ function WarningsList({ preview }: { preview: NonNullable<ZohoImportActionState[
 }
 
 function ResultPanel({ result }: { result: NonNullable<ZohoImportActionState["result"]> }) {
+  const validation = result.validation;
   const rows = [
     ["Customers created", result.customersCreated],
     ["Customers matched", result.customersMatched],
@@ -261,9 +265,14 @@ function ResultPanel({ result }: { result: NonNullable<ZohoImportActionState["re
     ["Assets matched", result.assetsMatched],
     ["Inspections created", result.inspectionsCreated],
     ["Defects created", result.defectsCreated],
+    ["Portable assets", validation.portable_assets_imported],
+    ["Fixed assets", validation.fixed_assets_imported],
+    ["Pressure tests due", validation.pressure_tests_required],
+    ["Parts used", validation.parts_used_records_created],
+    ["Quote required", validation.quote_required_records_created],
+    ["Duplicates skipped", validation.duplicate_rows_skipped],
     ["Skipped rows", result.skippedRows],
     ["Warning rows", result.warningRows],
-    ["Duplicate rows", result.duplicateRows],
   ] as const;
 
   return (

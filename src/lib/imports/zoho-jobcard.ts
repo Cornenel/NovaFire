@@ -10,30 +10,25 @@ export const ZOHO_IMPORT_SOURCE = "zoho_import";
 /**
  * Zoho Jobcard CSV column layout (Excel letters A–AR, 44 columns, 0-based indices).
  *
- * A–O  (0–14)  Portable fire equipment serviced
- * P    (15)     Replacement parts used on portable device
- * Q    (16)     Additional service requirements (ignored on import)
- * R–AH (17–33) Fixed fire equipment (hose reels, hydrants, etc.)
- * AI   (34)     Spares replaced on fixed equipment
- * AJ   (35)     Device compliance (portable and fixed)
- * AK   (36)     Next service date
- * AL   (37)     Marketing opt-in
- * AM   (38)     Customer name
- * AN   (39)     Technician name
- * AO   (40)     SAQCC number
- * AP   (41)     Time added
- * AQ   (42)     Submitter location
- * AR   (43)     Technician notes / report
+ * Hierarchical export (Unique ID at A, portable at G / index 6):
+ * A  (0)  Unique ID / Jobcard ID
+ * B  (1)  Date
+ * C–F(2–5) Customer details
+ * G–Q(6–16) Portable fire equipment (annual result at Q / 16)
+ * R–AH(17–33) Fixed fire equipment
+ * AI (34) Fixed spares replaced
+ * AJ (35) Fixed device compliance
+ * AK–AR(36–43) Jobcard footer / visit fields
  *
- * Some exports prepend Unique ID / Date / contact columns (A–G), shifting portable
- * fields to H–. The parser detects that legacy layout automatically.
+ * Legacy exports shift portable to H (index 7) with the same footer columns.
+ * Letter-only exports start portable at A (index 0) with no job prefix columns.
  */
 
 export const ZOHO_COL = {
   PORTABLE_START: 0,
   PORTABLE_END: 14,
   REPLACEMENT_PARTS: 15,
-  ADDITIONAL_SERVICE: 16,
+  ANNUAL_SERVICE_RESULT: 16,
   FIXED_START: 17,
   FIXED_END: 33,
   FIXED_SPARES: 34,
@@ -49,6 +44,7 @@ export const ZOHO_COL = {
 } as const;
 
 const LEGACY_JOB_PREFIX_COLUMNS = 7;
+const HIERARCHICAL_PORTABLE_START = 6;
 
 const JOB_FIELDS = [
   "Unique ID",
@@ -73,7 +69,7 @@ const REQUIRED_HEADERS = [
   "SAQCC Number",
 ] as const;
 
-export type ZohoLayout = "letter" | "legacy";
+export type ZohoLayout = "hierarchical" | "legacy" | "letter";
 
 export interface ZohoColumnMap {
   layout: ZohoLayout;
@@ -83,6 +79,7 @@ export interface ZohoColumnMap {
   portableLastPressureTest: number;
   portableCheckIndices: number[];
   replacementParts: number;
+  annualServiceResult: number | null;
   fixedDevice: number;
   fixedLocation: number;
   fixedLastService: number;
@@ -121,22 +118,58 @@ interface JobState {
   marketingOptIn?: string;
 }
 
-export function buildZohoColumnMap(headers: string[]): ZohoColumnMap {
-  const legacy =
-    headers[0] === "Unique ID" ||
-    (headers.length > 7 && headers[7] === "Portable Fire Equipment");
+export interface ParsedPortableDevice {
+  assetCategory: string;
+  deviceType: string;
+  deviceSize: string | null;
+  agentType: string | null;
+  serviceType: string | null;
+  assetType: AssetType;
+  capacity: string | null;
+  medium: string | null;
+  unknown: boolean;
+  parseError: string | null;
+}
 
-  const portableOffset = legacy ? LEGACY_JOB_PREFIX_COLUMNS : 0;
-  const fixedOffset = legacy ? 1 : 0;
+export interface AnnualServiceOutcome {
+  annualServiceCompliant: boolean;
+  pressureTestRequired: boolean;
+  assetStatus: string;
+  inspectionPass: boolean;
+}
+
+export interface ServicePartsUsed {
+  replacementPartsUsedRaw: string | null;
+  servicePartsUsed: string[];
+  partsUsed: boolean;
+}
+
+export function buildZohoColumnMap(headers: string[]): ZohoColumnMap {
+  const hierarchical =
+    headers[0] === "Unique ID" &&
+    (headers[HIERARCHICAL_PORTABLE_START] === "Portable Fire Equipment" ||
+      headers[HIERARCHICAL_PORTABLE_START]?.toLowerCase().includes("portable"));
+  const legacy =
+    !hierarchical &&
+    (headers[0] === "Unique ID" ||
+      (headers.length > 7 && headers[7] === "Portable Fire Equipment"));
+
+  const portableOffset = hierarchical
+    ? HIERARCHICAL_PORTABLE_START
+    : legacy
+      ? LEGACY_JOB_PREFIX_COLUMNS
+      : 0;
+  const fixedOffset = legacy || hierarchical ? 0 : 0;
 
   return {
-    layout: legacy ? "legacy" : "letter",
-    portableDevice: portableOffset + ZOHO_COL.PORTABLE_START,
+    layout: hierarchical ? "hierarchical" : legacy ? "legacy" : "letter",
+    portableDevice: portableOffset + (hierarchical ? 0 : legacy ? 0 : ZOHO_COL.PORTABLE_START),
     portableWeight: portableOffset + 1,
     portableLocation: portableOffset + 2,
     portableLastPressureTest: portableOffset + 3,
     portableCheckIndices: [4, 5, 6, 7, 8].map((i) => portableOffset + i),
     replacementParts: ZOHO_COL.REPLACEMENT_PARTS,
+    annualServiceResult: hierarchical ? ZOHO_COL.ANNUAL_SERVICE_RESULT : null,
     fixedDevice: ZOHO_COL.FIXED_START + fixedOffset,
     fixedLocation: ZOHO_COL.FIXED_START + fixedOffset + 1,
     fixedLastService: ZOHO_COL.FIXED_START + fixedOffset + 2,
@@ -150,17 +183,17 @@ export function buildZohoColumnMap(headers: string[]): ZohoColumnMap {
     deviceCompliance: ZOHO_COL.DEVICE_COMPLIANCE,
     nextServiceDate: ZOHO_COL.NEXT_SERVICE_DATE,
     optInMarketing: ZOHO_COL.OPT_IN_MARKETING,
-    customerName: ZOHO_COL.CUSTOMER_NAME,
+    customerName: hierarchical ? 2 : ZOHO_COL.CUSTOMER_NAME,
     technicianName: ZOHO_COL.TECHNICIAN_NAME,
     saqccNumber: ZOHO_COL.SAQCC_NUMBER,
     addedTime: ZOHO_COL.ADDED_TIME,
     submittersLocation: ZOHO_COL.SUBMITTERS_LOCATION,
     technicianNotes: ZOHO_COL.TECHNICIAN_NOTES,
-    uniqueId: legacy ? 0 : headerIndex(headers, "Unique ID"),
-    jobDate: legacy ? 1 : headerIndex(headers, "Date"),
-    contactName: legacy ? 3 : headerIndex(headers, "Contact Name"),
-    phone: legacy ? 4 : headerIndex(headers, "Phone"),
-    email: legacy ? 5 : headerIndex(headers, "Email"),
+    uniqueId: hierarchical || legacy ? 0 : headerIndex(headers, "Unique ID"),
+    jobDate: hierarchical || legacy ? 1 : headerIndex(headers, "Date"),
+    contactName: hierarchical ? 3 : legacy ? 3 : headerIndex(headers, "Contact Name"),
+    phone: hierarchical ? 4 : legacy ? 4 : headerIndex(headers, "Phone"),
+    email: hierarchical ? 5 : legacy ? 5 : headerIndex(headers, "Email"),
   };
 }
 
@@ -180,10 +213,22 @@ export function getZohoCell(
   return clean(row[key]);
 }
 
-function getComplianceCell(
+function getPortableComplianceCell(
   row: CsvRow,
-  headers: string[]
+  headers: string[],
+  columnMap: ZohoColumnMap
 ): string | null {
+  if (columnMap.annualServiceResult !== null) {
+    return getZohoCell(row, headers, columnMap.annualServiceResult);
+  }
+  return getComplianceCell(row, headers);
+}
+
+function getFixedComplianceCell(row: CsvRow, headers: string[]): string | null {
+  return getComplianceCell(row, headers);
+}
+
+function getComplianceCell(row: CsvRow, headers: string[]): string | null {
   return (
     getZohoCell(row, headers, ZOHO_COL.DEVICE_COMPLIANCE) ??
     clean(row["Unnamed: 34"]) ??
@@ -234,6 +279,9 @@ export interface ZohoMappedEquipment {
   legacyZohoJobcardId: string;
   rawRow: Record<string, string>;
   job: ZohoMappedJob;
+  parsedDevice: ParsedPortableDevice | null;
+  annualService: AnnualServiceOutcome | null;
+  partsUsed: ServicePartsUsed | null;
   asset: {
     assetType: AssetType;
     originalDescription: string;
@@ -249,7 +297,7 @@ export interface ZohoMappedEquipment {
   };
   inspection: {
     assetType: AssetType;
-    checklist: Record<string, string | boolean | null>;
+    checklist: Record<string, string | boolean | string[] | null>;
     result: InspectionResult;
     requiresPressureTest: boolean;
     requiresRefill: boolean;
@@ -257,6 +305,7 @@ export interface ZohoMappedEquipment {
   };
   defect: {
     shouldCreate: boolean;
+    quoteRequired: boolean;
     severity: DefectSeverity;
     description: string;
     recommendedAction: string;
@@ -277,6 +326,19 @@ export interface ZohoPreviewJob {
   status: "ready" | "warning" | "skipped";
 }
 
+export interface ZohoImportValidation {
+  jobcards_created: number;
+  jobcards_updated: number;
+  portable_assets_imported: number;
+  fixed_assets_imported: number;
+  service_records_created: number;
+  pressure_tests_required: number;
+  parts_used_records_created: number;
+  quote_required_records_created: number;
+  duplicate_rows_skipped: number;
+  errors: ZohoWarning[];
+}
+
 export interface ZohoParseResult {
   headers: string[];
   totalCsvRows: number;
@@ -286,6 +348,7 @@ export interface ZohoParseResult {
   equipment: ZohoMappedEquipment[];
   jobs: ZohoPreviewJob[];
   warnings: ZohoWarning[];
+  validation: ZohoImportValidation;
   summary: {
     detectedJobs: number;
     portableAssets: number;
@@ -296,6 +359,19 @@ export interface ZohoParseResult {
 }
 
 type CsvRow = Record<string, string>;
+
+interface CsvStructure {
+  headerRowIndex: number;
+  dataStartIndex: number;
+  sectionHeaderSkipped: boolean;
+}
+
+function detectCsvStructure(rows: string[][]): CsvStructure {
+  if (rows.length >= 2 && rows[1]?.[0]?.trim() === "Unique ID") {
+    return { headerRowIndex: 1, dataStartIndex: 2, sectionHeaderSkipped: true };
+  }
+  return { headerRowIndex: 0, dataStartIndex: 1, sectionHeaderSkipped: false };
+}
 
 export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
   const rows = parseCsv(csvText);
@@ -309,12 +385,22 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
     ]);
   }
 
-  const rawHeaders = rows[0].map((h) => h.trim());
+  const structure = detectCsvStructure(rows);
+  const rawHeaders = rows[structure.headerRowIndex].map((h) => h.trim());
   const headers = makeUniqueHeaders(rawHeaders);
   const columnMap = buildZohoColumnMap(headers);
   const warnings: ZohoWarning[] = [];
+
+  if (structure.sectionHeaderSkipped) {
+    warnings.push({
+      code: "section_header_skipped",
+      message: "Skipped row 1 section header row; row 2 used as field headers.",
+      severity: "info",
+    });
+  }
+
   for (const h of REQUIRED_HEADERS) {
-    if (!headers.includes(h) && columnMap.layout === "legacy") {
+    if (!headers.includes(h) && columnMap.layout !== "letter") {
       warnings.push({
         code: "missing_header",
         message: `Expected header "${h}" was not found.`,
@@ -330,36 +416,85 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
     });
   }
 
-  const state: JobState = {};
+  let currentJobcard: JobState | null = null;
   const seenKeys = new Set<string>();
   const equipment: ZohoMappedEquipment[] = [];
-  let skippedRows = 0;
+  let skippedRows = structure.sectionHeaderSkipped ? 1 : 0;
   let duplicateRows = 0;
 
-  for (let i = 1; i < rows.length; i++) {
+  for (let i = structure.dataStartIndex; i < rows.length; i++) {
     const csvRowNumber = i + 1;
     const row = rowToObject(headers, rows[i]);
-    if (isBlankRow(row) || isQuestionLabelRow(row, columnMap, headers)) {
+    if (isBlankRow(row)) {
+      skippedRows++;
+      continue;
+    }
+    if (isQuestionLabelRow(row, columnMap, headers)) {
       skippedRows++;
       continue;
     }
 
-    mergeJobStateFromRow(row, headers, columnMap, state);
+    const uniqueIdOnRow = getZohoCell(row, headers, columnMap.uniqueId);
+    const startsNewJobcard = Boolean(uniqueIdOnRow);
+    const letterLayoutJobRow =
+      columnMap.layout === "letter" &&
+      !startsNewJobcard &&
+      hasLetterLayoutJobFields(row, headers, columnMap);
+
+    if (startsNewJobcard) {
+      currentJobcard = buildJobStateFromRow(row, headers, columnMap);
+    } else if (letterLayoutJobRow) {
+      currentJobcard = buildJobStateFromRow(row, headers, columnMap);
+      if (!currentJobcard.uniqueId) {
+        currentJobcard.uniqueId = deriveLegacyJobcardId({
+          addedTime: currentJobcard.addedTime,
+          customerName: currentJobcard.customerName,
+          technicianName: currentJobcard.technicianName,
+          submittersLocation: currentJobcard.submittersLocation,
+          date: currentJobcard.date,
+          csvRowNumber,
+        });
+      }
+    } else {
+      if (!currentJobcard) {
+        warnings.push({
+          code: "orphan_asset_row",
+          message:
+            "Asset/device row appeared before any Jobcard row with a Unique ID.",
+          csvRowNumber,
+          severity: "error",
+        });
+        continue;
+      }
+      mergeFooterFieldsIntoJob(currentJobcard, row, headers, columnMap);
+    }
+
+    if (!currentJobcard?.uniqueId) {
+      warnings.push({
+        code: "missing_unique_id",
+        message: "Jobcard row is missing required Unique ID (column A).",
+        csvRowNumber,
+        severity: "error",
+      });
+      continue;
+    }
 
     const rowWarnings: ZohoWarning[] = [];
-    const job = mapJob(state, columnMap, csvRowNumber, rowWarnings);
+    const job = mapJob(currentJobcard, columnMap, csvRowNumber, rowWarnings);
     const sections: EquipmentSection[] = [];
     if (hasPortableEquipment(row, columnMap, headers)) sections.push("portable");
     if (hasFixedEquipment(row, columnMap, headers)) sections.push("fixed");
 
     if (sections.length === 0) {
-      skippedRows++;
-      warnings.push({
-        code: "row_skipped",
-        message: "Row contains no portable or fixed equipment data.",
-        csvRowNumber,
-        severity: "info",
-      });
+      if (!startsNewJobcard) {
+        skippedRows++;
+        warnings.push({
+          code: "row_skipped",
+          message: "Child row contains no portable or fixed equipment data.",
+          csvRowNumber,
+          severity: "info",
+        });
+      }
       continue;
     }
 
@@ -377,7 +512,7 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
         duplicateRows++;
         mapped.warnings.push({
           code: "duplicate_row",
-          message: "Duplicate equipment idempotency key detected in this CSV.",
+          message: "Duplicate equipment import fingerprint detected in this CSV.",
           csvRowNumber,
           severity: "warning",
         });
@@ -398,15 +533,20 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
       .filter((row): row is number => typeof row === "number")
   ).size;
 
+  const validation = buildImportValidation(equipment, duplicateRows, allWarnings);
+
+  assertNoFatalParseErrors(allWarnings);
+
   return {
     headers,
-    totalCsvRows: Math.max(0, rows.length - 1),
+    totalCsvRows: Math.max(0, rows.length - structure.headerRowIndex - 1),
     skippedRows,
     duplicateRows,
     warningRows,
     equipment,
     jobs,
     warnings: allWarnings,
+    validation,
     summary: {
       detectedJobs: jobs.length,
       portableAssets: equipment.filter((e) => e.section === "portable").length,
@@ -414,6 +554,37 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
       likelyDefects: equipment.filter((e) => e.defect?.shouldCreate).length,
       readyEquipmentRows: equipment.length,
     },
+  };
+}
+
+function assertNoFatalParseErrors(warnings: ZohoWarning[]): void {
+  const fatal = warnings.filter((w) => w.severity === "error");
+  if (fatal.length > 0) {
+    throw new Error(
+      `CSV import failed: ${fatal.map((w) => w.message).join("; ")}`
+    );
+  }
+}
+
+function buildImportValidation(
+  equipment: ZohoMappedEquipment[],
+  duplicateRows: number,
+  warnings: ZohoWarning[]
+): ZohoImportValidation {
+  const jobIds = new Set(equipment.map((e) => e.legacyZohoJobcardId));
+  return {
+    jobcards_created: jobIds.size,
+    jobcards_updated: 0,
+    portable_assets_imported: equipment.filter((e) => e.section === "portable").length,
+    fixed_assets_imported: equipment.filter((e) => e.section === "fixed").length,
+    service_records_created: equipment.length,
+    pressure_tests_required: equipment.filter(
+      (e) => e.annualService?.pressureTestRequired || e.inspection.requiresPressureTest
+    ).length,
+    parts_used_records_created: equipment.filter((e) => e.partsUsed?.partsUsed).length,
+    quote_required_records_created: equipment.filter((e) => e.defect?.quoteRequired).length,
+    duplicate_rows_skipped: duplicateRows,
+    errors: warnings.filter((w) => w.severity === "error"),
   };
 }
 
@@ -436,6 +607,18 @@ export function normalizeEmail(value: string | null | undefined): string | null 
 }
 
 function emptyResult(warnings: ZohoWarning[]): ZohoParseResult {
+  const validation: ZohoImportValidation = {
+    jobcards_created: 0,
+    jobcards_updated: 0,
+    portable_assets_imported: 0,
+    fixed_assets_imported: 0,
+    service_records_created: 0,
+    pressure_tests_required: 0,
+    parts_used_records_created: 0,
+    quote_required_records_created: 0,
+    duplicate_rows_skipped: 0,
+    errors: warnings.filter((w) => w.severity === "error"),
+  };
   return {
     headers: [],
     totalCsvRows: 0,
@@ -445,6 +628,7 @@ function emptyResult(warnings: ZohoWarning[]): ZohoParseResult {
     equipment: [],
     jobs: [],
     warnings,
+    validation,
     summary: {
       detectedJobs: 0,
       portableAssets: 0,
@@ -545,7 +729,41 @@ function isQuestionLabelRow(
   );
 }
 
-function mergeJobStateFromRow(
+function buildJobStateFromRow(
+  row: CsvRow,
+  headers: string[],
+  columnMap: ZohoColumnMap
+): JobState {
+  const state: JobState = {};
+  mergeJobFieldsFromRow(row, headers, columnMap, state);
+  return state;
+}
+
+function mergeFooterFieldsIntoJob(
+  state: JobState,
+  row: CsvRow,
+  headers: string[],
+  columnMap: ZohoColumnMap
+): void {
+  const assign = (key: keyof JobState, index: number | null | undefined) => {
+    const value = getZohoCell(row, headers, index);
+    if (value) state[key] = value;
+  };
+
+  assign("nextServiceDate", columnMap.nextServiceDate);
+  assign("technicianName", columnMap.technicianName);
+  assign("saqccNumber", columnMap.saqccNumber);
+  assign("addedTime", columnMap.addedTime);
+  assign("submittersLocation", columnMap.submittersLocation);
+  assign("technicianReport", columnMap.technicianNotes);
+  assign("marketingOptIn", columnMap.optInMarketing);
+  assign("customerName", columnMap.customerName);
+
+  const rowNextService = getNextServiceCell(row, headers, columnMap);
+  if (rowNextService) state.nextServiceDate = rowNextService;
+}
+
+function mergeJobFieldsFromRow(
   row: CsvRow,
   headers: string[],
   columnMap: ZohoColumnMap,
@@ -625,7 +843,6 @@ function hasPortableEquipment(
   headers: string[]
 ): boolean {
   if (getZohoCell(row, headers, columnMap.portableDevice)) return true;
-  if (getZohoCell(row, headers, columnMap.portableWeight)) return true;
   if (getZohoCell(row, headers, columnMap.portableLocation)) return true;
   return Boolean(clean(row["Portable Fire Equipment"]));
 }
@@ -641,46 +858,66 @@ function hasFixedEquipment(
   return Boolean(clean(row["Fixed Fire Equipment"]));
 }
 
+function hasLetterLayoutJobFields(
+  row: CsvRow,
+  headers: string[],
+  columnMap: ZohoColumnMap
+): boolean {
+  return Boolean(
+    getZohoCell(row, headers, columnMap.customerName) ||
+      getZohoCell(row, headers, columnMap.addedTime) ||
+      getZohoCell(row, headers, columnMap.technicianName)
+  );
+}
+
+function deriveLegacyJobcardId(input: {
+  addedTime?: string;
+  customerName?: string;
+  technicianName?: string;
+  submittersLocation?: string;
+  date?: string;
+  csvRowNumber: number;
+}): string {
+  const parts = [
+    input.addedTime,
+    input.customerName,
+    input.technicianName,
+    input.submittersLocation,
+    input.date,
+  ]
+    .map((value) => normalizeText(value))
+    .filter(Boolean);
+  if (parts.length > 0) {
+    return `zoho-${parts.join("-").slice(0, 120)}`;
+  }
+  return `missing-${input.csvRowNumber}`;
+}
+
 function mapJob(
   state: JobState,
   columnMap: ZohoColumnMap,
   csvRowNumber: number,
   warnings: ZohoWarning[]
 ): ZohoMappedJob {
-  const uniqueId =
-    clean(state.uniqueId) ??
-    deriveLegacyJobcardId({
-      addedTime: state.addedTime,
-      customerName: state.customerName,
-      technicianName: state.technicianName,
-      submittersLocation: state.submittersLocation,
-      date: state.date,
-      csvRowNumber,
-    });
-  const customerName = clean(state.customerName);
-  const email = clean(state.email);
-
-  if (!state.uniqueId && columnMap.layout === "legacy") {
+  const uniqueId = clean(state.uniqueId);
+  if (!uniqueId) {
     warnings.push({
       code: "missing_unique_id",
-      message: "Missing Zoho Unique ID after forward-fill.",
+      message: "Missing Zoho Unique ID on jobcard row.",
       csvRowNumber,
       severity: "error",
     });
-  } else if (!state.uniqueId && columnMap.layout === "letter") {
-    warnings.push({
-      code: "derived_job_id",
-      message: `Derived job id ${uniqueId} from customer, technician and time added (column AP).`,
-      csvRowNumber,
-      severity: "info",
-    });
   }
+
+  const customerName = clean(state.customerName);
+  const email = clean(state.email);
+
   if (!customerName) {
     warnings.push({
       code: "missing_customer_name",
-      message: "Missing customer name after forward-fill (column AM).",
+      message: "Missing customer name on jobcard row.",
       csvRowNumber,
-      severity: "warning",
+      severity: "error",
     });
   }
   if (email && !normalizeEmail(email)) {
@@ -713,7 +950,7 @@ function mapJob(
   }
 
   return {
-    legacyZohoJobcardId: uniqueId,
+    legacyZohoJobcardId: uniqueId ?? `missing-${csvRowNumber}`,
     date,
     addedTime: parseDateTime(clean(state.addedTime)) ?? date,
     customerName,
@@ -728,27 +965,124 @@ function mapJob(
   };
 }
 
-function deriveLegacyJobcardId(input: {
-  addedTime?: string;
-  customerName?: string;
-  technicianName?: string;
-  submittersLocation?: string;
-  date?: string;
-  csvRowNumber: number;
-}): string {
-  const parts = [
-    input.addedTime,
-    input.customerName,
-    input.technicianName,
-    input.submittersLocation,
-    input.date,
-  ]
-    .map((value) => normalizeText(value))
-    .filter(Boolean);
-  if (parts.length > 0) {
-    return `zoho-${parts.join("-").slice(0, 120)}`;
+export function parsePortableDeviceDescription(
+  description: string
+): ParsedPortableDevice {
+  const text = description.trim();
+  const lower = text.toLowerCase();
+
+  if (lower.includes("blanket")) {
+    return {
+      assetCategory: "Portable Fire Equipment",
+      deviceType: "Fire Blanket",
+      deviceSize: null,
+      agentType: null,
+      serviceType: lower.includes("service") ? "Annual Service" : null,
+      assetType: "fire_blanket",
+      capacity: null,
+      medium: null,
+      unknown: false,
+      parseError: null,
+    };
   }
-  return `missing-${input.csvRowNumber}`;
+
+  const deviceType = lower.includes("extinguisher") ? "Extinguisher" : "Extinguisher";
+  const sizeMatch = text.match(/(\d+(?:\.\d+)?)\s*kg/i);
+  const deviceSize = sizeMatch?.[0] ?? null;
+  const agentType = /\bco2\b/i.test(text)
+    ? "CO2"
+    : /\bdcp\b/i.test(text)
+      ? "DCP"
+      : null;
+  const serviceType = /\bservice\b/i.test(text) ? "Annual Service" : null;
+
+  const unknown =
+    !lower.includes("extinguisher") &&
+    !lower.includes("blanket") &&
+    !lower.includes("dcp") &&
+    !lower.includes("co2");
+
+  const parseError =
+    !unknown && lower.includes("extinguisher") && !deviceSize
+      ? `Could not parse extinguisher size from device description: ${description}`
+      : null;
+
+  return {
+    assetCategory: "Portable Fire Equipment",
+    deviceType,
+    deviceSize,
+    agentType,
+    serviceType,
+    assetType: "fire_extinguisher",
+    capacity: deviceSize,
+    medium: agentType,
+    unknown,
+    parseError,
+  };
+}
+
+export function parseAnnualServiceResult(
+  value: string | null | undefined
+): AnnualServiceOutcome | null {
+  const text = clean(value);
+  if (!text) return null;
+  const normalized = normalizeText(text);
+
+  if (["yes", "compliant", "pass", "passed"].includes(normalized)) {
+    return {
+      annualServiceCompliant: true,
+      pressureTestRequired: false,
+      assetStatus: "Compliant",
+      inspectionPass: true,
+    };
+  }
+
+  if (
+    normalized.includes("pressure testing required") ||
+    normalized.includes("pressure test required")
+  ) {
+    return {
+      annualServiceCompliant: true,
+      pressureTestRequired: true,
+      assetStatus: "Service Completed - Pressure Test Due",
+      inspectionPass: true,
+    };
+  }
+
+  if (["no", "not compliant", "fail", "failed"].includes(normalized)) {
+    return {
+      annualServiceCompliant: false,
+      pressureTestRequired: false,
+      assetStatus: "Non-Compliant",
+      inspectionPass: false,
+    };
+  }
+
+  return null;
+}
+
+export function splitServiceParts(
+  value: string | null | undefined
+): ServicePartsUsed {
+  const raw = clean(value);
+  if (!raw || !isMeaningfulPartsOrSpares(raw)) {
+    return {
+      replacementPartsUsedRaw: null,
+      servicePartsUsed: [],
+      partsUsed: false,
+    };
+  }
+
+  const servicePartsUsed = raw
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  return {
+    replacementPartsUsedRaw: raw,
+    servicePartsUsed,
+    partsUsed: servicePartsUsed.length > 0,
+  };
 }
 
 function mapEquipment(
@@ -768,12 +1102,22 @@ function mapEquipment(
         clean(row["Fixed Fire Equipment"]);
   const originalDescription = rawDescription ?? "Unknown equipment";
 
-  const parsed =
+  const parsedPortable =
     section === "portable"
-      ? parsePortableDescription(originalDescription)
-      : parseFixedDescription(originalDescription);
+      ? parsePortableDeviceDescription(originalDescription)
+      : null;
+  const parsedFixed =
+    section === "fixed" ? parseFixedDescription(originalDescription) : null;
+  const parsed = parsedPortable ?? parsedFixed!;
 
-  if (parsed.unknown) {
+  if (parsedPortable?.parseError) {
+    warnings.push({
+      code: "device_parse_error",
+      message: parsedPortable.parseError,
+      csvRowNumber,
+      severity: "error",
+    });
+  } else if (parsed.unknown) {
     warnings.push({
       code: "unknown_equipment_type",
       message: `Could not confidently map equipment type: ${originalDescription}`,
@@ -786,17 +1130,23 @@ function mapEquipment(
     section === "portable"
       ? getZohoCell(row, headers, columnMap.portableLocation)
       : getZohoCell(row, headers, columnMap.fixedLocation);
-  const portableNumberOrCapacity =
+  const deviceWeightReading =
     section === "portable"
-      ? splitCustomerNumberAndCapacity(
-          getZohoCell(row, headers, columnMap.portableWeight)
-        )
+      ? getZohoCell(row, headers, columnMap.portableWeight)
       : null;
   const sizeCapacity =
+    section === "portable" ? parsedPortable?.deviceSize ?? null : parsed.capacity;
+  const compliance =
     section === "portable"
-      ? portableNumberOrCapacity?.capacity ?? parsed.capacity
-      : parsed.capacity;
-  const compliance = getComplianceCell(row, headers);
+      ? getPortableComplianceCell(row, headers, columnMap)
+      : getFixedComplianceCell(row, headers);
+  const annualService = parseAnnualServiceResult(compliance);
+  const partsUsed = splitServiceParts(
+    section === "portable"
+      ? getZohoCell(row, headers, columnMap.replacementParts)
+      : getZohoCell(row, headers, columnMap.fixedSpares)
+  );
+
   const manufactureDate = parseDate(
     firstAliasedValue(row, [
       "Manufacture Date",
@@ -833,19 +1183,20 @@ function mapEquipment(
     ])
   );
   const report = job.technicianReport;
-  const checklist =
+  let checklist =
     section === "portable"
-      ? mapPortableChecklist(row, headers, columnMap, report)
-      : mapFixedChecklist(row, headers, columnMap, report, parsed.assetType);
-  const defect = buildDefect(
-    row,
-    headers,
-    columnMap,
-    section,
-    compliance,
-    checklist,
-    report
-  );
+      ? mapPortableChecklist(
+          row,
+          headers,
+          columnMap,
+          report,
+          deviceWeightReading,
+          compliance,
+          partsUsed,
+          parsedPortable
+        )
+      : mapFixedChecklist(row, headers, columnMap, report, parsed.assetType, compliance);
+  const defect = buildDefect(compliance, annualService, checklist, report);
 
   if (!compliance) {
     warnings.push({
@@ -865,13 +1216,26 @@ function mapEquipment(
     });
   }
 
-  const idempotencyKey = makeIdempotencyKey({
-    legacyZohoJobcardId: job.legacyZohoJobcardId,
-    csvRowNumber,
-    section,
-    location: location ?? "",
-    description: originalDescription,
+  const replacementPartsRaw =
+    section === "portable"
+      ? getZohoCell(row, headers, columnMap.replacementParts)
+      : getZohoCell(row, headers, columnMap.fixedSpares);
+
+  const idempotencyKey = makeImportFingerprint({
+    jobcardId: job.legacyZohoJobcardId,
+    deviceTypeSizeService: originalDescription,
+    deviceLocation: location ?? "",
+    lastPressureTestDate:
+      lastPressureTestDate ??
+      getZohoCell(row, headers, columnMap.portableLastPressureTest) ??
+      "",
+    replacementPartsUsed: replacementPartsRaw ?? "",
+    annualServiceResult: compliance ?? "",
   });
+
+  const inspectionPass =
+    annualService?.inspectionPass ??
+    isCompliant(compliance, checklist, annualService);
 
   return {
     csvRowNumber,
@@ -880,11 +1244,14 @@ function mapEquipment(
     legacyZohoJobcardId: job.legacyZohoJobcardId,
     rawRow: row,
     job,
+    parsedDevice: parsedPortable,
+    annualService,
+    partsUsed: section === "portable" ? partsUsed : null,
     asset: {
       assetType: parsed.assetType,
       originalDescription,
       sizeCapacity,
-      customerAssetNumber: portableNumberOrCapacity?.customerAssetNumber ?? null,
+      customerAssetNumber: null,
       medium: parsed.medium,
       locationDescription: location,
       manufactureDate,
@@ -899,8 +1266,9 @@ function mapEquipment(
     inspection: {
       assetType: parsed.assetType,
       checklist,
-      result: isCompliant(compliance, checklist) ? "pass" : "fail",
-      requiresPressureTest: containsPressureTest(compliance),
+      result: inspectionPass ? "pass" : "fail",
+      requiresPressureTest:
+        annualService?.pressureTestRequired ?? containsPressureTest(compliance),
       requiresRefill: containsAny(`${originalDescription} ${report ?? ""}`, [
         "refill",
         "recharge",
@@ -910,58 +1278,6 @@ function mapEquipment(
     defect,
     warnings,
   };
-}
-
-function parsePortableDescription(description: string): {
-  assetType: AssetType;
-  capacity: string | null;
-  medium: string | null;
-  unknown: boolean;
-} {
-  const text = description.toLowerCase();
-  const capacity = description.match(/(\d+(?:\.\d+)?)\s*kg/i)?.[0] ?? null;
-  const medium = text.includes("co2") ? "CO2" : text.includes("dcp") ? "DCP" : null;
-  if (text.includes("co2") || text.includes("dcp") || text.includes("extinguisher")) {
-    return { assetType: "fire_extinguisher", capacity, medium, unknown: false };
-  }
-  if (text.includes("blanket")) {
-    return { assetType: "fire_blanket", capacity: null, medium: null, unknown: false };
-  }
-  return { assetType: "fire_extinguisher", capacity, medium, unknown: true };
-}
-
-const VALID_EXTINGUISHER_CAPACITIES = new Set([
-  "1kg",
-  "2kg",
-  "2.5kg",
-  "4.5kg",
-  "5kg",
-  "6kg",
-  "9kg",
-  "25kg",
-  "50kg",
-]);
-
-function splitCustomerNumberAndCapacity(value: string | null | undefined): {
-  capacity: string | null;
-  customerAssetNumber: string | null;
-} {
-  const text = clean(value);
-  if (!text) return { capacity: null, customerAssetNumber: null };
-
-  const normalizedCapacity = text.toLowerCase().replace(/\s+/g, "");
-  if (VALID_EXTINGUISHER_CAPACITIES.has(normalizedCapacity)) {
-    return {
-      capacity: normalizedCapacity.replace("kg", "kg"),
-      customerAssetNumber: null,
-    };
-  }
-
-  if (/^\d+$/.test(text)) {
-    return { capacity: null, customerAssetNumber: text };
-  }
-
-  return { capacity: null, customerAssetNumber: text };
 }
 
 function parseFixedDescription(description: string): {
@@ -987,18 +1303,41 @@ function mapPortableChecklist(
   row: CsvRow,
   headers: string[],
   columnMap: ZohoColumnMap,
-  report: string | null
-): Record<string, string | boolean | null> {
+  report: string | null,
+  deviceWeightReading: string | null,
+  compliance: string | null,
+  partsUsed: ServicePartsUsed,
+  parsedPortable: ParsedPortableDevice | null
+): Record<string, string | boolean | string[] | null> {
   const [seal, damage, nozzle, pressure, accessible] =
     columnMap.portableCheckIndices.map((index) => getZohoCell(row, headers, index));
   return {
+    asset_category: parsedPortable?.assetCategory ?? "Portable Fire Equipment",
+    device_type: parsedPortable?.deviceType ?? null,
+    device_size: parsedPortable?.deviceSize ?? null,
+    agent_type: parsedPortable?.agentType ?? null,
+    service_type: parsedPortable?.serviceType ?? null,
+    annual_service_compliant: parsedPortable
+      ? parseAnnualServiceResult(compliance)?.annualServiceCompliant ?? null
+      : null,
+    pressure_test_required: parsedPortable
+      ? parseAnnualServiceResult(compliance)?.pressureTestRequired ?? null
+      : null,
+    asset_status: parsedPortable
+      ? parseAnnualServiceResult(compliance)?.assetStatus ?? null
+      : null,
+    device_weight_reading: deviceWeightReading,
     seal_and_pin_intact: yesNo(seal),
     no_visible_damage_rust_or_corrosion: yesNo(damage),
     nozzle_free_from_obstruction_or_damage: yesNo(nozzle),
     pressure_within_operational_range: yesNo(pressure),
     accessible_and_clearly_marked: yesNo(accessible),
-    replacement_parts_used: getZohoCell(row, headers, columnMap.replacementParts),
-    compliant_result: getComplianceCell(row, headers),
+    replacement_parts_used_raw: partsUsed.replacementPartsUsedRaw,
+    service_parts_used: partsUsed.servicePartsUsed,
+    parts_used: partsUsed.partsUsed,
+    replacement_parts_used: partsUsed.replacementPartsUsedRaw,
+    compliant_result: compliance,
+    annual_service_result: compliance,
     last_pressure_test_date: parseDate(
       getZohoCell(row, headers, columnMap.portableLastPressureTest)
     ),
@@ -1011,8 +1350,9 @@ function mapFixedChecklist(
   headers: string[],
   columnMap: ZohoColumnMap,
   report: string | null,
-  assetType: AssetType
-): Record<string, string | boolean | null> {
+  assetType: AssetType,
+  compliance: string | null
+): Record<string, string | boolean | string[] | null> {
   const cellAt = (index: number) => getZohoCell(row, headers, index);
   if (assetType === "hydrant") {
     const [body, operational, reading, valve, couplings, marked] =
@@ -1025,7 +1365,7 @@ function mapFixedChecklist(
       couplings_and_nozzles_functional: yesNo(cellAt(couplings)),
       clearly_marked_and_accessible: yesNo(cellAt(marked)),
       spares_replaced: cellAt(columnMap.fixedSpares),
-      compliant_result: getComplianceCell(row, headers),
+      compliant_result: compliance,
       technician_notes: report,
     };
   }
@@ -1050,7 +1390,7 @@ function mapFixedChecklist(
     no_leaks: yesNo(cellAt(leaks)),
     cabinet_accessible_and_intact: yesNo(cellAt(cabinet)),
     spares_replaced: cellAt(columnMap.fixedSpares),
-    compliant_result: getComplianceCell(row, headers),
+    compliant_result: compliance,
     technician_notes: report,
   };
 }
@@ -1060,7 +1400,7 @@ function yesNo(value: string | null | undefined): boolean | null {
   if (!text) return null;
   if (["yes", "y", "true", "pass", "ok", "compliant"].includes(text)) return true;
   if (["no", "n", "false", "fail", "not compliant"].includes(text)) return false;
-  if (text.includes("pressure testing required")) return false;
+  if (text.includes("pressure testing required")) return null;
   return null;
 }
 
@@ -1077,9 +1417,11 @@ function firstAliasedValue(row: CsvRow, aliases: string[]): string | null {
 
 function isCompliant(
   compliance: string | null,
-  checklist: Record<string, string | boolean | null>
+  checklist: Record<string, string | boolean | string[] | null>,
+  annualService: AnnualServiceOutcome | null
 ): boolean {
-  if (containsPressureTest(compliance)) return false;
+  if (annualService) return annualService.inspectionPass;
+  if (containsPressureTest(compliance)) return true;
   const normalized = normalizeText(compliance);
   if (["no", "not compliant", "fail", "failed"].includes(normalized)) return false;
   if (Object.values(checklist).some((value) => value === false)) return false;
@@ -1087,61 +1429,48 @@ function isCompliant(
 }
 
 function buildDefect(
-  row: CsvRow,
-  headers: string[],
-  columnMap: ZohoColumnMap,
-  section: EquipmentSection,
   compliance: string | null,
-  checklist: Record<string, string | boolean | null>,
+  annualService: AnnualServiceOutcome | null,
+  checklist: Record<string, string | boolean | string[] | null>,
   report: string | null
 ): ZohoMappedEquipment["defect"] {
-  const parts =
-    section === "portable"
-      ? getZohoCell(row, headers, columnMap.replacementParts)
-      : getZohoCell(row, headers, columnMap.fixedSpares);
-  const meaningfulParts = isMeaningfulPartsOrSpares(parts);
-  const rowFailed = !isCompliant(compliance, checklist);
-  const hasChecklistFailure = Object.values(checklist).some((value) => value === false);
+  if (annualService?.inspectionPass) {
+    return null;
+  }
+
+  const hasChecklistFailure = Object.entries(checklist).some(
+    ([key, value]) => value === false && !key.includes("parts")
+  );
+  const rowFailed = !isCompliant(compliance, checklist, annualService);
   const rowSpecificText = [
     compliance,
-    meaningfulParts ? parts : null,
     ...Object.entries(checklist)
       .filter(([, value]) => value === false)
       .map(([key]) => key),
   ]
     .filter(Boolean)
     .join(" ");
-  const combined = [rowSpecificText, report].filter(Boolean).join(" ");
 
-  // Technician report is job-level text and is repeated across every imported
-  // equipment row. Do not let report-only keywords create duplicate defects
-  // for rows whose own compliance/checklist/parts data passed.
   const shouldCreate =
     rowFailed ||
-    meaningfulParts ||
     hasChecklistFailure ||
     containsAny(rowSpecificText, [
-      "pressure test",
-      "pressure testing required",
-      "refill",
-      "replacement",
-      "replaced",
+      "not compliant",
       "damaged",
       "missing",
       "leak",
       "rust",
       "corrosion",
       "not installed",
-      "not compliant",
       "repair",
     ]);
 
   if (!shouldCreate) return null;
 
+  const combined = [rowSpecificText, report].filter(Boolean).join(" ");
   const severity = suggestedSeverity(combined);
   const description = [
     compliance ? `Compliance: ${compliance}` : null,
-    meaningfulParts ? `Parts/spares: ${parts}` : null,
     report ? `Technician report: ${report}` : null,
     Object.entries(checklist)
       .filter(([, value]) => value === false)
@@ -1153,6 +1482,7 @@ function buildDefect(
 
   return {
     shouldCreate: true,
+    quoteRequired: false,
     severity,
     description: description || "Imported Zoho inspection indicates non-compliance.",
     recommendedAction: recommendedAction(combined),
@@ -1172,22 +1502,17 @@ function suggestedSeverity(text: string): DefectSeverity {
     return "high";
   }
   if (
-    normalized.includes("pressure testing required") ||
     normalized.includes("rust") ||
     normalized.includes("corrosion") ||
     normalized.includes("damage")
   ) {
     return "medium";
   }
-  if (normalized.includes("parts") || normalized.includes("spares")) return "low";
   return "medium";
 }
 
 function recommendedAction(text: string): string {
   const normalized = normalizeText(text);
-  if (normalized.includes("pressure testing required")) {
-    return "Schedule hydro/pressure test and verify unit is safe to remain in service.";
-  }
   if (normalized.includes("missing") || normalized.includes("not installed")) {
     return "Install the missing required equipment or signage and update the asset register.";
   }
@@ -1204,7 +1529,11 @@ function recommendedAction(text: string): string {
 }
 
 function containsPressureTest(value: string | null | undefined): boolean {
-  return normalizeText(value).includes("pressure testing required");
+  const normalized = normalizeText(value);
+  return (
+    normalized.includes("pressure testing required") ||
+    normalized.includes("pressure test required")
+  );
 }
 
 function containsAny(value: string | null | undefined, needles: string[]): boolean {
@@ -1212,7 +1541,6 @@ function containsAny(value: string | null | undefined, needles: string[]): boole
   return needles.some((needle) => haystack.includes(normalizeText(needle)));
 }
 
-/** Column P / AI should list actual parts – not yes/no checklist answers. */
 function isMeaningfulPartsOrSpares(value: string | null | undefined): boolean {
   if (!value) return false;
   const text = normalizeText(value);
@@ -1250,20 +1578,22 @@ function parseDateTime(value: string | null): string | null {
   return date ? `${date}T00:00:00.000Z` : null;
 }
 
-function makeIdempotencyKey(input: {
-  legacyZohoJobcardId: string;
-  csvRowNumber: number;
-  section: EquipmentSection;
-  location: string;
-  description: string;
+function makeImportFingerprint(input: {
+  jobcardId: string;
+  deviceTypeSizeService: string;
+  deviceLocation: string;
+  lastPressureTestDate: string;
+  replacementPartsUsed: string;
+  annualServiceResult: string;
 }): string {
   return [
     "zoho",
-    normalizeText(input.legacyZohoJobcardId),
-    input.csvRowNumber,
-    input.section,
-    normalizeText(input.location),
-    normalizeText(input.description),
+    normalizeText(input.jobcardId),
+    normalizeText(input.deviceTypeSizeService),
+    normalizeText(input.deviceLocation),
+    normalizeText(input.lastPressureTestDate),
+    normalizeText(input.replacementPartsUsed),
+    normalizeText(input.annualServiceResult),
   ].join("|");
 }
 

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import {
   buildZohoColumnMap,
+  parseAnnualServiceResult,
+  parsePortableDeviceDescription,
   parseZohoJobcardCsv,
+  splitServiceParts,
   ZOHO_COL,
 } from "../src/lib/imports/zoho-jobcard.ts";
 import { formatAssetDisplayName } from "../src/lib/fsm/asset-display.ts";
@@ -135,7 +138,7 @@ assert.equal(parsed.skippedRows, 1, "question-label row should be skipped");
 assert.equal(parsed.summary.detectedJobs, 2, "should detect two jobcards");
 assert.equal(parsed.summary.portableAssets, 2, "should map portable equipment rows");
 assert.equal(parsed.summary.fixedAssets, 1, "should map fixed equipment rows");
-assert.equal(parsed.summary.likelyDefects, 1, "pressure testing required should create a defect");
+assert.equal(parsed.summary.likelyDefects, 0, "pressure testing required must not create a defect");
 assert.equal(
   parsed.equipment[1].legacyZohoJobcardId,
   "ZJ-001",
@@ -202,16 +205,16 @@ const extinguisherCsv = [
     ["Extinguisher 4.5kg DCP Service", "4.5kg", "DCP"],
     ["Extinguisher 5kg CO2 Service", "5kg", "CO2"],
     ["Extinguisher 2kg CO2 Service", "2kg", "CO2"],
-    ["Extinguisher DCP Service", "6", "DCP"],
+    ["Extinguisher 6kg DCP Service", "6kg", "DCP"],
     ["DCP Unit", null, "DCP"],
     ["CO2 Unit", null, "CO2"],
-  ].map(([description, capacity, medium], index) =>
+  ].map(([description, weightReading, medium], index) =>
     row({
       "Unique ID": `EXT-${index + 1}`,
       Date: "01/01/2025",
       "Customer Name": "Extinguisher Test",
       "Portable Fire Equipment": description,
-      "Unnamed: 7": capacity ?? "",
+      "Unnamed: 7": weightReading ?? "",
       "Unnamed: 8": `Location ${index + 1}`,
       "Unnamed: 10": "Yes",
       "Unnamed: 11": "Yes",
@@ -234,47 +237,40 @@ for (const [index, item] of extinguisherMappings.entries()) {
   assert.notEqual(item.asset.assetType, "co2_unit", "CO2 Unit must not be produced");
 }
 assert.deepEqual(
-  extinguisherMappings.slice(0, 4).map((item) => [
+  extinguisherMappings.slice(0, 5).map((item) => [
     item.asset.sizeCapacity,
     item.asset.medium,
+    item.parsedDevice?.deviceSize,
+    item.inspection.checklist.device_weight_reading,
   ]),
   [
-    ["9kg", "DCP"],
-    ["4.5kg", "DCP"],
-    ["5kg", "CO2"],
-    ["2kg", "CO2"],
+    ["9kg", "DCP", "9kg", "9kg"],
+    ["4.5kg", "DCP", "4.5kg", "4.5kg"],
+    ["5kg", "CO2", "5kg", "5kg"],
+    ["2kg", "CO2", "2kg", "2kg"],
+    ["6kg", "DCP", "6kg", "6kg"],
   ],
-  "known Zoho extinguisher descriptions should map to normalized capacity/medium"
-);
-assert.equal(
-  extinguisherMappings[4].asset.customerAssetNumber,
-  "6",
-  "plain number 6 should import as customer_asset_number"
+  "extinguisher size must come from column 6, not column 7 weight reading"
 );
 assert.equal(
   extinguisherMappings[4].asset.sizeCapacity,
-  null,
-  "plain number 6 must not import as capacity"
+  "6kg",
+  "size must be parsed from column 6 description, not column 7"
+);
+assert.equal(
+  extinguisherMappings[4].inspection.checklist.device_weight_reading,
+  "6kg",
+  "column 7 should store captured weight reading only"
 );
 assert.equal(
   formatAssetDisplayName({
     asset_type: "fire_extinguisher",
-    customer_asset_number: "6",
-    size_capacity: null,
-    asset_medium: "DCP",
-  }),
-  "Asset #6 - DCP Fire Extinguisher",
-  "display should show customer asset number separately from capacity"
-);
-assert.equal(
-  formatAssetDisplayName({
-    asset_type: "fire_extinguisher",
-    customer_asset_number: "6",
+    customer_asset_number: null,
     size_capacity: "9kg",
     asset_medium: "DCP",
   }),
-  "Asset #6 - 9kg DCP Fire Extinguisher",
-  "valid 9kg should still display as capacity"
+  "9kg DCP Fire Extinguisher",
+  "display should use parsed capacity from column 6"
 );
 
 const firstRunKeys = new Set(parsed.equipment.map((item) => item.idempotencyKey));
@@ -608,6 +604,226 @@ assert.equal(
   letterParsed.equipment[0].inspection.checklist.compliant_result,
   "Yes",
   "device compliance should come from column AJ"
+);
+
+const parsedPortable = parsePortableDeviceDescription("Extinguisher 4.5kg DCP Service");
+assert.deepEqual(
+  {
+    deviceType: parsedPortable.deviceType,
+    deviceSize: parsedPortable.deviceSize,
+    agentType: parsedPortable.agentType,
+    serviceType: parsedPortable.serviceType,
+  },
+  {
+    deviceType: "Extinguisher",
+    deviceSize: "4.5kg",
+    agentType: "DCP",
+    serviceType: "Annual Service",
+  },
+  "column 6 description should parse device type, size, agent and service"
+);
+
+const pressureOutcome = parseAnnualServiceResult("Pressure testing required");
+assert.equal(pressureOutcome?.annualServiceCompliant, true);
+assert.equal(pressureOutcome?.pressureTestRequired, true);
+assert.equal(pressureOutcome?.inspectionPass, true);
+
+const parts = splitServiceParts(
+  "DCP Long Operating Head W/Gauge, DCP Powder ABC 40% MAP (P/KG), Nitrogen recharge, DCP 9KG Discharge hose"
+);
+assert.equal(parts.partsUsed, true);
+assert.equal(parts.servicePartsUsed.length, 4);
+
+const hierarchicalHeaders = [
+  "Unique ID",
+  "Date",
+  "Customer Name",
+  "Contact Name",
+  "Phone",
+  "Email",
+  "Portable Fire Equipment",
+  "Unnamed: 7",
+  "Unnamed: 8",
+  "Unnamed: 9",
+  "Unnamed: 10",
+  "Unnamed: 11",
+  "Unnamed: 12",
+  "Unnamed: 13",
+  "Unnamed: 14",
+  "Unnamed: 15",
+  "Unnamed: 16",
+  "Fixed Fire Equipment",
+  "Unnamed: 18",
+  "Unnamed: 19",
+  "Unnamed: 20",
+  "Unnamed: 21",
+  "Unnamed: 22",
+  "Unnamed: 23",
+  "Unnamed: 24",
+  "Unnamed: 25",
+  "Unnamed: 26",
+  "Unnamed: 27",
+  "Unnamed: 28",
+  "Unnamed: 29",
+  "Unnamed: 30",
+  "Unnamed: 31",
+  "Unnamed: 32",
+  "Unnamed: 33",
+  "Unnamed: 34",
+  "Unnamed: 35",
+  "Next Service Date",
+  "Opt In for Promotional and Fire Industry Newsletters",
+  "Customer Name.1",
+  "Technicians Name",
+  "SAQCC Number",
+  "Added Time",
+  "Submitters Location",
+  "Technicians Report",
+];
+
+function hierarchicalRow(values) {
+  return hierarchicalHeaders.map((header) => csv(values[header] ?? "")).join(",");
+}
+
+const portableDescriptions = [
+  "Extinguisher 4.5kg DCP Service",
+  "Extinguisher 1kg DCP Service",
+  "Extinguisher 9kg DCP Service",
+  "Extinguisher 2kg CO2 Service",
+  "Extinguisher 5kg CO2 Service",
+  "Extinguisher 4.5kg DCP Service",
+  "Extinguisher 9kg DCP Service",
+  "Extinguisher 1kg DCP Service",
+  "Extinguisher 2.5kg DCP Service",
+  "Extinguisher 6kg DCP Service",
+  "Extinguisher 9kg DCP Service",
+  "Extinguisher 4.5kg DCP Service",
+  "Extinguisher 1kg DCP Service",
+  "Extinguisher 9kg DCP Service",
+];
+
+const partsRow =
+  "DCP Long Operating Head W/Gauge, DCP Powder ABC 40% MAP (P/KG), Nitrogen recharge, DCP 9KG Discharge hose";
+
+const jcFixture = [
+  hierarchicalHeaders.map((header, index) => csv(index === 0 ? "Jobcard Section" : header)).join(","),
+  hierarchicalHeaders.join(","),
+  hierarchicalRow({
+    "Unique ID": "JC-01489",
+    Date: "15/06/2025",
+    "Customer Name": "Hierarchical Customer",
+    "Contact Name": "Sam",
+    Phone: "012 555 2000",
+    Email: "sam@example.com",
+    "Portable Fire Equipment": portableDescriptions[0],
+    "Unnamed: 7": "4.5kg",
+    "Unnamed: 8": "Reception",
+    "Unnamed: 9": "15/06/2023",
+    "Unnamed: 10": "Yes",
+    "Unnamed: 11": "Yes",
+    "Unnamed: 12": "Yes",
+    "Unnamed: 13": "Yes",
+    "Unnamed: 14": "Yes",
+    "Unnamed: 15": partsRow,
+    "Unnamed: 16": "Pressure testing required",
+    "Technicians Name": "Tech One",
+    "SAQCC Number": "SAQCC-99",
+  }),
+  ...portableDescriptions.slice(1).map((description, index) =>
+    hierarchicalRow({
+      "Portable Fire Equipment": description,
+      "Unnamed: 7": description.match(/(\d+(?:\.\d+)?kg)/i)?.[1] ?? "",
+      "Unnamed: 8": `Location ${index + 2}`,
+      "Unnamed: 9": "15/06/2023",
+      "Unnamed: 10": "Yes",
+      "Unnamed: 11": "Yes",
+      "Unnamed: 12": "Yes",
+      "Unnamed: 13": "Yes",
+      "Unnamed: 14": "Yes",
+      "Unnamed: 16": "Pressure testing required",
+    })
+  ),
+].join("\n");
+
+const jcParsed = parseZohoJobcardCsv(jcFixture);
+assert.equal(jcParsed.summary.detectedJobs, 1, "JC-01489 should create one jobcard");
+assert.equal(jcParsed.summary.portableAssets, 14, "JC-01489 should import 14 portable assets");
+assert.equal(jcParsed.summary.fixedAssets, 0, "JC-01489 should import no fixed assets");
+assert.equal(
+  jcParsed.validation.pressure_tests_required,
+  14,
+  "all 14 assets should require pressure testing"
+);
+assert.equal(
+  jcParsed.validation.quote_required_records_created,
+  0,
+  "replacement parts must not create quote required records"
+);
+assert.equal(jcParsed.validation.parts_used_records_created, 1, "one asset row has used parts");
+assert.ok(
+  jcParsed.equipment.every(
+    (item) =>
+      item.annualService?.annualServiceCompliant === true &&
+      item.inspection.result === "pass"
+  ),
+  "all assets should pass annual service inspection"
+);
+assert.ok(
+  jcParsed.equipment.every((item) => item.defect?.shouldCreate !== true),
+  "pressure test due must not create defects"
+);
+assert.equal(
+  jcParsed.equipment[0].parsedDevice?.deviceSize,
+  "4.5kg",
+  "first asset size must be parsed from column 6"
+);
+assert.equal(
+  jcParsed.equipment[1].parsedDevice?.deviceSize,
+  "1kg",
+  "second asset size must be parsed from column 6"
+);
+assert.equal(
+  jcParsed.equipment[0].partsUsed?.servicePartsUsed.length,
+  4,
+  "replacement parts should split into used service parts"
+);
+
+assert.throws(
+  () =>
+    parseZohoJobcardCsv(
+      [
+        hierarchicalHeaders.join(","),
+        hierarchicalRow({
+          "Portable Fire Equipment": "Extinguisher 9kg DCP Service",
+          "Unnamed: 8": "Orphan location",
+          "Unnamed: 16": "Yes",
+        }),
+      ].join("\n")
+    ),
+  /before any Jobcard row/
+);
+
+assert.throws(
+  () =>
+    parseZohoJobcardCsv(
+      [
+        headers.join(","),
+        row({
+          "Unique ID": "BAD-PARSE",
+          Date: "01/01/2025",
+          "Customer Name": "Parse Fail",
+          "Portable Fire Equipment": "Extinguisher DCP Service",
+          "Unnamed: 8": "Kitchen",
+          "Unnamed: 10": "Yes",
+          "Unnamed: 11": "Yes",
+          "Unnamed: 12": "Yes",
+          "Unnamed: 13": "Yes",
+          "Unnamed: 14": "Yes",
+          "Unnamed: 34": "Yes",
+        }),
+      ].join("\n")
+    ),
+  /Could not parse extinguisher size/
 );
 assert.equal(
   letterParsed.equipment[0].job.nextServiceDate,

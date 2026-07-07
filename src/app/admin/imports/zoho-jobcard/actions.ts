@@ -35,6 +35,18 @@ interface ImportResult {
   skippedRows: number;
   warningRows: number;
   duplicateRows: number;
+  validation: {
+    jobcards_created: number;
+    jobcards_updated: number;
+    portable_assets_imported: number;
+    fixed_assets_imported: number;
+    service_records_created: number;
+    pressure_tests_required: number;
+    parts_used_records_created: number;
+    quote_required_records_created: number;
+    duplicate_rows_skipped: number;
+    errors: ZohoWarning[];
+  };
 }
 
 type CustomerRow = {
@@ -177,6 +189,18 @@ export async function confirmZohoJobcardImport(
       skippedRows: preview.skippedRows,
       warningRows: preview.warningRows,
       duplicateRows: preview.duplicateRows,
+      validation: {
+        jobcards_created: 0,
+        jobcards_updated: 0,
+        portable_assets_imported: 0,
+        fixed_assets_imported: 0,
+        service_records_created: 0,
+        pressure_tests_required: 0,
+        parts_used_records_created: 0,
+        quote_required_records_created: 0,
+        duplicate_rows_skipped: preview.duplicateRows,
+        errors: [],
+      },
     };
 
     const byJob = groupByJob(preview.equipment);
@@ -212,6 +236,7 @@ export async function confirmZohoJobcardImport(
         let inspectionId: string | null = null;
         if (duplicateInspection) {
           result.duplicateRows++;
+          result.validation.duplicate_rows_skipped++;
         } else {
           const { data: inspection, error } = await admin
             .from("inspections")
@@ -240,6 +265,18 @@ export async function confirmZohoJobcardImport(
           if (error || !inspection) throw new Error(error?.message ?? "Inspection import failed.");
           inspectionId = inspection.id;
           result.inspectionsCreated++;
+          result.validation.service_records_created++;
+          if (item.section === "portable") {
+            result.validation.portable_assets_imported++;
+          } else {
+            result.validation.fixed_assets_imported++;
+          }
+          if (item.inspection.requiresPressureTest) {
+            result.validation.pressure_tests_required++;
+          }
+          if (item.partsUsed?.partsUsed) {
+            result.validation.parts_used_records_created++;
+          }
 
           await recordImportedInspectionHistory(admin, {
             assetId: asset.id,
@@ -265,7 +302,7 @@ export async function confirmZohoJobcardImport(
                 severity: item.defect.severity,
                 description: item.defect.description,
                 recommended_action: item.defect.recommendedAction,
-                quote_required: true,
+                quote_required: item.defect.quoteRequired,
                 status: "open",
                 legacy_zoho_jobcard_id: item.legacyZohoJobcardId,
                 import_source: ZOHO_IMPORT_SOURCE,
@@ -280,6 +317,9 @@ export async function confirmZohoJobcardImport(
             if (error || !defect) throw new Error(error?.message ?? "Defect import failed.");
             defectId = defect.id;
             result.defectsCreated++;
+            if (item.defect.quoteRequired) {
+              result.validation.quote_required_records_created++;
+            }
           }
         }
 
@@ -303,6 +343,9 @@ export async function confirmZohoJobcardImport(
         });
       }
     }
+
+    result.validation.jobcards_created = result.jobsCreated;
+    result.validation.jobcards_updated = result.jobsMatched;
 
     await admin
       .from("import_sessions")
