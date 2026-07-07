@@ -4,16 +4,21 @@ import { ArrowLeft, ChevronRight, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createSite } from "@/app/admin/actions";
 import { CustomerEditPanel } from "@/components/admin/customer-edit-form";
+import { PortalUsersPanel } from "@/components/admin/portal-users-panel";
+import { featureFlags } from "@/lib/fsm/feature-flags";
 
 const inputCls =
   "w-full px-3.5 py-2.5 rounded-lg bg-[#171717] border border-white/10 text-white placeholder-zinc-600 text-sm focus:border-red-500/50 focus:outline-none focus:ring-2 focus:ring-red-500/20";
 
 export default async function AdminCustomerDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ portal_error?: string }>;
 }) {
   const { id } = await params;
+  const { portal_error: portalError } = await searchParams;
   const supabase = await createClient();
 
   const [
@@ -195,6 +200,19 @@ export default async function AdminCustomerDetailPage({
           </form>
         </div>
       </div>
+
+      {featureFlags.customerPortal ? (
+        <div className="mt-8">
+          <PortalUsersPanel
+            customerId={customer.id}
+            sites={(customer.sites ?? []).map((site: { id: string; name: string }) => ({
+              id: site.id,
+              name: site.name,
+            }))}
+            error={portalError}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

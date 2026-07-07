@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import {
   ArrowLeft,
   MapPin,
-  History,
   AlertTriangle,
   ClipboardCheck,
   Camera,
@@ -23,20 +22,10 @@ import {
   DEFECT_SEVERITY_STYLES,
 } from "@/lib/fsm/labels";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
-import type { Asset, AssetEvent, Defect, Inspection } from "@/lib/fsm/types";
+import type { Asset, Defect, Inspection } from "@/lib/fsm/types";
+import { AssetTimeline } from "@/components/fsm/asset-timeline";
+import { loadAssetTimelineData } from "@/lib/fsm/load-asset-timeline";
 import { cn } from "@/lib/utils";
-
-const EVENT_LABELS: Record<string, string> = {
-  installed: "Installed",
-  inspected: "Inspected",
-  defect_reported: "Defect reported",
-  refilled: "Refilled",
-  replaced: "Replaced",
-  removed: "Removed",
-  marked_missing: "Marked missing",
-  status_changed: "Status changed",
-  serviced: "Serviced",
-};
 
 export default async function AssetDetailPage({
   params,
@@ -77,46 +66,24 @@ export default async function AssetDetailPage({
     jobId = openJob?.id ?? null;
   }
 
-  const [
-    { data: events },
-    { data: defects },
-    { data: inspections },
-    { count: totalDefects },
-  ] = await Promise.all([
-    supabase
-      .from("asset_events")
-      .select("*")
-      .eq("asset_id", id)
-      .order("created_at", { ascending: false })
-      .limit(20),
-    supabase
-      .from("defects")
-      .select("*")
-      .eq("asset_id", id)
-      .order("created_at", { ascending: false })
-      .limit(10),
-    supabase
-      .from("inspections")
-      .select("*, job:jobs(id, status, scheduled_date, completed_at, legacy_technician_saqcc, legacy_zoho_jobcard_id, import_source)")
-      .eq("asset_id", id)
-      .order("created_at", { ascending: false })
-      .limit(10),
-    // Phase 5 (F1): exact defect count for the insights panel (read-only)
-    supabase
-      .from("defects")
-      .select("id", { count: "exact", head: true })
-      .eq("asset_id", id),
-  ]);
+  const timelineBundle = await loadAssetTimelineData(supabase, id);
+  if (!timelineBundle) notFound();
+  const { timeline, inspections, defects } = timelineBundle;
+
+  const { count: totalDefects } = await supabase
+    .from("defects")
+    .select("id", { count: "exact", head: true })
+    .eq("asset_id", id);
 
   if (!asset.calculated_compliance_status) {
     try {
-      const latestInspection = (inspections ?? [])[0] as
+      const latestInspection = (inspections ?? [])[0] as unknown as
         | (Inspection & { job?: Record<string, unknown> | null })
         | undefined;
       const evaluation = evaluateExistingAssetCompliance({
         asset,
         latestInspection,
-        unresolvedDefects: ((defects ?? []) as Defect[]).map((defect) => ({
+        unresolvedDefects: ((defects ?? []) as unknown as Defect[]).map((defect) => ({
           status: defect.status,
           severity: defect.severity,
           description: defect.description,
@@ -142,8 +109,8 @@ export default async function AssetDetailPage({
   const insights = featureFlags.assetInsights
     ? computeAssetInsights(
         asset,
-        (events ?? []) as AssetEvent[],
-        (inspections ?? []) as Inspection[],
+        [],
+        (inspections ?? []) as unknown as Inspection[],
         totalDefects ?? 0
       )
     : null;
@@ -281,7 +248,7 @@ export default async function AssetDetailPage({
             Open Defects
           </h2>
           <div className="space-y-2">
-            {(defects as Defect[])
+            {(defects as unknown as Defect[])
               .filter((d) => d.status === "open")
               .map((d) => (
                 <div
@@ -308,55 +275,15 @@ export default async function AssetDetailPage({
         </div>
       )}
 
-      {/* History */}
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-300 mb-3">
-        <History className="w-4 h-4" />
-        Service History
-      </h2>
-
-      {(events ?? []).length === 0 && (inspections ?? []).length === 0 ? (
-        <p className="text-zinc-500 text-sm">
-          No recorded history for this asset yet.
-        </p>
-      ) : (
-        <div className="space-y-2">
-          {(inspections as Inspection[] | null)?.map((i) => (
-            <div
-              key={i.id}
-              className="rounded-xl border border-white/[0.08] nf-glass-panel px-4 py-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-sm text-zinc-200">Inspection</p>
-                <span
-                  className={cn(
-                    "text-[10px] px-2 py-0.5 rounded-full border",
-                    i.result === "pass"
-                      ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
-                      : "bg-red-500/15 text-red-400 border-red-500/40"
-                  )}
-                >
-                  {i.result.toUpperCase()}
-                </span>
-              </div>
-              <p className="text-xs text-zinc-500 mt-1">
-                {fmtDate(i.created_at)}
-                {i.notes ? ` · ${i.notes}` : ""}
-              </p>
-            </div>
-          ))}
-          {(events as AssetEvent[] | null)?.map((e) => (
-            <div
-              key={e.id}
-              className="rounded-xl border border-white/[0.08] nf-glass-panel px-4 py-3"
-            >
-              <p className="text-sm text-zinc-200">
-                {EVENT_LABELS[e.event_type] ?? e.event_type}
-              </p>
-              <p className="text-xs text-zinc-500 mt-1">{fmtDate(e.created_at)}</p>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Asset timeline */}
+      <div className="rounded-xl border border-white/[0.08] nf-glass-panel p-4">
+        <AssetTimeline
+          entries={timeline}
+          assetCode={asset.asset_code}
+          assetLabel={formatAssetDisplayName(asset)}
+          customerAssetNumber={asset.customer_asset_number}
+        />
+      </div>
     </div>
   );
 }

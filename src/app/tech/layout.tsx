@@ -29,13 +29,12 @@ export default async function TechLayout({
     .select("full_name, role, is_active")
     .eq("id", user.id)
     .single();
-
-  const isStaff =
-    profile &&
-    profile.is_active &&
-    ["technician", "dispatcher", "admin"].includes(profile.role);
-
-  if (!isStaff) redirect("/tech-restricted");
+  if (
+    !profile?.is_active ||
+    !["technician", "dispatcher", "admin"].includes(profile.role)
+  ) {
+    redirect("/tech-restricted");
+  }
 
   const firstName = profile.full_name.split(" ")[0] || "Technician";
 

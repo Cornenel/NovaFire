@@ -2,12 +2,11 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { evaluateFireExtinguisherCompliance } from "@/lib/compliance/fireCompliance";
+import { recordImportedInspectionHistory } from "@/lib/fsm/asset-history-sync";
+import { matchExistingCustomer } from "@/lib/fsm/historical-records";
 import {
   ZOHO_IMPORT_SOURCE,
   jobTypeForImportedEquipment,
-  normalizeEmail,
-  normalizePhone,
   normalizeText,
   parseZohoJobcardCsv,
   type ZohoMappedEquipment,
@@ -241,6 +240,14 @@ export async function confirmZohoJobcardImport(
           if (error || !inspection) throw new Error(error?.message ?? "Inspection import failed.");
           inspectionId = inspection.id;
           result.inspectionsCreated++;
+
+          await recordImportedInspectionHistory(admin, {
+            assetId: asset.id,
+            jobId,
+            technicianId: fallbackTechnicianId,
+            inspectionId: inspection.id,
+            result: item.inspection.result,
+          });
         }
 
         let defectId: string | null = null;
@@ -372,19 +379,16 @@ async function findOrCreateCustomer(
   item: ZohoMappedEquipment,
   result: ImportResult
 ): Promise<CustomerRow> {
-  const email = normalizeEmail(item.job.email);
-  const phone = normalizePhone(item.job.phone);
   const name = item.job.customerName ?? "Imported Zoho Customer";
-  const normalizedName = normalizeText(name);
-
-  let match =
-    (email && context.customers.find((c) => normalizeEmail(c.email) === email)) ||
-    context.customers.find((c) => normalizeText(c.name) === normalizedName) ||
-    (phone && context.customers.find((c) => normalizePhone(c.phone) === phone));
+  const match = matchExistingCustomer(context.customers, {
+    name,
+    email: item.job.email,
+    phone: item.job.phone,
+  });
 
   if (match) {
     result.customersMatched++;
-    return match;
+    return match as CustomerRow;
   }
 
   const { data, error } = await admin
@@ -392,7 +396,7 @@ async function findOrCreateCustomer(
     .insert({
       name,
       contact_person: item.job.contactName,
-      email,
+      email: item.job.email,
       phone: item.job.phone,
       notes: "Imported from Zoho Jobcard CSV. Existing records were not overwritten.",
       import_source: ZOHO_IMPORT_SOURCE,
@@ -406,10 +410,10 @@ async function findOrCreateCustomer(
     .single();
 
   if (error || !data) throw new Error(error?.message ?? "Customer import failed.");
-  match = data as CustomerRow;
-  context.customers.push(match);
+  const created = data as CustomerRow;
+  context.customers.push(created);
   result.customersCreated++;
-  return match;
+  return created;
 }
 
 async function findOrCreateSite(
@@ -558,10 +562,6 @@ async function findOrCreateAsset(
     );
 
   if (match) {
-    await admin
-      .from("assets")
-      .update(compliancePayloadForImportedAsset(item))
-      .eq("id", match.id);
     result.assetsMatched++;
     return match;
   }
@@ -576,10 +576,7 @@ async function findOrCreateAsset(
       asset_medium: item.asset.medium,
       location_description: item.asset.locationDescription,
       manufacture_date: item.asset.manufactureDate,
-      last_service_date: item.asset.lastServiceDate ?? item.job.date,
-      next_service_date: item.job.nextServiceDate,
       last_pressure_test_date: item.asset.lastPressureTestDate,
-      status: item.inspection.result === "pass" ? "compliant" : "defective",
       notes: item.asset.medium ? `Imported medium: ${item.asset.medium}` : null,
       legacy_zoho_jobcard_id: item.legacyZohoJobcardId,
       import_source: ZOHO_IMPORT_SOURCE,
@@ -588,7 +585,6 @@ async function findOrCreateAsset(
       import_idempotency_key: assetKey,
       legacy_description: item.asset.originalDescription,
       imported_unverified: item.asset.importedUnverified,
-      ...compliancePayloadForImportedAsset(item),
     })
     .select(
       "id, site_id, asset_type, size_capacity, customer_asset_number, asset_medium, location_description, legacy_description, import_idempotency_key"
@@ -600,55 +596,6 @@ async function findOrCreateAsset(
   context.assets.push(match);
   result.assetsCreated++;
   return match;
-}
-
-function compliancePayloadForImportedAsset(item: ZohoMappedEquipment) {
-  const rawImportedStatus =
-    typeof item.inspection.checklist.compliant_result === "string"
-      ? item.inspection.checklist.compliant_result
-      : null;
-  const compliance = evaluateFireExtinguisherCompliance({
-    assetType: item.asset.assetType,
-    assetStatus: item.inspection.result === "pass" ? "compliant" : "defective",
-    customerAssetNumber: item.asset.customerAssetNumber,
-    location: item.asset.locationDescription,
-    sizeCapacity: item.asset.sizeCapacity,
-    medium: item.asset.medium,
-    manufactureDate: item.asset.manufactureDate,
-    lastServiceDate: item.asset.lastServiceDate,
-    nextServiceDate: item.job.nextServiceDate,
-    lastPressureTestDate: item.asset.lastPressureTestDate,
-    nextPressureTestDate: item.asset.nextPressureTestDate,
-    workCompletedDate: item.job.addedTime ?? item.job.date,
-    workStatus: `completed ${rawImportedStatus ?? item.inspection.result}`,
-    rawImportedStatus,
-    condition: item.asset.originalDescription,
-    notes: [item.job.technicianReport, item.inspection.notes].filter(Boolean).join(" "),
-    technicianName: item.job.technicianName,
-    technicianSaqccNumber: item.job.saqccNumber,
-    unresolvedDefects: item.defect
-      ? [
-          {
-            status: "open",
-            severity: item.defect.severity,
-            description: item.defect.description,
-            recommendedAction: item.defect.recommendedAction,
-            defectType: "Zoho Import Finding",
-          },
-        ]
-      : [],
-  });
-
-  return {
-    calculated_compliance_status: compliance.status,
-    compliance_reasons: compliance.reasons,
-    compliance_next_actions: compliance.nextActions,
-    compliance_source_fields: compliance.sourceFieldsUsed,
-    compliance_calculated_at: new Date().toISOString(),
-    annual_service_due_date: compliance.calculatedDates.annualServiceDueDate ?? null,
-    pressure_test_due_date: compliance.calculatedDates.pressureTestDueDate ?? null,
-    hydro_test_due_date: compliance.calculatedDates.pressureTestDueDate ?? null,
-  };
 }
 
 async function rowExists(

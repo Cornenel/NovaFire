@@ -109,9 +109,10 @@ export default async function AdminSiteDetailPage({
           ) : (
             <div className="rounded-xl border border-white/[0.08] nf-glass-panel divide-y divide-white/5">
               {assets.map((a) => (
-                <div
+                <Link
                   key={a.id}
-                  className="flex items-center justify-between gap-3 px-4 py-3"
+                  href={`/admin/assets/${a.id}`}
+                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors"
                 >
                   <div className="min-w-0">
                     <p className="text-sm text-white">
@@ -135,7 +136,7 @@ export default async function AdminSiteDetailPage({
                       label={formatAssetDisplayName(a)}
                     />
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

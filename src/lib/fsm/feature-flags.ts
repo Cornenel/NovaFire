@@ -30,4 +30,6 @@ export const featureFlags = {
   /** F8: Revenue opportunity detection */
   revenueOpportunities:
     process.env.NEXT_PUBLIC_FF_REVENUE_OPPORTUNITIES !== "false",
+  /** Phase 2: Customer portal (read-only client access) */
+  customerPortal: process.env.NEXT_PUBLIC_FF_CUSTOMER_PORTAL !== "false",
 } as const;

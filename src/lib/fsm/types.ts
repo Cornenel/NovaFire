@@ -78,6 +78,11 @@ export interface Profile {
   vehicle_number?: string | null;
   saqcc_number?: string | null;
   photo_url?: string | null;
+  /** Customer portal (migration 00010) */
+  customer_id?: string | null;
+  portal_site_id?: string | null;
+  portal_access_enabled?: boolean;
+  last_portal_login_at?: string | null;
 }
 
 export interface Customer {

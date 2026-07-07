@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createClient } from "@/lib/supabase/server";
+import { featureFlags } from "@/lib/fsm/feature-flags";
 import {
   JobReportDocument,
   type JobReportData,
@@ -22,13 +23,23 @@ export async function GET(
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, is_active")
+    .select("role, is_active, portal_access_enabled, customer_id")
     .eq("id", user.id)
     .single();
-  if (
-    !profile?.is_active ||
-    !["technician", "dispatcher", "admin"].includes(profile.role)
-  ) {
+
+  const isStaff =
+    profile?.is_active &&
+    profile.role &&
+    ["technician", "dispatcher", "admin"].includes(profile.role);
+
+  const isPortalUser =
+    featureFlags.customerPortal &&
+    profile?.is_active &&
+    profile.role === "client" &&
+    profile.portal_access_enabled &&
+    profile.customer_id;
+
+  if (!isStaff && !isPortalUser) {
     return new Response("Forbidden", { status: 403 });
   }
 

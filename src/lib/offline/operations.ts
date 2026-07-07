@@ -9,6 +9,10 @@
  */
 
 import { createClient } from "@/lib/supabase/client";
+import {
+  buildAssetUpdateFromLatestInspection,
+  pickLatestInspection,
+} from "@/lib/fsm/historical-records";
 
 export type OfflineOp =
   | {
@@ -137,21 +141,85 @@ export async function executeOp(op: OfflineOp): Promise<void> {
       );
       throwIfError(error, "Inspection");
 
-      await supabase
-        .from("assets")
-        .update({
-          last_service_date: p.serviceDate,
-          next_service_date: p.nextServiceDate,
-          status: p.result === "pass" ? "compliant" : "defective",
-        })
-        .eq("id", p.assetId);
+      const { data: existingInspections } = await supabase
+        .from("inspections")
+        .select(
+          "id, created_at, result, notes, requires_refill, requires_pressure_test, job_id, job:jobs(id, job_number, status, scheduled_date, completed_at)"
+        )
+        .eq("asset_id", p.assetId);
+
+      const latest = pickLatestInspection([
+        ...((existingInspections ?? []) as Array<{
+          id: string;
+          created_at: string;
+          result: "pass" | "fail";
+          notes: string | null;
+          requires_refill: boolean;
+          requires_pressure_test: boolean;
+          job_id: string;
+          job?: {
+            id?: string;
+            job_number?: string | null;
+            status?: string | null;
+            scheduled_date?: string | null;
+            completed_at?: string | null;
+          } | null;
+        }>),
+        {
+          id: p.id,
+          created_at: new Date().toISOString(),
+          result: p.result,
+          notes: p.notes,
+          requires_refill: p.requiresRefill,
+          requires_pressure_test: p.requiresPressureTest,
+          job_id: p.jobId,
+          job: { scheduled_date: p.serviceDate },
+        },
+      ]);
+
+      if (latest?.id === p.id) {
+        const { data: assetRow } = await supabase
+          .from("assets")
+          .select("*")
+          .eq("id", p.assetId)
+          .single();
+
+        const { data: openDefects } = await supabase
+          .from("defects")
+          .select("status, severity, description, defect_type, recommended_action")
+          .eq("asset_id", p.assetId)
+          .eq("status", "open");
+
+        if (assetRow) {
+          const update = buildAssetUpdateFromLatestInspection(
+            assetRow,
+            {
+              id: p.id,
+              created_at: new Date().toISOString(),
+              result: p.result,
+              notes: p.notes,
+              requires_refill: p.requiresRefill,
+              requires_pressure_test: p.requiresPressureTest,
+              job_id: p.jobId,
+              job: { scheduled_date: p.serviceDate },
+            },
+            openDefects ?? []
+          );
+
+          await supabase.from("assets").update(update).eq("id", p.assetId);
+        }
+      }
 
       await supabase.from("asset_events").insert({
         asset_id: p.assetId,
         job_id: p.jobId,
         technician_id: p.technicianId,
-        event_type: "inspected",
-        details: { result: p.result, requires_refill: p.requiresRefill },
+        event_type: p.result === "pass" ? "serviced" : "inspected",
+        details: {
+          result: p.result,
+          requires_refill: p.requiresRefill,
+          inspection_id: p.id,
+        },
       });
       break;
     }

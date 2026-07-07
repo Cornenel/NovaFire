@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { featureFlags } from "@/lib/fsm/feature-flags";
 
 /**
  * Proxy (Next.js 16 middleware)
@@ -96,15 +97,27 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Guard: technician portal and admin dashboard require a signed-in user
-  const isTechRoute =
+  // Guard: staff/admin routes require sign-in (role checks happen in layouts)
+  const isStaffRoute =
     effectivePath === "/tech" ||
     effectivePath.startsWith("/tech/") ||
     effectivePath === "/admin" ||
     effectivePath.startsWith("/admin/");
 
-  if (isTechRoute && !user) {
+  const isPortalRoute =
+    effectivePath === "/client-portal" ||
+    effectivePath.startsWith("/client-portal/");
+
+  const isPortalLogin = effectivePath === "/client-portal/login";
+
+  if (isStaffRoute && !user) {
     const loginUrl = new URL("/tech-login", request.url);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (featureFlags.customerPortal && isPortalRoute && !isPortalLogin && !user) {
+    const loginUrl = new URL("/client-portal/login", request.url);
+    loginUrl.searchParams.set("next", effectivePath);
     return NextResponse.redirect(loginUrl);
   }
 
