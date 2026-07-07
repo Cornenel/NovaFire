@@ -12,7 +12,7 @@ export const ZOHO_IMPORT_SOURCE = "zoho_import";
  *
  * A–O  (0–14)  Portable fire equipment serviced
  * P    (15)     Replacement parts used on portable device
- * Q    (16)     Additional service requirements
+ * Q    (16)     Additional service requirements (ignored on import)
  * R–AH (17–33) Fixed fire equipment (hose reels, hydrants, etc.)
  * AI   (34)     Spares replaced on fixed equipment
  * AJ   (35)     Device compliance (portable and fixed)
@@ -83,7 +83,6 @@ export interface ZohoColumnMap {
   portableLastPressureTest: number;
   portableCheckIndices: number[];
   replacementParts: number;
-  additionalService: number;
   fixedDevice: number;
   fixedLocation: number;
   fixedLastService: number;
@@ -138,7 +137,6 @@ export function buildZohoColumnMap(headers: string[]): ZohoColumnMap {
     portableLastPressureTest: portableOffset + 3,
     portableCheckIndices: [4, 5, 6, 7, 8].map((i) => portableOffset + i),
     replacementParts: ZOHO_COL.REPLACEMENT_PARTS,
-    additionalService: ZOHO_COL.ADDITIONAL_SERVICE,
     fixedDevice: ZOHO_COL.FIXED_START + fixedOffset,
     fixedLocation: ZOHO_COL.FIXED_START + fixedOffset + 1,
     fixedLastService: ZOHO_COL.FIXED_START + fixedOffset + 2,
@@ -799,7 +797,6 @@ function mapEquipment(
       ? portableNumberOrCapacity?.capacity ?? parsed.capacity
       : parsed.capacity;
   const compliance = getComplianceCell(row, headers);
-  const additionalService = getZohoCell(row, headers, columnMap.additionalService);
   const manufactureDate = parseDate(
     firstAliasedValue(row, [
       "Manufacture Date",
@@ -838,7 +835,7 @@ function mapEquipment(
   const report = job.technicianReport;
   const checklist =
     section === "portable"
-      ? mapPortableChecklist(row, headers, columnMap, report, additionalService)
+      ? mapPortableChecklist(row, headers, columnMap, report)
       : mapFixedChecklist(row, headers, columnMap, report, parsed.assetType);
   const defect = buildDefect(
     row,
@@ -847,8 +844,7 @@ function mapEquipment(
     section,
     compliance,
     checklist,
-    report,
-    additionalService
+    report
   );
 
   if (!compliance) {
@@ -991,8 +987,7 @@ function mapPortableChecklist(
   row: CsvRow,
   headers: string[],
   columnMap: ZohoColumnMap,
-  report: string | null,
-  additionalService: string | null
+  report: string | null
 ): Record<string, string | boolean | null> {
   const [seal, damage, nozzle, pressure, accessible] =
     columnMap.portableCheckIndices.map((index) => getZohoCell(row, headers, index));
@@ -1003,7 +998,6 @@ function mapPortableChecklist(
     pressure_within_operational_range: yesNo(pressure),
     accessible_and_clearly_marked: yesNo(accessible),
     replacement_parts_used: getZohoCell(row, headers, columnMap.replacementParts),
-    additional_service_requirements: additionalService,
     compliant_result: getComplianceCell(row, headers),
     last_pressure_test_date: parseDate(
       getZohoCell(row, headers, columnMap.portableLastPressureTest)
@@ -1031,7 +1025,6 @@ function mapFixedChecklist(
       couplings_and_nozzles_functional: yesNo(cellAt(couplings)),
       clearly_marked_and_accessible: yesNo(cellAt(marked)),
       spares_replaced: cellAt(columnMap.fixedSpares),
-      additional_service_requirements: cellAt(columnMap.additionalService),
       compliant_result: getComplianceCell(row, headers),
       technician_notes: report,
     };
@@ -1057,7 +1050,6 @@ function mapFixedChecklist(
     no_leaks: yesNo(cellAt(leaks)),
     cabinet_accessible_and_intact: yesNo(cellAt(cabinet)),
     spares_replaced: cellAt(columnMap.fixedSpares),
-    additional_service_requirements: cellAt(columnMap.additionalService),
     compliant_result: getComplianceCell(row, headers),
     technician_notes: report,
   };
@@ -1101,8 +1093,7 @@ function buildDefect(
   section: EquipmentSection,
   compliance: string | null,
   checklist: Record<string, string | boolean | null>,
-  report: string | null,
-  additionalService: string | null
+  report: string | null
 ): ZohoMappedEquipment["defect"] {
   const parts =
     section === "portable"
@@ -1114,7 +1105,6 @@ function buildDefect(
   const rowSpecificText = [
     compliance,
     meaningfulParts ? parts : null,
-    additionalService,
     ...Object.entries(checklist)
       .filter(([, value]) => value === false)
       .map(([key]) => key),
@@ -1129,7 +1119,6 @@ function buildDefect(
   const shouldCreate =
     rowFailed ||
     meaningfulParts ||
-    isMeaningfulAdditionalService(additionalService) ||
     hasChecklistFailure ||
     containsAny(rowSpecificText, [
       "pressure test",
@@ -1153,7 +1142,6 @@ function buildDefect(
   const description = [
     compliance ? `Compliance: ${compliance}` : null,
     meaningfulParts ? `Parts/spares: ${parts}` : null,
-    additionalService ? `Additional service: ${additionalService}` : null,
     report ? `Technician report: ${report}` : null,
     Object.entries(checklist)
       .filter(([, value]) => value === false)
@@ -1232,14 +1220,6 @@ function isMeaningfulPartsOrSpares(value: string | null | undefined): boolean {
   if (["yes", "y", "no", "n", "true", "false", "pass", "fail", "ok", "compliant"].includes(text)) {
     return false;
   }
-  return true;
-}
-
-function isMeaningfulAdditionalService(value: string | null | undefined): boolean {
-  if (!value) return false;
-  const text = normalizeText(value);
-  if (!text) return false;
-  if (["yes", "y", "no", "n", "-"].includes(text)) return false;
   return true;
 }
 

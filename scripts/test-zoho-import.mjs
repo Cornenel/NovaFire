@@ -541,7 +541,6 @@ assert.equal(
 const letterHeaders = Array.from({ length: 44 }, (_, index) => {
   if (index === 0) return "Portable Fire Equipment";
   if (index === ZOHO_COL.REPLACEMENT_PARTS) return "Replacement Parts";
-  if (index === ZOHO_COL.ADDITIONAL_SERVICE) return "Additional Service Requirements";
   if (index === ZOHO_COL.FIXED_START) return "Fixed Fire Equipment";
   if (index === ZOHO_COL.FIXED_SPARES) return "Fixed Spares Replaced";
   if (index === ZOHO_COL.DEVICE_COMPLIANCE) return "Device Compliance";
@@ -577,7 +576,6 @@ const letterCsv = [
     "Field 7": "Yes",
     "Field 8": "Yes",
     "Replacement Parts": "Safety pin",
-    "Additional Service Requirements": "Pressure test next visit",
     "Device Compliance": "Yes",
     "Next Service Date": "01/06/2026",
     "Customer Name": "Letter Layout Customer",
@@ -605,11 +603,6 @@ assert.equal(
   letterParsed.equipment[0].inspection.checklist.replacement_parts_used,
   "Safety pin",
   "replacement parts should come from column P"
-);
-assert.equal(
-  letterParsed.equipment[0].inspection.checklist.additional_service_requirements,
-  "Pressure test next visit",
-  "additional service should come from column Q"
 );
 assert.equal(
   letterParsed.equipment[0].inspection.checklist.compliant_result,
