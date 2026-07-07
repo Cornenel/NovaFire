@@ -7,6 +7,49 @@ import type {
 
 export const ZOHO_IMPORT_SOURCE = "zoho_import";
 
+/**
+ * Zoho Jobcard CSV column layout (Excel letters A–AR, 44 columns, 0-based indices).
+ *
+ * A–O  (0–14)  Portable fire equipment serviced
+ * P    (15)     Replacement parts used on portable device
+ * Q    (16)     Additional service requirements
+ * R–AH (17–33) Fixed fire equipment (hose reels, hydrants, etc.)
+ * AI   (34)     Spares replaced on fixed equipment
+ * AJ   (35)     Device compliance (portable and fixed)
+ * AK   (36)     Next service date
+ * AL   (37)     Marketing opt-in
+ * AM   (38)     Customer name
+ * AN   (39)     Technician name
+ * AO   (40)     SAQCC number
+ * AP   (41)     Time added
+ * AQ   (42)     Submitter location
+ * AR   (43)     Technician notes / report
+ *
+ * Some exports prepend Unique ID / Date / contact columns (A–G), shifting portable
+ * fields to H–. The parser detects that legacy layout automatically.
+ */
+
+export const ZOHO_COL = {
+  PORTABLE_START: 0,
+  PORTABLE_END: 14,
+  REPLACEMENT_PARTS: 15,
+  ADDITIONAL_SERVICE: 16,
+  FIXED_START: 17,
+  FIXED_END: 33,
+  FIXED_SPARES: 34,
+  DEVICE_COMPLIANCE: 35,
+  NEXT_SERVICE_DATE: 36,
+  OPT_IN_MARKETING: 37,
+  CUSTOMER_NAME: 38,
+  TECHNICIAN_NAME: 39,
+  SAQCC_NUMBER: 40,
+  ADDED_TIME: 41,
+  SUBMITTERS_LOCATION: 42,
+  TECHNICIAN_NOTES: 43,
+} as const;
+
+const LEGACY_JOB_PREFIX_COLUMNS = 7;
+
 const JOB_FIELDS = [
   "Unique ID",
   "Date",
@@ -24,19 +67,143 @@ const JOB_FIELDS = [
 ] as const;
 
 const REQUIRED_HEADERS = [
-  "Unique ID",
-  "Date",
-  "Customer Name",
-  "Contact Name",
-  "Phone",
-  "Email",
-  "Next Service Date",
   "Portable Fire Equipment",
   "Fixed Fire Equipment",
   "Technicians Name",
   "SAQCC Number",
-  "Technicians Report",
 ] as const;
+
+export type ZohoLayout = "letter" | "legacy";
+
+export interface ZohoColumnMap {
+  layout: ZohoLayout;
+  portableDevice: number;
+  portableWeight: number;
+  portableLocation: number;
+  portableLastPressureTest: number;
+  portableCheckIndices: number[];
+  replacementParts: number;
+  additionalService: number;
+  fixedDevice: number;
+  fixedLocation: number;
+  fixedLastService: number;
+  fixedHoseCheckIndices: number[];
+  fixedHydrantCheckIndices: number[];
+  fixedSpares: number;
+  deviceCompliance: number;
+  nextServiceDate: number;
+  optInMarketing: number;
+  customerName: number;
+  technicianName: number;
+  saqccNumber: number;
+  addedTime: number;
+  submittersLocation: number;
+  technicianNotes: number;
+  uniqueId: number | null;
+  jobDate: number | null;
+  contactName: number | null;
+  phone: number | null;
+  email: number | null;
+}
+
+interface JobState {
+  uniqueId?: string;
+  date?: string;
+  customerName?: string;
+  contactName?: string;
+  phone?: string;
+  email?: string;
+  nextServiceDate?: string;
+  technicianName?: string;
+  saqccNumber?: string;
+  addedTime?: string;
+  submittersLocation?: string;
+  technicianReport?: string;
+  marketingOptIn?: string;
+}
+
+export function buildZohoColumnMap(headers: string[]): ZohoColumnMap {
+  const legacy =
+    headers[0] === "Unique ID" ||
+    (headers.length > 7 && headers[7] === "Portable Fire Equipment");
+
+  const portableOffset = legacy ? LEGACY_JOB_PREFIX_COLUMNS : 0;
+  const fixedOffset = legacy ? 1 : 0;
+
+  return {
+    layout: legacy ? "legacy" : "letter",
+    portableDevice: portableOffset + ZOHO_COL.PORTABLE_START,
+    portableWeight: portableOffset + 1,
+    portableLocation: portableOffset + 2,
+    portableLastPressureTest: portableOffset + 3,
+    portableCheckIndices: [4, 5, 6, 7, 8].map((i) => portableOffset + i),
+    replacementParts: ZOHO_COL.REPLACEMENT_PARTS,
+    additionalService: ZOHO_COL.ADDITIONAL_SERVICE,
+    fixedDevice: ZOHO_COL.FIXED_START + fixedOffset,
+    fixedLocation: ZOHO_COL.FIXED_START + fixedOffset + 1,
+    fixedLastService: ZOHO_COL.FIXED_START + fixedOffset + 2,
+    fixedHoseCheckIndices: [3, 4, 5, 6, 7, 8, 9].map(
+      (i) => ZOHO_COL.FIXED_START + fixedOffset + i
+    ),
+    fixedHydrantCheckIndices: [10, 11, 12, 13, 14, 15].map(
+      (i) => ZOHO_COL.FIXED_START + fixedOffset + i
+    ),
+    fixedSpares: ZOHO_COL.FIXED_SPARES,
+    deviceCompliance: ZOHO_COL.DEVICE_COMPLIANCE,
+    nextServiceDate: ZOHO_COL.NEXT_SERVICE_DATE,
+    optInMarketing: ZOHO_COL.OPT_IN_MARKETING,
+    customerName: ZOHO_COL.CUSTOMER_NAME,
+    technicianName: ZOHO_COL.TECHNICIAN_NAME,
+    saqccNumber: ZOHO_COL.SAQCC_NUMBER,
+    addedTime: ZOHO_COL.ADDED_TIME,
+    submittersLocation: ZOHO_COL.SUBMITTERS_LOCATION,
+    technicianNotes: ZOHO_COL.TECHNICIAN_NOTES,
+    uniqueId: legacy ? 0 : headerIndex(headers, "Unique ID"),
+    jobDate: legacy ? 1 : headerIndex(headers, "Date"),
+    contactName: legacy ? 3 : headerIndex(headers, "Contact Name"),
+    phone: legacy ? 4 : headerIndex(headers, "Phone"),
+    email: legacy ? 5 : headerIndex(headers, "Email"),
+  };
+}
+
+function headerIndex(headers: string[], name: string): number | null {
+  const index = headers.indexOf(name);
+  return index >= 0 ? index : null;
+}
+
+export function getZohoCell(
+  row: Record<string, string>,
+  headers: string[],
+  index: number | null | undefined
+): string | null {
+  if (index === null || index === undefined || index < 0) return null;
+  const key = headers[index];
+  if (!key) return null;
+  return clean(row[key]);
+}
+
+function getComplianceCell(
+  row: CsvRow,
+  headers: string[]
+): string | null {
+  return (
+    getZohoCell(row, headers, ZOHO_COL.DEVICE_COMPLIANCE) ??
+    clean(row["Unnamed: 34"]) ??
+    clean(row["Unnamed: 35"])
+  );
+}
+
+function getNextServiceCell(
+  row: CsvRow,
+  headers: string[],
+  columnMap: ZohoColumnMap
+): string | null {
+  return (
+    getZohoCell(row, headers, columnMap.nextServiceDate) ??
+    clean(row["Next Service Date"]) ??
+    clean(row["Unnamed: 35"])
+  );
+}
 
 export type EquipmentSection = "portable" | "fixed";
 
@@ -146,9 +313,10 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
 
   const rawHeaders = rows[0].map((h) => h.trim());
   const headers = makeUniqueHeaders(rawHeaders);
+  const columnMap = buildZohoColumnMap(headers);
   const warnings: ZohoWarning[] = [];
   for (const h of REQUIRED_HEADERS) {
-    if (!headers.includes(h)) {
+    if (!headers.includes(h) && columnMap.layout === "legacy") {
       warnings.push({
         code: "missing_header",
         message: `Expected header "${h}" was not found.`,
@@ -159,12 +327,12 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
   if (headers.length < 44) {
     warnings.push({
       code: "column_count",
-      message: `Expected 44 columns but found ${headers.length}. Import will preserve raw rows and warn on unmapped fields.`,
+      message: `Expected 44 columns (A–AR) but found ${headers.length}. Import will preserve raw rows and warn on unmapped fields.`,
       severity: "warning",
     });
   }
 
-  const state: Partial<Record<(typeof JOB_FIELDS)[number], string>> = {};
+  const state: JobState = {};
   const seenKeys = new Set<string>();
   const equipment: ZohoMappedEquipment[] = [];
   let skippedRows = 0;
@@ -173,21 +341,18 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
   for (let i = 1; i < rows.length; i++) {
     const csvRowNumber = i + 1;
     const row = rowToObject(headers, rows[i]);
-    if (isBlankRow(row) || isQuestionLabelRow(row)) {
+    if (isBlankRow(row) || isQuestionLabelRow(row, columnMap, headers)) {
       skippedRows++;
       continue;
     }
 
-    for (const field of JOB_FIELDS) {
-      const value = clean(row[field]);
-      if (value) state[field] = value;
-    }
+    mergeJobStateFromRow(row, headers, columnMap, state);
 
     const rowWarnings: ZohoWarning[] = [];
-    const job = mapJob(state, csvRowNumber, rowWarnings);
+    const job = mapJob(state, columnMap, csvRowNumber, rowWarnings);
     const sections: EquipmentSection[] = [];
-    if (hasPortableEquipment(row)) sections.push("portable");
-    if (hasFixedEquipment(row)) sections.push("fixed");
+    if (hasPortableEquipment(row, columnMap, headers)) sections.push("portable");
+    if (hasFixedEquipment(row, columnMap, headers)) sections.push("fixed");
 
     if (sections.length === 0) {
       skippedRows++;
@@ -201,7 +366,14 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
     }
 
     for (const section of sections) {
-      const mapped = mapEquipment(row, csvRowNumber, section, job);
+      const mapped = mapEquipment(
+        row,
+        headers,
+        columnMap,
+        csvRowNumber,
+        section,
+        job
+      );
       mapped.warnings.unshift(...rowWarnings);
       if (seenKeys.has(mapped.idempotencyKey)) {
         duplicateRows++;
@@ -356,9 +528,16 @@ function isBlankRow(row: CsvRow): boolean {
   return Object.values(row).every((value) => !clean(value));
 }
 
-function isQuestionLabelRow(row: CsvRow): boolean {
+function isQuestionLabelRow(
+  row: CsvRow,
+  columnMap: ZohoColumnMap,
+  headers: string[]
+): boolean {
   const values = Object.values(row).join(" ").toLowerCase();
-  const noJobData = !clean(row["Unique ID"]) && !clean(row["Customer Name"]);
+  const noJobData =
+    !getZohoCell(row, headers, columnMap.uniqueId) &&
+    !getZohoCell(row, headers, columnMap.customerName) &&
+    !clean(row["Customer Name"]);
   return (
     noJobData &&
     (values.includes("device weight") ||
@@ -368,44 +547,140 @@ function isQuestionLabelRow(row: CsvRow): boolean {
   );
 }
 
-function hasPortableEquipment(row: CsvRow): boolean {
-  return Boolean(
-    clean(row["Portable Fire Equipment"]) ||
-      clean(row["Unnamed: 7"]) ||
-      clean(row["Unnamed: 8"])
-  );
+function mergeJobStateFromRow(
+  row: CsvRow,
+  headers: string[],
+  columnMap: ZohoColumnMap,
+  state: JobState
+): void {
+  const assign = (key: keyof JobState, index: number | null | undefined) => {
+    const value = getZohoCell(row, headers, index);
+    if (value) state[key] = value;
+  };
+
+  for (const field of JOB_FIELDS) {
+    const value = clean(row[field]);
+    if (!value) continue;
+    switch (field) {
+      case "Unique ID":
+        state.uniqueId = value;
+        break;
+      case "Date":
+        state.date = value;
+        break;
+      case "Customer Name":
+      case "Customer Name.1":
+        state.customerName = value;
+        break;
+      case "Contact Name":
+        state.contactName = value;
+        break;
+      case "Phone":
+        state.phone = value;
+        break;
+      case "Email":
+        state.email = value;
+        break;
+      case "Next Service Date":
+        state.nextServiceDate = value;
+        break;
+      case "Technicians Name":
+        state.technicianName = value;
+        break;
+      case "SAQCC Number":
+        state.saqccNumber = value;
+        break;
+      case "Added Time":
+        state.addedTime = value;
+        break;
+      case "Submitters Location":
+        state.submittersLocation = value;
+        break;
+      case "Technicians Report":
+        state.technicianReport = value;
+        break;
+      default:
+        break;
+    }
+  }
+
+  assign("uniqueId", columnMap.uniqueId);
+  assign("date", columnMap.jobDate);
+  assign("contactName", columnMap.contactName);
+  assign("phone", columnMap.phone);
+  assign("email", columnMap.email);
+  assign("customerName", columnMap.customerName);
+  assign("nextServiceDate", columnMap.nextServiceDate);
+  const rowNextService = getNextServiceCell(row, headers, columnMap);
+  if (rowNextService) state.nextServiceDate = rowNextService;
+  assign("technicianName", columnMap.technicianName);
+  assign("saqccNumber", columnMap.saqccNumber);
+  assign("addedTime", columnMap.addedTime);
+  assign("submittersLocation", columnMap.submittersLocation);
+  assign("technicianReport", columnMap.technicianNotes);
+  assign("marketingOptIn", columnMap.optInMarketing);
 }
 
-function hasFixedEquipment(row: CsvRow): boolean {
-  return Boolean(
-    clean(row["Fixed Fire Equipment"]) ||
-      clean(row["Unnamed: 18"]) ||
-      clean(row["Unnamed: 19"])
-  );
+function hasPortableEquipment(
+  row: CsvRow,
+  columnMap: ZohoColumnMap,
+  headers: string[]
+): boolean {
+  if (getZohoCell(row, headers, columnMap.portableDevice)) return true;
+  if (getZohoCell(row, headers, columnMap.portableWeight)) return true;
+  if (getZohoCell(row, headers, columnMap.portableLocation)) return true;
+  return Boolean(clean(row["Portable Fire Equipment"]));
+}
+
+function hasFixedEquipment(
+  row: CsvRow,
+  columnMap: ZohoColumnMap,
+  headers: string[]
+): boolean {
+  if (getZohoCell(row, headers, columnMap.fixedDevice)) return true;
+  if (getZohoCell(row, headers, columnMap.fixedLocation)) return true;
+  if (getZohoCell(row, headers, columnMap.fixedLastService)) return true;
+  return Boolean(clean(row["Fixed Fire Equipment"]));
 }
 
 function mapJob(
-  state: Partial<Record<(typeof JOB_FIELDS)[number], string>>,
+  state: JobState,
+  columnMap: ZohoColumnMap,
   csvRowNumber: number,
   warnings: ZohoWarning[]
 ): ZohoMappedJob {
-  const uniqueId = clean(state["Unique ID"]);
-  const customerName =
-    clean(state["Customer Name"]) ?? clean(state["Customer Name.1"]);
-  const email = clean(state.Email);
+  const uniqueId =
+    clean(state.uniqueId) ??
+    deriveLegacyJobcardId({
+      addedTime: state.addedTime,
+      customerName: state.customerName,
+      technicianName: state.technicianName,
+      submittersLocation: state.submittersLocation,
+      date: state.date,
+      csvRowNumber,
+    });
+  const customerName = clean(state.customerName);
+  const email = clean(state.email);
 
-  if (!uniqueId) {
+  if (!state.uniqueId && columnMap.layout === "legacy") {
     warnings.push({
       code: "missing_unique_id",
       message: "Missing Zoho Unique ID after forward-fill.",
       csvRowNumber,
       severity: "error",
     });
+  } else if (!state.uniqueId && columnMap.layout === "letter") {
+    warnings.push({
+      code: "derived_job_id",
+      message: `Derived job id ${uniqueId} from customer, technician and time added (column AP).`,
+      csvRowNumber,
+      severity: "info",
+    });
   }
   if (!customerName) {
     warnings.push({
       code: "missing_customer_name",
-      message: "Missing customer name after forward-fill.",
+      message: "Missing customer name after forward-fill (column AM).",
       csvRowNumber,
       severity: "warning",
     });
@@ -419,44 +694,69 @@ function mapJob(
     });
   }
 
-  const date = parseDate(clean(state.Date));
-  if (clean(state.Date) && !date) {
+  const date = parseDate(clean(state.date));
+  if (clean(state.date) && !date) {
     warnings.push({
       code: "invalid_date",
-      message: `Could not parse job date: ${state.Date}`,
+      message: `Could not parse job date: ${state.date}`,
       csvRowNumber,
       severity: "warning",
     });
   }
 
-  const nextServiceDate = parseDate(clean(state["Next Service Date"]));
-  if (clean(state["Next Service Date"]) && !nextServiceDate) {
+  const nextServiceDate = parseDate(clean(state.nextServiceDate));
+  if (clean(state.nextServiceDate) && !nextServiceDate) {
     warnings.push({
       code: "invalid_next_service_date",
-      message: `Could not parse next service date: ${state["Next Service Date"]}`,
+      message: `Could not parse next service date (column AK): ${state.nextServiceDate}`,
       csvRowNumber,
       severity: "warning",
     });
   }
 
   return {
-    legacyZohoJobcardId: uniqueId ?? `missing-${csvRowNumber}`,
+    legacyZohoJobcardId: uniqueId,
     date,
-    addedTime: parseDateTime(clean(state["Added Time"])) ?? date,
+    addedTime: parseDateTime(clean(state.addedTime)) ?? date,
     customerName,
-    contactName: clean(state["Contact Name"]),
-    phone: clean(state.Phone),
+    contactName: clean(state.contactName),
+    phone: clean(state.phone),
     email: normalizeEmail(email) ?? email ?? null,
     nextServiceDate,
-    technicianName: clean(state["Technicians Name"]),
-    saqccNumber: clean(state["SAQCC Number"]),
-    submittersLocation: clean(state["Submitters Location"]),
-    technicianReport: clean(state["Technicians Report"]),
+    technicianName: clean(state.technicianName),
+    saqccNumber: clean(state.saqccNumber),
+    submittersLocation: clean(state.submittersLocation),
+    technicianReport: clean(state.technicianReport),
   };
+}
+
+function deriveLegacyJobcardId(input: {
+  addedTime?: string;
+  customerName?: string;
+  technicianName?: string;
+  submittersLocation?: string;
+  date?: string;
+  csvRowNumber: number;
+}): string {
+  const parts = [
+    input.addedTime,
+    input.customerName,
+    input.technicianName,
+    input.submittersLocation,
+    input.date,
+  ]
+    .map((value) => normalizeText(value))
+    .filter(Boolean);
+  if (parts.length > 0) {
+    return `zoho-${parts.join("-").slice(0, 120)}`;
+  }
+  return `missing-${input.csvRowNumber}`;
 }
 
 function mapEquipment(
   row: CsvRow,
+  headers: string[],
+  columnMap: ZohoColumnMap,
   csvRowNumber: number,
   section: EquipmentSection,
   job: ZohoMappedJob
@@ -464,8 +764,10 @@ function mapEquipment(
   const warnings: ZohoWarning[] = [];
   const rawDescription =
     section === "portable"
-      ? clean(row["Portable Fire Equipment"])
-      : clean(row["Fixed Fire Equipment"]);
+      ? getZohoCell(row, headers, columnMap.portableDevice) ??
+        clean(row["Portable Fire Equipment"])
+      : getZohoCell(row, headers, columnMap.fixedDevice) ??
+        clean(row["Fixed Fire Equipment"]);
   const originalDescription = rawDescription ?? "Unknown equipment";
 
   const parsed =
@@ -483,15 +785,21 @@ function mapEquipment(
   }
 
   const location =
-    section === "portable" ? clean(row["Unnamed: 8"]) : clean(row["Unnamed: 18"]);
+    section === "portable"
+      ? getZohoCell(row, headers, columnMap.portableLocation)
+      : getZohoCell(row, headers, columnMap.fixedLocation);
   const portableNumberOrCapacity =
-    section === "portable" ? splitCustomerNumberAndCapacity(row["Unnamed: 7"]) : null;
+    section === "portable"
+      ? splitCustomerNumberAndCapacity(
+          getZohoCell(row, headers, columnMap.portableWeight)
+        )
+      : null;
   const sizeCapacity =
     section === "portable"
       ? portableNumberOrCapacity?.capacity ?? parsed.capacity
       : parsed.capacity;
-  const compliance =
-    section === "portable" ? clean(row["Unnamed: 16"]) : clean(row["Unnamed: 35"]);
+  const compliance = getComplianceCell(row, headers);
+  const additionalService = getZohoCell(row, headers, columnMap.additionalService);
   const manufactureDate = parseDate(
     firstAliasedValue(row, [
       "Manufacture Date",
@@ -503,7 +811,7 @@ function mapEquipment(
   );
   const lastPressureTestDate = parseDate(
     section === "portable"
-      ? clean(row["Unnamed: 9"]) ??
+      ? getZohoCell(row, headers, columnMap.portableLastPressureTest) ??
           firstAliasedValue(row, [
             "Last Pressure Test Date",
             "Pressure Test Date",
@@ -530,9 +838,18 @@ function mapEquipment(
   const report = job.technicianReport;
   const checklist =
     section === "portable"
-      ? mapPortableChecklist(row, report)
-      : mapFixedChecklist(row, report, parsed.assetType);
-  const defect = buildDefect(row, section, compliance, checklist, report);
+      ? mapPortableChecklist(row, headers, columnMap, report, additionalService)
+      : mapFixedChecklist(row, headers, columnMap, report, parsed.assetType);
+  const defect = buildDefect(
+    row,
+    headers,
+    columnMap,
+    section,
+    compliance,
+    checklist,
+    report,
+    additionalService
+  );
 
   if (!compliance) {
     warnings.push({
@@ -576,7 +893,9 @@ function mapEquipment(
       locationDescription: location,
       manufactureDate,
       lastServiceDate:
-        section === "fixed" ? parseDate(clean(row["Unnamed: 19"])) : null,
+        section === "fixed"
+          ? parseDate(getZohoCell(row, headers, columnMap.fixedLastService))
+          : null,
       lastPressureTestDate,
       nextPressureTestDate,
       importedUnverified: parsed.unknown || !location,
@@ -670,51 +989,76 @@ function parseFixedDescription(description: string): {
 
 function mapPortableChecklist(
   row: CsvRow,
-  report: string | null
+  headers: string[],
+  columnMap: ZohoColumnMap,
+  report: string | null,
+  additionalService: string | null
 ): Record<string, string | boolean | null> {
+  const [seal, damage, nozzle, pressure, accessible] =
+    columnMap.portableCheckIndices.map((index) => getZohoCell(row, headers, index));
   return {
-    seal_and_pin_intact: yesNo(row["Unnamed: 10"]),
-    no_visible_damage_rust_or_corrosion: yesNo(row["Unnamed: 11"]),
-    nozzle_free_from_obstruction_or_damage: yesNo(row["Unnamed: 12"]),
-    pressure_within_operational_range: yesNo(row["Unnamed: 13"]),
-    accessible_and_clearly_marked: yesNo(row["Unnamed: 14"]),
-    replacement_parts_used: clean(row["Unnamed: 15"]),
-    compliant_result: clean(row["Unnamed: 16"]),
-    last_pressure_test_date: parseDate(clean(row["Unnamed: 9"])),
+    seal_and_pin_intact: yesNo(seal),
+    no_visible_damage_rust_or_corrosion: yesNo(damage),
+    nozzle_free_from_obstruction_or_damage: yesNo(nozzle),
+    pressure_within_operational_range: yesNo(pressure),
+    accessible_and_clearly_marked: yesNo(accessible),
+    replacement_parts_used: getZohoCell(row, headers, columnMap.replacementParts),
+    additional_service_requirements: additionalService,
+    compliant_result: getComplianceCell(row, headers),
+    last_pressure_test_date: parseDate(
+      getZohoCell(row, headers, columnMap.portableLastPressureTest)
+    ),
     technician_notes: report,
   };
 }
 
 function mapFixedChecklist(
   row: CsvRow,
+  headers: string[],
+  columnMap: ZohoColumnMap,
   report: string | null,
   assetType: AssetType
 ): Record<string, string | boolean | null> {
+  const cellAt = (index: number) => getZohoCell(row, headers, index);
   if (assetType === "hydrant") {
+    const [body, operational, reading, valve, couplings, marked] =
+      columnMap.fixedHydrantCheckIndices;
     return {
-      hydrant_body_condition_ok: yesNo(row["Unnamed: 28"]),
-      hydrant_operational_with_good_pressure: yesNo(row["Unnamed: 29"]),
-      pressure_reading: clean(row["Unnamed: 30"]),
-      valve_opens_and_closes_without_leaks: yesNo(row["Unnamed: 31"]),
-      couplings_and_nozzles_functional: yesNo(row["Unnamed: 32"]),
-      clearly_marked_and_accessible: yesNo(row["Unnamed: 33"]),
-      spares_replaced: clean(row["Unnamed: 34"]),
-      compliant_result: clean(row["Unnamed: 35"]),
+      hydrant_body_condition_ok: yesNo(cellAt(body)),
+      hydrant_operational_with_good_pressure: yesNo(cellAt(operational)),
+      pressure_reading: cellAt(reading),
+      valve_opens_and_closes_without_leaks: yesNo(cellAt(valve)),
+      couplings_and_nozzles_functional: yesNo(cellAt(couplings)),
+      clearly_marked_and_accessible: yesNo(cellAt(marked)),
+      spares_replaced: cellAt(columnMap.fixedSpares),
+      additional_service_requirements: cellAt(columnMap.additionalService),
+      compliant_result: getComplianceCell(row, headers),
       technician_notes: report,
     };
   }
 
+  const [
+    hose,
+    reel,
+    hoseLength,
+    nozzle,
+    waterFlow,
+    signage,
+    leaks,
+    cabinet,
+  ] = columnMap.fixedHoseCheckIndices;
   return {
-    hose_condition_ok: yesNo(row["Unnamed: 20"]),
-    reel_mechanism_ok: yesNo(row["Unnamed: 21"]),
-    hose_length_sufficient: yesNo(row["Unnamed: 22"]),
-    nozzle_operating_correctly: yesNo(row["Unnamed: 23"]),
-    water_flow_pressure_adequate: yesNo(row["Unnamed: 24"]),
-    signage_present: yesNo(row["Unnamed: 25"]),
-    no_leaks: yesNo(row["Unnamed: 26"]),
-    cabinet_accessible_and_intact: yesNo(row["Unnamed: 27"]),
-    spares_replaced: clean(row["Unnamed: 34"]),
-    compliant_result: clean(row["Unnamed: 35"]),
+    hose_condition_ok: yesNo(cellAt(hose)),
+    reel_mechanism_ok: yesNo(cellAt(reel)),
+    hose_length_sufficient: yesNo(cellAt(hoseLength)),
+    nozzle_operating_correctly: yesNo(cellAt(nozzle)),
+    water_flow_pressure_adequate: yesNo(cellAt(waterFlow)),
+    signage_present: yesNo(cellAt(signage)),
+    no_leaks: yesNo(cellAt(leaks)),
+    cabinet_accessible_and_intact: yesNo(cellAt(cabinet)),
+    spares_replaced: cellAt(columnMap.fixedSpares),
+    additional_service_requirements: cellAt(columnMap.additionalService),
+    compliant_result: getComplianceCell(row, headers),
     technician_notes: report,
   };
 }
@@ -752,37 +1096,40 @@ function isCompliant(
 
 function buildDefect(
   row: CsvRow,
+  headers: string[],
+  columnMap: ZohoColumnMap,
   section: EquipmentSection,
   compliance: string | null,
   checklist: Record<string, string | boolean | null>,
-  report: string | null
+  report: string | null,
+  additionalService: string | null
 ): ZohoMappedEquipment["defect"] {
   const parts =
-    section === "portable" ? clean(row["Unnamed: 15"]) : clean(row["Unnamed: 34"]);
+    section === "portable"
+      ? getZohoCell(row, headers, columnMap.replacementParts)
+      : getZohoCell(row, headers, columnMap.fixedSpares);
+  const meaningfulParts = isMeaningfulPartsOrSpares(parts);
   const rowFailed = !isCompliant(compliance, checklist);
   const hasChecklistFailure = Object.values(checklist).some((value) => value === false);
   const rowSpecificText = [
     compliance,
-    parts,
+    meaningfulParts ? parts : null,
+    additionalService,
     ...Object.entries(checklist)
       .filter(([, value]) => value === false)
       .map(([key]) => key),
   ]
     .filter(Boolean)
     .join(" ");
-  const combined = [
-    rowSpecificText,
-    report,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const combined = [rowSpecificText, report].filter(Boolean).join(" ");
 
   // Technician report is job-level text and is repeated across every imported
   // equipment row. Do not let report-only keywords create duplicate defects
   // for rows whose own compliance/checklist/parts data passed.
   const shouldCreate =
     rowFailed ||
-    Boolean(parts) ||
+    meaningfulParts ||
+    isMeaningfulAdditionalService(additionalService) ||
     hasChecklistFailure ||
     containsAny(rowSpecificText, [
       "pressure test",
@@ -805,7 +1152,8 @@ function buildDefect(
   const severity = suggestedSeverity(combined);
   const description = [
     compliance ? `Compliance: ${compliance}` : null,
-    parts ? `Parts/spares: ${parts}` : null,
+    meaningfulParts ? `Parts/spares: ${parts}` : null,
+    additionalService ? `Additional service: ${additionalService}` : null,
     report ? `Technician report: ${report}` : null,
     Object.entries(checklist)
       .filter(([, value]) => value === false)
@@ -874,6 +1222,25 @@ function containsPressureTest(value: string | null | undefined): boolean {
 function containsAny(value: string | null | undefined, needles: string[]): boolean {
   const haystack = normalizeText(value);
   return needles.some((needle) => haystack.includes(normalizeText(needle)));
+}
+
+/** Column P / AI should list actual parts – not yes/no checklist answers. */
+function isMeaningfulPartsOrSpares(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const text = normalizeText(value);
+  if (!text) return false;
+  if (["yes", "y", "no", "n", "true", "false", "pass", "fail", "ok", "compliant"].includes(text)) {
+    return false;
+  }
+  return true;
+}
+
+function isMeaningfulAdditionalService(value: string | null | undefined): boolean {
+  if (!value) return false;
+  const text = normalizeText(value);
+  if (!text) return false;
+  if (["yes", "y", "no", "n", "-"].includes(text)) return false;
+  return true;
 }
 
 function parseDate(value: string | null): string | null {

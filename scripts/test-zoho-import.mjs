@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { parseZohoJobcardCsv } from "../src/lib/imports/zoho-jobcard.ts";
+import {
+  buildZohoColumnMap,
+  parseZohoJobcardCsv,
+  ZOHO_COL,
+} from "../src/lib/imports/zoho-jobcard.ts";
 import { formatAssetDisplayName } from "../src/lib/fsm/asset-display.ts";
 import {
   evaluateFireExtinguisherCompliance,
@@ -69,7 +73,7 @@ const fixture = [
     "Portable Fire Equipment": "Device type",
     "Unnamed: 7": "Device Weight",
     "Unnamed: 10": "Is the seal and safety pin intact?",
-    "Unnamed: 35": "Is the device compliant?",
+    "Unnamed: 34": "Is the device compliant?",
   }),
   row({
     "Unique ID": "ZJ-001",
@@ -88,7 +92,7 @@ const fixture = [
     "Unnamed: 12": "Yes",
     "Unnamed: 13": "Yes",
     "Unnamed: 14": "Yes",
-    "Unnamed: 16": "Yes",
+    "Unnamed: 34": "Yes",
     "Technicians Name": "Jacques",
     "SAQCC Number": "SAQCC-1",
     "Added Time": "2025-06-01T10:00:00Z",
@@ -104,7 +108,7 @@ const fixture = [
     "Unnamed: 12": "Yes",
     "Unnamed: 13": "Pressure testing required",
     "Unnamed: 14": "Yes",
-    "Unnamed: 16": "Pressure testing required",
+    "Unnamed: 34": "Pressure testing required",
   }),
   row({
     "Unique ID": "ZJ-002",
@@ -121,7 +125,7 @@ const fixture = [
     "Unnamed: 25": "Yes",
     "Unnamed: 26": "Yes",
     "Unnamed: 27": "Yes",
-    "Unnamed: 35": "Yes",
+    "Unnamed: 34": "Yes",
   }),
 ].join("\n");
 
@@ -153,7 +157,7 @@ const hundredJobCsv = [
       "Unnamed: 12": "Yes",
       "Unnamed: 13": "Yes",
       "Unnamed: 14": "Yes",
-      "Unnamed: 16": "Yes",
+      "Unnamed: 34": "Yes",
     })
   ),
 ].join("\n");
@@ -177,7 +181,7 @@ const repeatedReportCsv = [
       "Unnamed: 12": "Yes",
       "Unnamed: 13": "Yes",
       "Unnamed: 14": "Yes",
-      "Unnamed: 16": "Yes",
+      "Unnamed: 34": "Yes",
       "Technicians Report":
         "2.5kg fire extinguisher at Generator is too small for the Generator 9kg dcp required. no visible damage rust or corrosion",
     })
@@ -214,7 +218,7 @@ const extinguisherCsv = [
       "Unnamed: 12": "Yes",
       "Unnamed: 13": "Yes",
       "Unnamed: 14": "Yes",
-      "Unnamed: 16": "Yes",
+      "Unnamed: 34": "Yes",
     })
   ),
 ].join("\n");
@@ -532,6 +536,95 @@ assert.equal(
   idempotentRecheck.changed,
   false,
   "re-running historical recheck should be idempotent and avoid duplicate history"
+);
+
+const letterHeaders = Array.from({ length: 44 }, (_, index) => {
+  if (index === 0) return "Portable Fire Equipment";
+  if (index === ZOHO_COL.REPLACEMENT_PARTS) return "Replacement Parts";
+  if (index === ZOHO_COL.ADDITIONAL_SERVICE) return "Additional Service Requirements";
+  if (index === ZOHO_COL.FIXED_START) return "Fixed Fire Equipment";
+  if (index === ZOHO_COL.FIXED_SPARES) return "Fixed Spares Replaced";
+  if (index === ZOHO_COL.DEVICE_COMPLIANCE) return "Device Compliance";
+  if (index === ZOHO_COL.NEXT_SERVICE_DATE) return "Next Service Date";
+  if (index === ZOHO_COL.CUSTOMER_NAME) return "Customer Name";
+  if (index === ZOHO_COL.TECHNICIAN_NAME) return "Technicians Name";
+  if (index === ZOHO_COL.SAQCC_NUMBER) return "SAQCC Number";
+  if (index === ZOHO_COL.ADDED_TIME) return "Added Time";
+  if (index === ZOHO_COL.SUBMITTERS_LOCATION) return "Submitters Location";
+  if (index === ZOHO_COL.TECHNICIAN_NOTES) return "Technicians Report";
+  return `Field ${index}`;
+});
+
+function letterRow(values) {
+  return letterHeaders.map((header) => csv(values[header] ?? "")).join(",");
+}
+
+const letterCsv = [
+  letterHeaders.join(","),
+  letterRow({
+    "Portable Fire Equipment": "Device type",
+    "Field 1": "Device Weight",
+    "Field 4": "Is the seal and safety pin intact?",
+  }),
+  letterRow({
+    "Portable Fire Equipment": "Extinguisher 9kg DCP Service",
+    "Field 1": "9kg",
+    "Field 2": "Kitchen",
+    "Field 3": "01/06/2024",
+    "Field 4": "Yes",
+    "Field 5": "Yes",
+    "Field 6": "Yes",
+    "Field 7": "Yes",
+    "Field 8": "Yes",
+    "Replacement Parts": "Safety pin",
+    "Additional Service Requirements": "Pressure test next visit",
+    "Device Compliance": "Yes",
+    "Next Service Date": "01/06/2026",
+    "Customer Name": "Letter Layout Customer",
+    "Technicians Name": "Jacques",
+    "SAQCC Number": "SAQCC-9",
+    "Added Time": "2025-06-01T10:00:00Z",
+    "Submitters Location": "Site A",
+    "Technicians Report": "Portable service complete",
+  }),
+].join("\n");
+
+const letterParsed = parseZohoJobcardCsv(letterCsv);
+assert.equal(
+  buildZohoColumnMap(letterHeaders).layout,
+  "letter",
+  "44-column export without Unique ID prefix should use letter layout"
+);
+assert.equal(letterParsed.summary.portableAssets, 1, "letter layout should import portable row");
+assert.equal(
+  letterParsed.equipment[0].job.customerName,
+  "Letter Layout Customer",
+  "customer name should come from column AM"
+);
+assert.equal(
+  letterParsed.equipment[0].inspection.checklist.replacement_parts_used,
+  "Safety pin",
+  "replacement parts should come from column P"
+);
+assert.equal(
+  letterParsed.equipment[0].inspection.checklist.additional_service_requirements,
+  "Pressure test next visit",
+  "additional service should come from column Q"
+);
+assert.equal(
+  letterParsed.equipment[0].inspection.checklist.compliant_result,
+  "Yes",
+  "device compliance should come from column AJ"
+);
+assert.equal(
+  letterParsed.equipment[0].job.nextServiceDate,
+  "2026-06-01",
+  "next service date should come from column AK"
+);
+assert.equal(
+  letterParsed.equipment[0].job.technicianReport,
+  "Portable service complete",
+  "technician notes should come from column AR"
 );
 
 console.log("Zoho Jobcard import parser tests passed.");
