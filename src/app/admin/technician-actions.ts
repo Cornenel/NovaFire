@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  buildTokenHashConfirmUrl,
   getAuthRedirectUrl,
   inviteRedirectConfigurationError,
 } from "@/lib/site-url";
@@ -66,6 +67,12 @@ function strOrNull(formData: FormData, key: string): string | null {
 
 function technicianErrorRedirect(message: string): never {
   redirect(`/admin/technicians?error=${encodeURIComponent(message)}`);
+}
+
+function technicianSuccessRedirect(message: string, setupLink?: string): never {
+  const params = new URLSearchParams({ success: message });
+  if (setupLink) params.set("setupLink", setupLink);
+  redirect(`/admin/technicians?${params.toString()}`);
 }
 
 function getConfiguredAdminClient(): ReturnType<typeof createAdminClient> {
@@ -154,14 +161,46 @@ async function saveStaffProfile(
   }
 }
 
-async function sendStaffPasswordEmail(email: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: getAuthRedirectUrl("/auth/set-password"),
-  });
-  if (error) {
-    technicianErrorRedirect(inviteErrorMessage(error.message));
+/**
+ * Creates a device-safe password setup link (token_hash). Prefer this over
+ * resetPasswordForEmail: PKCE codes from that flow are tied to the admin
+ * browser and fail when the technician opens the link on their phone.
+ */
+async function createStaffSetupLink(
+  admin: ReturnType<typeof createAdminClient>,
+  email: string,
+  type: "invite" | "recovery",
+  meta?: {
+    first_name: string;
+    last_name: string;
+    full_name: string;
+    phone: string | null;
+    invited_role: string;
   }
+): Promise<{ userId: string; setupLink: string }> {
+  const { data, error } = await admin.auth.admin.generateLink({
+    type,
+    email,
+    options: {
+      redirectTo: getAuthRedirectUrl("/auth/set-password"),
+      ...(meta ? { data: meta } : {}),
+    },
+  });
+
+  if (error || !data.user || !data.properties?.hashed_token) {
+    if (isAlreadyRegisteredError(error?.message)) {
+      throw new Error(error?.message ?? "already registered");
+    }
+    technicianErrorRedirect(
+      inviteErrorMessage(error?.message ?? "Could not create password setup link")
+    );
+  }
+
+  const linkType = type === "invite" ? "invite" : "recovery";
+  return {
+    userId: data.user.id,
+    setupLink: buildTokenHashConfirmUrl(data.properties.hashed_token, linkType),
+  };
 }
 
 async function recoverExistingStaffAccount(
@@ -187,21 +226,20 @@ async function recoverExistingStaffAccount(
   }
 
   await saveStaffProfile(admin, { ...profile, id: existing.id });
-  await sendStaffPasswordEmail(email);
+  const { setupLink } = await createStaffSetupLink(admin, email, "recovery");
 
   revalidatePath("/admin/technicians");
-  redirect(
-    `/admin/technicians?success=${encodeURIComponent(
-      `Existing account restored for ${email}. A password setup email has been sent.`
-    )}`
+  technicianSuccessRedirect(
+    `Existing account restored for ${email}. Copy the setup link below and send it on WhatsApp (email links can get burned by scanners).`,
+    setupLink
   );
 }
 
 /**
  * Create a staff account:
- * 1. Invite via Supabase Auth (sends invite email – no manual password).
- * 2. The handle_new_user trigger creates the profile.
- * 3. Enrich the profile with the remaining fields.
+ * 1. Generate an invite link via Supabase Admin (also emails the user).
+ * 2. Upsert the profiles row (trigger may also create one).
+ * 3. Show a copyable device-safe /auth/confirm link (WhatsApp-safe).
  */
 export async function createTechnician(formData: FormData) {
   const role = str(formData, "role") === "admin" ? "admin" : "technician";
@@ -239,37 +277,32 @@ export async function createTechnician(formData: FormData) {
     is_active: true,
   };
 
-  const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(
-    email,
-    {
-      data: {
-        first_name: firstName,
-        last_name: lastName,
-        full_name: `${firstName} ${lastName}`,
-        phone: strOrNull(formData, "phone"),
-        // The signup trigger only honours non-admin invited roles; the
-        // service-role profile update below applies admin role after invite.
-        invited_role: role === "admin" ? "technician" : role,
-      },
-      redirectTo: getAuthRedirectUrl("/auth/set-password"),
-    }
-  );
-
-  if (error || !invited.user) {
-    if (isAlreadyRegisteredError(error?.message)) {
+  let setupLink: string;
+  try {
+    const invited = await createStaffSetupLink(admin, email, "invite", {
+      first_name: firstName,
+      last_name: lastName,
+      full_name: `${firstName} ${lastName}`,
+      phone: strOrNull(formData, "phone"),
+      // Signup trigger only honours non-admin invited roles; upsert applies admin.
+      invited_role: role === "admin" ? "technician" : role,
+    });
+    profilePayload.id = invited.userId;
+    setupLink = invited.setupLink;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (isAlreadyRegisteredError(message)) {
       await recoverExistingStaffAccount(admin, email, profilePayload);
     }
-    technicianErrorRedirect(inviteErrorMessage(error?.message ?? "Invite failed"));
+    technicianErrorRedirect(inviteErrorMessage(message || "Invite failed"));
   }
 
-  profilePayload.id = invited.user.id;
   await saveStaffProfile(admin, profilePayload);
 
   revalidatePath("/admin/technicians");
-  redirect(
-    `/admin/technicians?success=${encodeURIComponent(
-      `Invite sent to ${email}. They will receive an email to set their password.`
-    )}`
+  technicianSuccessRedirect(
+    `Invite ready for ${email}. Copy the setup link below and send it on WhatsApp — that is the most reliable way for staff to set a password.`,
+    setupLink
   );
 }
 
@@ -315,16 +348,25 @@ export async function setTechnicianActive(id: string, active: boolean) {
   revalidatePath("/admin/technicians");
 }
 
-/** Re-send a password setup / reset email. */
+/** Re-send a password setup email and show a device-safe copyable link. */
 export async function sendPasswordReset(email: string) {
   await requireDispatcher();
 
-  const supabase = await createClient();
   const inviteConfigError = inviteRedirectConfigurationError();
   if (inviteConfigError) {
     technicianErrorRedirect(inviteConfigError);
   }
-  await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: getAuthRedirectUrl("/auth/set-password"),
-  });
+
+  const admin = getConfiguredAdminClient();
+  const { setupLink } = await createStaffSetupLink(
+    admin,
+    email.toLowerCase(),
+    "recovery"
+  );
+
+  revalidatePath("/admin/technicians");
+  technicianSuccessRedirect(
+    `Password setup link ready for ${email}. Copy it below and send on WhatsApp.`,
+    setupLink
+  );
 }

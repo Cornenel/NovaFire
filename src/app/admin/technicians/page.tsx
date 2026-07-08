@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Users, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createTechnician } from "@/app/admin/technician-actions";
+import { CopySetupLink } from "@/components/admin/copy-setup-link";
 import type { Profile } from "@/lib/fsm/types";
 import { cn } from "@/lib/utils";
 
@@ -14,9 +15,9 @@ const labelCls = "block text-xs text-zinc-400 mb-1.5";
 export default async function TechniciansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; success?: string }>;
+  searchParams: Promise<{ error?: string; success?: string; setupLink?: string }>;
 }) {
-  const { error, success } = await searchParams;
+  const { error, success, setupLink } = await searchParams;
   const supabase = await createClient();
 
   const [
@@ -75,9 +76,12 @@ export default async function TechniciansPage({
       )}
 
       {success && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] px-4 py-3 mb-6">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <p className="text-sm text-emerald-300">{success}</p>
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] px-4 py-3 mb-6">
+          <div className="flex items-start gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <p className="text-sm text-emerald-300">{success}</p>
+          </div>
+          {setupLink && <CopySetupLink link={setupLink} />}
         </div>
       )}
 

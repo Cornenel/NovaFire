@@ -50,28 +50,26 @@ export function TechnicianStatusButton({
 }
 
 export function PasswordResetButton({ email }: { email: string }) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [sent, setSent] = useState(false);
 
   return (
     <button
       onClick={() =>
         startTransition(async () => {
           await sendPasswordReset(email);
-          setSent(true);
+          router.refresh();
         })
       }
-      disabled={isPending || sent}
+      disabled={isPending}
       className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-white/5 border border-white/10 text-zinc-300 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
     >
       {isPending ? (
         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-      ) : sent ? (
-        <Check className="w-3.5 h-3.5 text-emerald-400" />
       ) : (
         <MailQuestion className="w-3.5 h-3.5" />
       )}
-      {sent ? "Email sent" : "Send password email"}
+      Get setup link
     </button>
   );
 }

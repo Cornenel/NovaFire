@@ -7,9 +7,10 @@ import { Loader2, KeyRound } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * Finishes an invite / password-reset flow. Supabase email links arrive
- * either already verified (via /auth/confirm) or with session tokens in the
- * URL hash – both cases are handled here.
+ * Finishes an invite / password-reset flow. Supabase email links may arrive as:
+ * - PKCE: ?code=...
+ * - implicit: #access_token=...&refresh_token=...
+ * - already verified via /auth/confirm (session cookie present)
  */
 export function SetPasswordForm() {
   const router = useRouter();
@@ -24,20 +25,39 @@ export function SetPasswordForm() {
 
   useEffect(() => {
     async function init() {
-      // Hash-token links: #access_token=...&refresh_token=...
-      const hash = window.location.hash.slice(1);
-      if (hash.includes("access_token")) {
-        const params = new URLSearchParams(hash);
-        const accessToken = params.get("access_token");
-        const refreshToken = params.get("refresh_token");
-        if (accessToken && refreshToken) {
-          await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-          window.history.replaceState(null, "", window.location.pathname);
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+
+      // PKCE invite / recovery links: ?code=...
+      if (code) {
+        const { error: exchangeError } =
+          await supabase.auth.exchangeCodeForSession(code);
+        // Strip the one-time code from the URL either way so refresh does not
+        // re-attempt a consumed code and show a false "expired" state.
+        window.history.replaceState(null, "", window.location.pathname);
+        if (exchangeError) {
+          setError(exchangeError.message);
+          setHasSession(false);
+          setReady(true);
+          return;
+        }
+      } else {
+        // Hash-token links: #access_token=...&refresh_token=...
+        const hash = window.location.hash.slice(1);
+        if (hash.includes("access_token")) {
+          const hashParams = new URLSearchParams(hash);
+          const accessToken = hashParams.get("access_token");
+          const refreshToken = hashParams.get("refresh_token");
+          if (accessToken && refreshToken) {
+            await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+            window.history.replaceState(null, "", window.location.pathname);
+          }
         }
       }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -85,7 +105,7 @@ export function SetPasswordForm() {
     return (
       <div className="rounded-xl border border-white/[0.08] nf-glass-panel p-5 text-center">
         <p className="text-sm text-zinc-300 mb-2">
-          This link has expired or was already used.
+          {error || "This link has expired or was already used."}
         </p>
         <p className="text-xs text-zinc-500">
           Ask your administrator to send a new invite, or{" "}
