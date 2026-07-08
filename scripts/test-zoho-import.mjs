@@ -914,4 +914,88 @@ assert.equal(
   "technician notes should come from column AR"
 );
 
+const hierarchicalHeaders42 = hierarchicalHeaders.slice(0, 42);
+
+const shortExportFixture = [
+  hierarchicalHeaders42.map((header, index) => csv(index === 0 ? "Jobcard Section" : header)).join(","),
+  hierarchicalHeaders42.join(","),
+  hierarchicalRow(
+    {
+      "Unique ID": "JC-42COL",
+      Date: "15/06/2025",
+      "Customer Name": "Short Export Customer",
+      "Portable Fire Equipment": "Extinguisher 4.5kg DCP Service",
+      "Unnamed: 8": "Reception",
+      "Unnamed: 10": "Yes",
+      "Unnamed: 11": "Yes",
+      "Unnamed: 12": "Yes",
+      "Unnamed: 13": "Yes",
+      "Unnamed: 14": "Yes",
+      "Unnamed: 16": "Yes",
+      "Technicians Name": "Tech One",
+      "SAQCC Number": "SAQCC-42",
+    },
+    hierarchicalHeaders42
+  ),
+].join("\n");
+
+const shortExportParsed = parseZohoJobcardCsv(shortExportFixture);
+assert.equal(
+  shortExportParsed.warnings.filter((warning) => warning.code === "column_count").length,
+  0,
+  "42-column hierarchical exports should not warn about column count"
+);
+
+const inheritedComplianceFixture = [
+  hierarchicalHeaders.join(","),
+  hierarchicalHeaders.join(","),
+  hierarchicalRow({
+    "Unique ID": "JC-INHERIT",
+    Date: "15/06/2025",
+    "Customer Name": "Inherit Compliance Customer",
+    "Portable Fire Equipment": "Extinguisher 4.5kg DCP Service",
+    "Unnamed: 8": "Reception",
+    "Unnamed: 10": "Yes",
+    "Unnamed: 11": "Yes",
+    "Unnamed: 12": "Yes",
+    "Unnamed: 13": "Yes",
+    "Unnamed: 14": "Yes",
+    "Unnamed: 16": "Pressure testing required",
+    "Technicians Name": "Tech One",
+    "SAQCC Number": "SAQCC-INH",
+  }),
+  hierarchicalRow({
+    "Portable Fire Equipment": "Extinguisher 1kg DCP Service",
+    "Unnamed: 8": "Lobby",
+    "Unnamed: 10": "Yes",
+    "Unnamed: 11": "Yes",
+    "Unnamed: 12": "Yes",
+    "Unnamed: 13": "Yes",
+    "Unnamed: 14": "Yes",
+  }),
+  hierarchicalRow({
+    "Portable Fire Equipment": "Extinguisher 9kg DCP Service",
+    "Unnamed: 8": "Warehouse",
+    "Unnamed: 10": "Yes",
+    "Unnamed: 11": "Yes",
+    "Unnamed: 12": "Yes",
+    "Unnamed: 13": "Yes",
+    "Unnamed: 14": "Yes",
+  }),
+].join("\n");
+
+const inheritedParsed = parseZohoJobcardCsv(inheritedComplianceFixture);
+assert.equal(
+  inheritedParsed.warnings.filter((warning) => warning.code === "blank_compliance_result")
+    .length,
+  0,
+  "child rows should inherit portable compliance from the jobcard's first asset row"
+);
+assert.ok(
+  inheritedParsed.equipment.every(
+    (item) => item.annualService?.pressureTestRequired === true
+  ),
+  "inherited compliance must apply pressure test follow-up to every child asset"
+);
+
 console.log("Zoho Jobcard import parser tests passed.");

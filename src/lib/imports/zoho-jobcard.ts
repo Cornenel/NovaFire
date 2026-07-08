@@ -60,6 +60,8 @@ export const ZOHO_COL = {
 
 const LEGACY_JOB_PREFIX_COLUMNS = 7;
 const HIERARCHICAL_PORTABLE_START = 6;
+/** Zoho hierarchical exports commonly omit optional footer columns AP–AR. */
+const HIERARCHICAL_MIN_COLUMNS = 42;
 
 const JOB_FIELDS = [
   "Unique ID",
@@ -131,6 +133,8 @@ interface JobState {
   submittersLocation?: string;
   technicianReport?: string;
   marketingOptIn?: string;
+  /** Annual service result from the first portable row on this jobcard. */
+  portableComplianceResult?: string | null;
 }
 
 export interface ParsedPortableDevice {
@@ -251,16 +255,51 @@ export function getZohoCell(
 function getPortableComplianceCell(
   row: CsvRow,
   headers: string[],
-  columnMap: ZohoColumnMap
+  columnMap: ZohoColumnMap,
+  rawCells?: string[]
 ): string | null {
-  if (columnMap.annualServiceResult !== null) {
-    return getZohoCell(row, headers, columnMap.annualServiceResult);
-  }
-  return getComplianceCell(row, headers);
+  return resolvePortableCompliance(row, headers, columnMap, rawCells ?? [], null);
 }
 
-function getFixedComplianceCell(row: CsvRow, headers: string[]): string | null {
-  return getComplianceCell(row, headers);
+export function resolvePortableCompliance(
+  row: CsvRow,
+  headers: string[],
+  columnMap: ZohoColumnMap,
+  rawCells: string[],
+  inherited: string | null | undefined
+): string | null {
+  const annualIndex = columnMap.annualServiceResult ?? ZOHO_COL.ANNUAL_SERVICE_RESULT;
+  const fromAnnualColumn =
+    getZohoCell(row, headers, columnMap.annualServiceResult) ??
+    getCellAtIndex(rawCells, annualIndex) ??
+    getCellAtIndex(rawCells, ZOHO_COL.ANNUAL_SERVICE_RESULT) ??
+    firstAliasedValue(row, [
+      "Annual Service Result",
+      "Annual Service Completed",
+      "Compliance Result",
+      "Was the Annual Service Completed",
+    ]);
+
+  if (fromAnnualColumn) return fromAnnualColumn;
+
+  // Legacy flat exports store portable annual result in footer compliance columns.
+  if (columnMap.layout !== "hierarchical") {
+    const fromFooter = getComplianceCell(row, headers);
+    if (fromFooter) return fromFooter;
+  }
+
+  return inherited ?? null;
+}
+
+function getFixedComplianceCell(
+  row: CsvRow,
+  headers: string[],
+  rawCells?: string[]
+): string | null {
+  return (
+    getComplianceCell(row, headers) ??
+    (rawCells ? getCellAtIndex(rawCells, ZOHO_COL.DEVICE_COMPLIANCE) : null)
+  );
 }
 
 function getComplianceCell(row: CsvRow, headers: string[]): string | null {
@@ -480,10 +519,10 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
       });
     }
   }
-  if (headers.length < 44) {
+  if (headers.length < minimumColumnsForLayout(columnMap.layout)) {
     warnings.push({
       code: "column_count",
-      message: `Expected 44 columns (A–AR) but found ${headers.length}. Import will preserve raw rows and warn on unmapped fields.`,
+      message: `Expected at least ${minimumColumnsForLayout(columnMap.layout)} columns for ${columnMap.layout} Zoho export but found ${headers.length}. Import will preserve raw rows and warn on unmapped fields.`,
       severity: "warning",
     });
   }
@@ -496,7 +535,8 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
 
   for (let i = structure.dataStartIndex; i < rows.length; i++) {
     const csvRowNumber = i + 1;
-    const row = rowToObject(headers, rows[i]);
+    const rawCells = padCsvRow(rows[i], headers.length);
+    const row = rowToObject(headers, rawCells);
     if (isBlankRow(row)) {
       skippedRows++;
       continue;
@@ -515,6 +555,7 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
 
     if (startsNewJobcard) {
       currentJobcard = buildJobStateFromRow(row, headers, columnMap);
+      currentJobcard.portableComplianceResult = null;
     } else if (letterLayoutJobRow) {
       currentJobcard = buildJobStateFromRow(row, headers, columnMap);
       if (!currentJobcard.uniqueId) {
@@ -576,6 +617,20 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
     }
 
     for (const section of sections) {
+      let portableCompliance: string | null | undefined;
+      if (section === "portable" && currentJobcard) {
+        portableCompliance = resolvePortableCompliance(
+          row,
+          headers,
+          columnMap,
+          rawCells,
+          currentJobcard.portableComplianceResult
+        );
+        if (portableCompliance) {
+          currentJobcard.portableComplianceResult = portableCompliance;
+        }
+      }
+
       const mapped = mapEquipment(
         row,
         headers,
@@ -583,7 +638,8 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
         csvRowNumber,
         section,
         job,
-        rows[i]
+        rawCells,
+        portableCompliance
       );
       mapped.warnings.unshift(...rowWarnings);
       if (seenKeys.has(mapped.idempotencyKey)) {
@@ -760,6 +816,16 @@ function parseCsv(text: string): string[][] {
   row.push(field);
   if (row.some((cell) => cell.trim() !== "")) rows.push(row);
   return rows;
+}
+
+function padCsvRow(row: string[], columnCount: number): string[] {
+  if (row.length >= columnCount) return row;
+  return [...row, ...Array(columnCount - row.length).fill("")];
+}
+
+function minimumColumnsForLayout(layout: ZohoLayout): number {
+  if (layout === "letter") return ZOHO_COL.ANNUAL_SERVICE_RESULT + 1;
+  return HIERARCHICAL_MIN_COLUMNS;
 }
 
 function makeUniqueHeaders(headers: string[]): string[] {
@@ -1253,7 +1319,8 @@ function mapEquipment(
   csvRowNumber: number,
   section: EquipmentSection,
   job: ZohoMappedJob,
-  rawCells: string[]
+  rawCells: string[],
+  portableCompliance?: string | null
 ): ZohoMappedEquipment {
   const warnings: ZohoWarning[] = [];
   const rawDescription =
@@ -1300,8 +1367,10 @@ function mapEquipment(
     section === "portable" ? parsedPortable?.deviceSize ?? null : parsed.capacity;
   const compliance =
     section === "portable"
-      ? getPortableComplianceCell(row, headers, columnMap)
-      : getFixedComplianceCell(row, headers);
+      ? portableCompliance !== undefined
+        ? portableCompliance
+        : resolvePortableCompliance(row, headers, columnMap, rawCells, null)
+      : getFixedComplianceCell(row, headers, rawCells);
   const annualService = parseAnnualServiceResult(compliance);
   const partsUsed = splitServiceParts(
     section === "portable"
