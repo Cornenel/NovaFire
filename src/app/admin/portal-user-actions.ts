@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  getAuthRedirectUrl,
+  inviteRedirectConfigurationError,
+} from "@/lib/site-url";
 
 async function requireDispatcher() {
   const supabase = await createClient();
@@ -81,7 +85,10 @@ export async function invitePortalUser(formData: FormData) {
     }
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const inviteConfigError = inviteRedirectConfigurationError();
+  if (inviteConfigError) {
+    portalErrorRedirect(customerId, inviteConfigError);
+  }
 
   const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(
     email,
@@ -93,7 +100,7 @@ export async function invitePortalUser(formData: FormData) {
         phone: strOrNull(formData, "phone"),
         invited_role: "client",
       },
-      redirectTo: `${siteUrl}/auth/set-password`,
+      redirectTo: getAuthRedirectUrl("/auth/set-password"),
     }
   );
 

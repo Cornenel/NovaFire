@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  getAuthRedirectUrl,
+  inviteRedirectConfigurationError,
+} from "@/lib/site-url";
 
 /**
  * Technician management – additive server actions.
@@ -77,8 +81,16 @@ function getConfiguredAdminClient(): ReturnType<typeof createAdminClient> {
 }
 
 function inviteErrorMessage(message: string): string {
-  if (message.toLowerCase().includes("invalid api key")) {
+  const lower = message.toLowerCase();
+  if (lower.includes("invalid api key")) {
     return "Technician invites require SUPABASE_SERVICE_ROLE_KEY in the deployment environment. Use the secret service-role key from the same Supabase project as NEXT_PUBLIC_SUPABASE_URL, then redeploy.";
+  }
+  if (lower.includes("rate limit") || lower.includes("over_email_send_rate_limit")) {
+    return (
+      "Supabase email rate limit reached (about 2 emails/hour on the default mail service). " +
+      "Wait an hour and try again, or set up custom SMTP in Supabase → Project Settings → Authentication → SMTP Settings " +
+      "(e.g. Resend, SendGrid, or your domain mail). Each failed retry counts toward the limit."
+    );
   }
   return message;
 }
@@ -104,8 +116,12 @@ export async function createTechnician(formData: FormData) {
     technicianErrorRedirect("Email, first name and last name are required");
   }
 
+  const inviteConfigError = inviteRedirectConfigurationError();
+  if (inviteConfigError) {
+    technicianErrorRedirect(inviteConfigError);
+  }
+
   const admin = getConfiguredAdminClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
   const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(
     email,
@@ -119,7 +135,7 @@ export async function createTechnician(formData: FormData) {
         // service-role profile update below applies admin role after invite.
         invited_role: role === "admin" ? "technician" : role,
       },
-      redirectTo: `${siteUrl}/auth/set-password`,
+      redirectTo: getAuthRedirectUrl("/auth/set-password"),
     }
   );
 
@@ -196,8 +212,11 @@ export async function sendPasswordReset(email: string) {
   await requireDispatcher();
 
   const supabase = await createClient();
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const inviteConfigError = inviteRedirectConfigurationError();
+  if (inviteConfigError) {
+    technicianErrorRedirect(inviteConfigError);
+  }
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl}/auth/set-password`,
+    redirectTo: getAuthRedirectUrl("/auth/set-password"),
   });
 }

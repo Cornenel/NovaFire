@@ -1,0 +1,43 @@
+/**
+ * Public app URL for auth email links (invites, password reset).
+ *
+ * Set NEXT_PUBLIC_SITE_URL to your deployed URL, e.g. https://app.novafire.co.za
+ * Localhost links only work on the same machine — they fail on technicians' phones.
+ */
+
+function normalizeSiteUrl(url: string): string {
+  return url.replace(/\/$/, "");
+}
+
+export function getSiteUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configured) return normalizeSiteUrl(configured);
+
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) return normalizeSiteUrl(`https://${vercel}`);
+
+  return "http://localhost:3000";
+}
+
+export function getAuthRedirectUrl(path = "/auth/set-password"): string {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${getSiteUrl()}${normalizedPath}`;
+}
+
+export function isLocalSiteUrl(url = getSiteUrl()): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host === "localhost" || host === "127.0.0.1";
+  } catch {
+    return true;
+  }
+}
+
+export function inviteRedirectConfigurationError(): string | null {
+  if (!isLocalSiteUrl()) return null;
+  return (
+    "Invite links are pointing at localhost and will not work on a technician's phone. " +
+    "Set NEXT_PUBLIC_SITE_URL to your public app URL (e.g. https://app.novafire.co.za), " +
+    "add that URL under Supabase → Authentication → URL Configuration → Redirect URLs, then redeploy."
+  );
+}
