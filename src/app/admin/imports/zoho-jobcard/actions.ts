@@ -43,6 +43,7 @@ interface ImportResult {
     fixed_assets_imported: number;
     service_records_created: number;
     pressure_tests_required: number;
+    parts_used_detected: number;
     parts_used_records_created: number;
     quote_required_records_created: number;
     duplicate_rows_skipped: number;
@@ -197,6 +198,7 @@ export async function confirmZohoJobcardImport(
         fixed_assets_imported: 0,
         service_records_created: 0,
         pressure_tests_required: 0,
+        parts_used_detected: preview.validation.parts_used_detected,
         parts_used_records_created: 0,
         quote_required_records_created: 0,
         duplicate_rows_skipped: preview.duplicateRows,

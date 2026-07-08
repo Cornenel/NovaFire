@@ -764,7 +764,7 @@ assert.equal(
   0,
   "replacement parts must not create quote required records"
 );
-assert.equal(jcParsed.validation.parts_used_records_created, 1, "one asset row has used parts");
+assert.equal(jcParsed.validation.parts_used_detected, 1, "one asset row has used parts");
 assert.ok(
   jcParsed.equipment.every(
     (item) =>

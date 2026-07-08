@@ -368,6 +368,7 @@ export interface ZohoImportValidation {
   fixed_assets_imported: number;
   service_records_created: number;
   pressure_tests_required: number;
+  parts_used_detected: number;
   parts_used_records_created: number;
   quote_required_records_created: number;
   duplicate_rows_skipped: number;
@@ -547,7 +548,8 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
         columnMap,
         csvRowNumber,
         section,
-        job
+        job,
+        rows[i]
       );
       mapped.warnings.unshift(...rowWarnings);
       if (seenKeys.has(mapped.idempotencyKey)) {
@@ -623,6 +625,7 @@ function buildImportValidation(
     pressure_tests_required: equipment.filter(
       (e) => e.annualService?.pressureTestRequired || e.inspection.requiresPressureTest
     ).length,
+    parts_used_detected: equipment.filter((e) => e.partsUsed?.partsUsed).length,
     parts_used_records_created: equipment.filter((e) => e.partsUsed?.partsUsed).length,
     quote_required_records_created: equipment.filter((e) => e.defect?.quoteRequired).length,
     duplicate_rows_skipped: duplicateRows,
@@ -656,6 +659,7 @@ function emptyResult(warnings: ZohoWarning[]): ZohoParseResult {
     fixed_assets_imported: 0,
     service_records_created: 0,
     pressure_tests_required: 0,
+    parts_used_detected: 0,
     parts_used_records_created: 0,
     quote_required_records_created: 0,
     duplicate_rows_skipped: 0,
@@ -1126,6 +1130,36 @@ export function parseAnnualServiceResult(
   return null;
 }
 
+function getCellAtIndex(cells: string[], index: number): string | null {
+  if (index < 0 || index >= cells.length) return null;
+  return clean(cells[index]);
+}
+
+function getPortableReplacementParts(
+  row: CsvRow,
+  headers: string[],
+  columnMap: ZohoColumnMap,
+  rawCells: string[]
+): string | null {
+  const candidates = [
+    getZohoCell(row, headers, columnMap.replacementParts),
+    getCellAtIndex(rawCells, ZOHO_COL.REPLACEMENT_PARTS),
+    firstAliasedValue(row, [
+      "Replacement Parts Used",
+      "Replacement Parts",
+      "Replacement parts used",
+    ]),
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate && isMeaningfulPartsOrSpares(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
 export function splitServiceParts(
   value: string | null | undefined
 ): ServicePartsUsed {
@@ -1139,7 +1173,7 @@ export function splitServiceParts(
   }
 
   const servicePartsUsed = raw
-    .split(",")
+    .split(/[,;]+/)
     .map((part) => part.trim())
     .filter(Boolean);
 
@@ -1163,7 +1197,8 @@ function mapEquipment(
   columnMap: ZohoColumnMap,
   csvRowNumber: number,
   section: EquipmentSection,
-  job: ZohoMappedJob
+  job: ZohoMappedJob,
+  rawCells: string[]
 ): ZohoMappedEquipment {
   const warnings: ZohoWarning[] = [];
   const rawDescription =
@@ -1215,8 +1250,9 @@ function mapEquipment(
   const annualService = parseAnnualServiceResult(compliance);
   const partsUsed = splitServiceParts(
     section === "portable"
-      ? getZohoCell(row, headers, columnMap.replacementParts)
-      : getZohoCell(row, headers, columnMap.fixedSpares)
+      ? getPortableReplacementParts(row, headers, columnMap, rawCells)
+      : getZohoCell(row, headers, columnMap.fixedSpares) ??
+          getCellAtIndex(rawCells, ZOHO_COL.FIXED_SPARES)
   );
 
   const manufactureDate = parseDate(
@@ -1289,8 +1325,9 @@ function mapEquipment(
 
   const replacementPartsRaw =
     section === "portable"
-      ? getZohoCell(row, headers, columnMap.replacementParts)
-      : getZohoCell(row, headers, columnMap.fixedSpares);
+      ? getPortableReplacementParts(row, headers, columnMap, rawCells)
+      : getZohoCell(row, headers, columnMap.fixedSpares) ??
+        getCellAtIndex(rawCells, ZOHO_COL.FIXED_SPARES);
 
   const idempotencyKey = makeImportFingerprint({
     jobcardId: job.legacyZohoJobcardId,
