@@ -141,6 +141,11 @@ assert.equal(parsed.skippedRows, 1, "question-label row should be skipped");
 assert.equal(parsed.summary.detectedJobs, 2, "should detect two jobcards");
 assert.equal(parsed.summary.portableAssets, 2, "should map portable equipment rows");
 assert.equal(parsed.summary.fixedAssets, 1, "should map fixed equipment rows");
+assert.equal(
+  jobTypeForImportedEquipment(parsed.equipment),
+  "annual_service",
+  "jobcards with hose reels or pressure tests must still be annual service"
+);
 assert.equal(parsed.summary.likelyDefects, 0, "pressure testing required must not create a defect");
 assert.equal(
   parsed.equipment[1].legacyZohoJobcardId,

@@ -22,6 +22,7 @@ import {
   JOB_STATUS_LABELS,
   JOB_STATUS_STYLES,
   JOB_TYPE_LABELS,
+  resolveJobTypeLabel,
 } from "@/lib/fsm/labels";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type { Asset, JobWithRelations } from "@/lib/fsm/types";
@@ -91,7 +92,7 @@ export default async function JobDetailPage({
         </h1>
         <div className="flex flex-wrap items-center gap-1.5 mt-2">
           <span className="text-[11px] px-2 py-0.5 rounded-full border bg-white/[0.04] text-zinc-300 border-white/10">
-            {JOB_TYPE_LABELS[job.job_type]}
+            {resolveJobTypeLabel(job)}
           </span>
           <span
             className={cn(

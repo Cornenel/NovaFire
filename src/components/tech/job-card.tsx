@@ -6,6 +6,7 @@ import {
   JOB_STATUS_LABELS,
   JOB_STATUS_STYLES,
   JOB_TYPE_LABELS,
+  resolveJobTypeLabel,
 } from "@/lib/fsm/labels";
 import type { JobWithRelations } from "@/lib/fsm/types";
 import { cn } from "@/lib/utils";
@@ -43,7 +44,7 @@ export function JobCard({ job }: { job: JobWithRelations }) {
 
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="text-[11px] px-2 py-0.5 rounded-full border bg-white/[0.04] text-zinc-300 border-white/10">
-          {JOB_TYPE_LABELS[job.job_type]}
+          {resolveJobTypeLabel(job)}
         </span>
         <span
           className={cn(

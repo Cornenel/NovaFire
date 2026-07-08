@@ -84,4 +84,12 @@ create policy "quote_group_line_items: dispatcher write" on public.quote_group_l
 
 commit;
 
+-- Correct job type for historical Zoho imports misclassified before annual-service rules.
+update public.jobs
+set
+  job_type = 'annual_service',
+  service_category = coalesce(service_category, 'Annual Fire Equipment Service')
+where import_source = 'zoho_import'
+  and job_type in ('inspection', 'pressure_test', 'refill');
+
 -- After running: wait a few seconds for PostgREST schema cache to refresh, then retry the import.

@@ -6,6 +6,10 @@ import type {
   JobStatus,
   JobType,
 } from "./types";
+import {
+  ZOHO_ANNUAL_SERVICE_CATEGORY,
+  ZOHO_IMPORT_SOURCE,
+} from "@/lib/imports/zoho-jobcard";
 
 export const JOB_STATUS_LABELS: Record<JobStatus, string> = {
   not_started: "Not Started",
@@ -57,6 +61,25 @@ export const IMPORT_SOURCE_LABELS: Record<string, string> = {
 export function importSourceLabel(source: string | null | undefined): string | null {
   if (!source) return null;
   return IMPORT_SOURCE_LABELS[source] ?? source;
+}
+
+/** Zoho historical jobcards are annual services unless explicitly classified otherwise. */
+export function resolveJobTypeLabel(job: {
+  job_type: JobType;
+  import_source?: string | null;
+  service_category?: string | null;
+}): string {
+  if (job.import_source === ZOHO_IMPORT_SOURCE) {
+    if (
+      job.job_type === "inspection" &&
+      job.service_category &&
+      job.service_category !== ZOHO_ANNUAL_SERVICE_CATEGORY
+    ) {
+      return JOB_TYPE_LABELS.inspection;
+    }
+    return JOB_TYPE_LABELS.annual_service;
+  }
+  return JOB_TYPE_LABELS[job.job_type];
 }
 
 export const ASSET_TYPE_LABELS: Record<AssetType, string> = {

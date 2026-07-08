@@ -188,6 +188,7 @@ export interface Job {
   service_category?: string | null;
   import_source?: string | null;
   legacy_zoho_jobcard_id?: string | null;
+  next_service_due_date?: string | null;
 }
 
 export interface JobWithRelations extends Job {

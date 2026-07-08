@@ -11,6 +11,7 @@ import {
   DEFECT_SEVERITY_LABELS,
   JOB_PRIORITY_LABELS,
   JOB_TYPE_LABELS,
+  resolveJobTypeLabel,
 } from "@/lib/fsm/labels";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import { formatPartsUsedAndNotes } from "@/lib/reports/inspection-display";
@@ -28,6 +29,8 @@ export interface JobReportData {
   job: {
     job_number: string;
     job_type: JobType;
+    import_source?: string | null;
+    service_category?: string | null;
     priority: JobPriority;
     scheduled_date: string;
     description: string | null;
@@ -36,6 +39,7 @@ export interface JobReportData {
     checkin_latitude: number | null;
     checkin_longitude: number | null;
     completed_at: string | null;
+    next_service_due_date?: string | null;
   };
   customer: { name: string; contact_person: string | null; email: string | null };
   site: { name: string; address: string };
@@ -161,6 +165,16 @@ const fmtDateTime = (iso: string | null) =>
       })
     : "—";
 
+const fmtDate = (iso: string | null | undefined) =>
+  iso
+    ? new Date(`${iso}T12:00:00`).toLocaleDateString("en-ZA", {
+        timeZone: "Africa/Johannesburg",
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
+
 function failedItems(
   assetType: AssetType,
   checklist: Record<string, boolean | string | string[]>
@@ -224,7 +238,7 @@ export function JobReportDocument({ data }: { data: JobReportData }) {
         <View style={s.twoCol}>
           <View style={s.col}>
             <Text style={s.label}>Type</Text>
-            <Text style={s.value}>{JOB_TYPE_LABELS[job.job_type]}</Text>
+            <Text style={s.value}>{resolveJobTypeLabel(job)}</Text>
             <Text style={s.label}>Priority</Text>
             <Text style={s.value}>{JOB_PRIORITY_LABELS[job.priority]}</Text>
             <Text style={s.label}>Technician</Text>
@@ -240,6 +254,8 @@ export function JobReportDocument({ data }: { data: JobReportData }) {
             </Text>
             <Text style={s.label}>Completed</Text>
             <Text style={s.value}>{fmtDateTime(job.completed_at)}</Text>
+            <Text style={s.label}>Next service date</Text>
+            <Text style={s.value}>{fmtDate(job.next_service_due_date)}</Text>
             <Text style={s.label}>Photo evidence on file</Text>
             <Text style={s.value}>{data.photoCount} photo(s)</Text>
           </View>

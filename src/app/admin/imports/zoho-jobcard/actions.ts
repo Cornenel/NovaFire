@@ -590,12 +590,22 @@ async function findOrCreateJob(
     .eq("import_source", ZOHO_IMPORT_SOURCE)
     .maybeSingle();
 
+  const first = equipment[0];
+  const jobType = jobTypeForImportedEquipment(equipment);
+
   if (existing.data?.id) {
+    await admin
+      .from("jobs")
+      .update({
+        job_type: jobType,
+        service_category: ZOHO_ANNUAL_SERVICE_CATEGORY,
+        next_service_due_date: first.job.nextServiceDate,
+      })
+      .eq("id", existing.data.id);
     result.jobsMatched++;
     return existing.data.id as string;
   }
 
-  const first = equipment[0];
   const { data, error } = await admin
     .from("jobs")
     .insert({
@@ -603,7 +613,7 @@ async function findOrCreateJob(
       site_id: siteId,
       assigned_to: technicianId,
       created_by: importedBy,
-      job_type: jobTypeForImportedEquipment(equipment),
+      job_type: jobType,
       service_category: ZOHO_ANNUAL_SERVICE_CATEGORY,
       priority: "medium",
       status: "completed",

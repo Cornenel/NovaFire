@@ -7,6 +7,7 @@ import {
   JOB_STATUS_LABELS,
   JOB_STATUS_STYLES,
   JOB_TYPE_LABELS,
+  resolveJobTypeLabel,
 } from "@/lib/fsm/labels";
 import type { JobPriority, JobStatus, JobType } from "@/lib/fsm/types";
 import { cn } from "@/lib/utils";
@@ -16,6 +17,8 @@ interface JobRow {
   job_number: string;
   scheduled_date: string;
   job_type: JobType;
+  import_source: string | null;
+  service_category: string | null;
   priority: JobPriority;
   status: JobStatus;
   customer: { name: string } | null;
@@ -44,7 +47,7 @@ export default async function AdminJobsPage({
   let query = supabase
     .from("jobs")
     .select(
-      "id, job_number, scheduled_date, job_type, priority, status, customer:customers(name), site:sites(name), technician:profiles!jobs_assigned_to_fkey(full_name)"
+      "id, job_number, scheduled_date, job_type, import_source, service_category, priority, status, customer:customers(name), site:sites(name), technician:profiles!jobs_assigned_to_fkey(full_name)"
     )
     .order("scheduled_date", { ascending: false })
     .limit(100);
@@ -129,7 +132,7 @@ export default async function AdminJobsPage({
                     )}
                   </td>
                   <td className="px-4 py-3 text-zinc-400 whitespace-nowrap">
-                    {JOB_TYPE_LABELS[j.job_type]}
+                    {resolveJobTypeLabel(j)}
                   </td>
                   <td className="px-4 py-3">
                     <span

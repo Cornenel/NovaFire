@@ -11,6 +11,7 @@ import {
   JOB_STATUS_LABELS,
   JOB_STATUS_STYLES,
   JOB_TYPE_LABELS,
+  resolveJobTypeLabel,
   importSourceLabel,
 } from "@/lib/fsm/labels";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
@@ -148,8 +149,7 @@ export default async function AdminJobDetailPage({
     total_assets: number;
   }>;
   const pressureTestCount = inspections.filter((i) => i.requires_pressure_test).length;
-  const isZohoAnnualService =
-    job.import_source === "zoho_import" && job.job_type === "annual_service";
+  const isZohoAnnualService = job.import_source === "zoho_import";
   const importSource = importSourceLabel(job.import_source);
 
   // Signed URLs for photos and signature
@@ -193,7 +193,7 @@ export default async function AdminJobDetailPage({
           </h1>
           <div className="flex flex-wrap items-center gap-1.5 mt-2">
             <span className="text-[11px] px-2 py-0.5 rounded-full border bg-white/[0.04] text-zinc-300 border-white/10">
-              {JOB_TYPE_LABELS[job.job_type]}
+              {resolveJobTypeLabel(job)}
             </span>
             <span
               className={cn(
