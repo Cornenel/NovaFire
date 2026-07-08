@@ -92,6 +92,16 @@ function inviteErrorMessage(message: string): string {
       "(e.g. Resend, SendGrid, or your domain mail). Each failed retry counts toward the limit."
     );
   }
+  if (
+    lower.includes("already been registered") ||
+    lower.includes("already registered") ||
+    lower.includes("user already exists")
+  ) {
+    return (
+      "That email already has an account. Open their profile from the list below and use Send password reset, " +
+      "or remove the user in Supabase → Authentication → Users and invite again."
+    );
+  }
   return message;
 }
 
@@ -143,26 +153,37 @@ export async function createTechnician(formData: FormData) {
     technicianErrorRedirect(inviteErrorMessage(error?.message ?? "Invite failed"));
   }
 
-  // Enrich profile (created by the signup trigger) with technician fields.
-  // Service-role client: bypasses RLS; trigger permits server-side updates.
-  await admin
+  const profilePayload = {
+    id: invited.user.id,
+    first_name: firstName,
+    last_name: lastName,
+    full_name: `${firstName} ${lastName}`,
+    email,
+    phone: strOrNull(formData, "phone"),
+    vehicle_number: strOrNull(formData, "vehicle_number"),
+    saqcc_number: strOrNull(formData, "saqcc_number"),
+    photo_url: strOrNull(formData, "photo_url"),
+    role,
+    is_active: true,
+  };
+
+  // Upsert in case the signup trigger did not create a profile row yet.
+  const { error: profileError } = await admin
     .from("profiles")
-    .update({
-      first_name: firstName,
-      last_name: lastName,
-      full_name: `${firstName} ${lastName}`,
-      email,
-      phone: strOrNull(formData, "phone"),
-      vehicle_number: strOrNull(formData, "vehicle_number"),
-      saqcc_number: strOrNull(formData, "saqcc_number"),
-      photo_url: strOrNull(formData, "photo_url"),
-      role,
-      is_active: true,
-    })
-    .eq("id", invited.user.id);
+    .upsert(profilePayload, { onConflict: "id" });
+
+  if (profileError) {
+    technicianErrorRedirect(
+      `Invite email was sent but the staff profile could not be saved: ${profileError.message}`
+    );
+  }
 
   revalidatePath("/admin/technicians");
-  redirect(`/admin/technicians/${invited.user.id}`);
+  redirect(
+    `/admin/technicians?success=${encodeURIComponent(
+      `Invite sent to ${email}. They will receive an email to set their password.`
+    )}`
+  );
 }
 
 /** Edit technician profile fields (email is managed by Supabase Auth). */

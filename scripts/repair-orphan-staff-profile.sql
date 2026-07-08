@@ -1,0 +1,32 @@
+-- Repair a staff auth user that exists in auth.users but has no profiles row.
+-- Run in Supabase SQL Editor after a successful invite that showed a 404.
+--
+-- 1. Find the user id in Authentication → Users (copy UUID).
+-- 2. Replace the placeholders below and run.
+
+-- insert into public.profiles (
+--   id,
+--   full_name,
+--   first_name,
+--   last_name,
+--   email,
+--   role,
+--   is_active
+-- )
+-- select
+--   u.id,
+--   coalesce(u.raw_user_meta_data ->> 'full_name', split_part(u.email, '@', 1)),
+--   u.raw_user_meta_data ->> 'first_name',
+--   u.raw_user_meta_data ->> 'last_name',
+--   u.email,
+--   coalesce(u.raw_user_meta_data ->> 'invited_role', 'technician')::public.user_role,
+--   true
+-- from auth.users u
+-- where u.id = 'PASTE-USER-UUID-HERE'
+-- on conflict (id) do update set
+--   email = excluded.email,
+--   full_name = excluded.full_name,
+--   first_name = excluded.first_name,
+--   last_name = excluded.last_name,
+--   role = excluded.role,
+--   is_active = true;

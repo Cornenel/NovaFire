@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, AlertCircle } from "lucide-react";
+import { Users, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createTechnician } from "@/app/admin/technician-actions";
 import type { Profile } from "@/lib/fsm/types";
@@ -14,9 +14,9 @@ const labelCls = "block text-xs text-zinc-400 mb-1.5";
 export default async function TechniciansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; success?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, success } = await searchParams;
   const supabase = await createClient();
 
   const [
@@ -71,6 +71,13 @@ export default async function TechniciansPage({
         <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/[0.06] px-4 py-3 mb-6">
           <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
           <p className="text-sm text-red-300">{error}</p>
+        </div>
+      )}
+
+      {success && (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.06] px-4 py-3 mb-6">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <p className="text-sm text-emerald-300">{success}</p>
         </div>
       )}
 
