@@ -6,6 +6,7 @@ import { recordImportedInspectionHistory } from "@/lib/fsm/asset-history-sync";
 import { matchExistingCustomer } from "@/lib/fsm/historical-records";
 import {
   ZOHO_IMPORT_SOURCE,
+  buildAssetImportKey,
   jobTypeForImportedEquipment,
   normalizeText,
   parseZohoJobcardCsv,
@@ -576,17 +577,7 @@ async function findOrCreateAsset(
   item: ZohoMappedEquipment,
   result: ImportResult
 ): Promise<AssetRow> {
-  const assetKey = [
-    "zoho-asset",
-    siteId,
-    item.section,
-    normalizeText(item.asset.assetType),
-    normalizeText(item.asset.sizeCapacity),
-    normalizeText(item.asset.customerAssetNumber),
-    normalizeText(item.asset.medium),
-    normalizeText(item.asset.locationDescription),
-    normalizeText(item.asset.originalDescription),
-  ].join("|");
+  const assetKey = buildAssetImportKey(item, siteId);
 
   let match =
     context.assets.find((a) => a.import_idempotency_key === assetKey) ||

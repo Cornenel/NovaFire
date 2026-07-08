@@ -144,11 +144,13 @@ export interface ServicePartsUsed {
   partsUsed: boolean;
 }
 
-export function buildZohoColumnMap(headers: string[]): ZohoColumnMap {
+export function buildZohoColumnMap(
+  headers: string[],
+  options?: { hierarchicalExport?: boolean }
+): ZohoColumnMap {
   const hierarchical =
-    headers[0] === "Unique ID" &&
-    (headers[HIERARCHICAL_PORTABLE_START] === "Portable Fire Equipment" ||
-      headers[HIERARCHICAL_PORTABLE_START]?.toLowerCase().includes("portable"));
+    options?.hierarchicalExport === true ||
+    (headers[0] === "Unique ID" && headers[7] !== "Portable Fire Equipment");
   const legacy =
     !hierarchical &&
     (headers[0] === "Unique ID" ||
@@ -421,7 +423,9 @@ export function parseZohoJobcardCsv(csvText: string): ZohoParseResult {
   const structure = detectCsvStructure(rows);
   const rawHeaders = rows[structure.headerRowIndex].map((h) => h.trim());
   const headers = makeUniqueHeaders(rawHeaders);
-  const columnMap = buildZohoColumnMap(headers);
+  const columnMap = buildZohoColumnMap(headers, {
+    hierarchicalExport: structure.sectionHeaderSkipped,
+  });
   const warnings: ZohoWarning[] = [];
 
   if (structure.sectionHeaderSkipped) {
@@ -866,10 +870,52 @@ function hasFixedEquipment(
   columnMap: ZohoColumnMap,
   headers: string[]
 ): boolean {
-  if (getZohoCell(row, headers, columnMap.fixedDevice)) return true;
-  if (getZohoCell(row, headers, columnMap.fixedLocation)) return true;
-  if (getZohoCell(row, headers, columnMap.fixedLastService)) return true;
-  return Boolean(clean(row["Fixed Fire Equipment"]));
+  const device =
+    getZohoCell(row, headers, columnMap.fixedDevice) ??
+    clean(row["Fixed Fire Equipment"]);
+  return isMeaningfulFixedDeviceDescription(device);
+}
+
+function isMeaningfulFixedDeviceDescription(
+  value: string | null | undefined
+): boolean {
+  const text = clean(value);
+  if (!text || isChecklistAnswer(text)) return false;
+  const normalized = normalizeText(text);
+  return (
+    normalized.includes("hose") ||
+    normalized.includes("hydrant") ||
+    normalized.includes("reel") ||
+    normalized.includes("sign") ||
+    normalized.includes("detection") ||
+    normalized.includes("sprinkler") ||
+    normalized.includes("blanket")
+  );
+}
+
+function isChecklistAnswer(value: string | null | undefined): boolean {
+  const normalized = normalizeText(value);
+  if (!normalized) return false;
+  if (
+    [
+      "yes",
+      "y",
+      "no",
+      "n",
+      "true",
+      "false",
+      "pass",
+      "fail",
+      "ok",
+      "compliant",
+      "not compliant",
+    ].includes(normalized)
+  ) {
+    return true;
+  }
+  return (
+    normalized.includes("pressure test") || normalized.includes("pressure testing")
+  );
 }
 
 function hasLetterLayoutJobFields(
@@ -1650,6 +1696,35 @@ function buildPreviewJobs(equipment: ZohoMappedEquipment[]): ZohoPreviewJob[] {
   return [...map.values()].sort((a, b) =>
     a.legacyZohoJobcardId.localeCompare(b.legacyZohoJobcardId)
   );
+}
+
+export function buildAssetImportKey(
+  item: ZohoMappedEquipment,
+  siteId: string
+): string {
+  if (item.section === "portable" && item.parsedDevice) {
+    return [
+      "zoho-asset",
+      normalizeText(item.legacyZohoJobcardId),
+      normalizeText(item.parsedDevice.assetCategory),
+      normalizeText(item.parsedDevice.deviceType),
+      normalizeText(item.parsedDevice.deviceSize),
+      normalizeText(item.parsedDevice.agentType),
+      normalizeText(item.asset.locationDescription),
+    ].join("|");
+  }
+
+  return [
+    "zoho-asset",
+    siteId,
+    item.section,
+    normalizeText(item.asset.assetType),
+    normalizeText(item.asset.sizeCapacity),
+    normalizeText(item.asset.customerAssetNumber),
+    normalizeText(item.asset.medium),
+    normalizeText(item.asset.locationDescription),
+    normalizeText(item.asset.originalDescription),
+  ].join("|");
 }
 
 export function jobTypeForImportedEquipment(

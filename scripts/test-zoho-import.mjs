@@ -681,8 +681,8 @@ const hierarchicalHeaders = [
   "Technicians Report",
 ];
 
-function hierarchicalRow(values) {
-  return hierarchicalHeaders.map((header) => csv(values[header] ?? "")).join(",");
+function hierarchicalRow(values, headers = hierarchicalHeaders) {
+  return headers.map((header) => csv(values[header] ?? "")).join(",");
 }
 
 const portableDescriptions = [
@@ -832,6 +832,43 @@ assert.throws(
     ),
   /Could not parse extinguisher size/
 );
+
+const deviceTypeHeaders = hierarchicalHeaders.map((header, index) =>
+  index === 6 ? "Device type" : header
+);
+
+const deviceTypeFixture = [
+  deviceTypeHeaders.map((header, index) => csv(index === 0 ? "Jobcard Section" : header)).join(","),
+  deviceTypeHeaders.join(","),
+  hierarchicalRow({
+    "Unique ID": "JC-DEVICE-TYPE",
+    Date: "15/06/2025",
+    "Customer Name": "Device Type Header Customer",
+    "Device type": "Extinguisher 1kg DCP Service",
+    "Unnamed: 7": "1kg",
+    "Unnamed: 8": "Lobby",
+    "Unnamed: 9": "15/06/2023",
+    "Unnamed: 10": "Yes",
+    "Unnamed: 11": "Yes",
+    "Unnamed: 12": "Yes",
+    "Unnamed: 13": "Yes",
+    "Unnamed: 14": "Yes",
+    "Unnamed: 16": "Pressure testing required",
+    "Fixed Fire Equipment": "Yes",
+    "Unnamed: 18": "Yes",
+  }, deviceTypeHeaders),
+].join("\n");
+
+const deviceTypeParsed = parseZohoJobcardCsv(deviceTypeFixture);
+assert.equal(
+  buildZohoColumnMap(deviceTypeHeaders, { hierarchicalExport: true }).layout,
+  "hierarchical",
+  "section-header exports should use hierarchical column layout"
+);
+assert.equal(deviceTypeParsed.summary.portableAssets, 1);
+assert.equal(deviceTypeParsed.summary.fixedAssets, 0, "Yes values must not create fixed assets");
+assert.equal(deviceTypeParsed.equipment[0].parsedDevice?.deviceSize, "1kg");
+assert.equal(deviceTypeParsed.equipment[0].asset.sizeCapacity, "1kg");
 assert.equal(
   letterParsed.equipment[0].job.nextServiceDate,
   "2026-06-01",
