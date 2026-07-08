@@ -1459,12 +1459,14 @@ function mapEquipment(
     jobcardId: job.legacyZohoJobcardId,
     deviceTypeSizeService: originalDescription,
     deviceLocation: location ?? "",
+    deviceWeightReading: deviceWeightReading ?? "",
     lastPressureTestDate:
       lastPressureTestDate ??
       getZohoCell(row, headers, columnMap.portableLastPressureTest) ??
       "",
     replacementPartsUsed: replacementPartsRaw ?? "",
     annualServiceResult: compliance ?? "",
+    csvRowNumber,
   });
 
   const inspectionPass =
@@ -1504,12 +1506,7 @@ function mapEquipment(
       result: inspectionPass ? "pass" : "fail",
       requiresPressureTest:
         annualService?.pressureTestRequired ?? containsPressureTest(compliance),
-      requiresRefill: containsAny(
-        [originalDescription, partsUsed.replacementPartsUsedRaw]
-          .filter(Boolean)
-          .join(" "),
-        ["refill", "recharge"]
-      ),
+      requiresRefill: false,
       notes: inspectionNotes,
     },
     defect,
@@ -1872,18 +1869,22 @@ function makeImportFingerprint(input: {
   jobcardId: string;
   deviceTypeSizeService: string;
   deviceLocation: string;
+  deviceWeightReading: string;
   lastPressureTestDate: string;
   replacementPartsUsed: string;
   annualServiceResult: string;
+  csvRowNumber: number;
 }): string {
   return [
     "zoho",
     normalizeText(input.jobcardId),
     normalizeText(input.deviceTypeSizeService),
     normalizeText(input.deviceLocation),
+    normalizeText(input.deviceWeightReading),
     normalizeText(input.lastPressureTestDate),
     normalizeText(input.replacementPartsUsed),
     normalizeText(input.annualServiceResult),
+    String(input.csvRowNumber),
   ].join("|");
 }
 
@@ -1928,6 +1929,10 @@ export function buildAssetImportKey(
   siteId: string
 ): string {
   if (item.section === "portable" && item.parsedDevice) {
+    const weightReading = normalizeText(
+      item.inspection.checklist.device_weight_reading as string | null | undefined
+    );
+    const location = normalizeText(item.asset.locationDescription);
     return [
       "zoho-asset",
       normalizeText(item.legacyZohoJobcardId),
@@ -1935,8 +1940,13 @@ export function buildAssetImportKey(
       normalizeText(item.parsedDevice.deviceType),
       normalizeText(item.parsedDevice.deviceSize),
       normalizeText(item.parsedDevice.agentType),
-      normalizeText(item.asset.locationDescription),
-    ].join("|");
+      location,
+      weightReading,
+      // Disambiguate rows when location/weight are blank (common on Zoho child rows).
+      !location && !weightReading ? `row-${item.csvRowNumber}` : "",
+    ]
+      .filter(Boolean)
+      .join("|");
   }
 
   return [

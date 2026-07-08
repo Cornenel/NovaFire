@@ -997,5 +997,61 @@ assert.ok(
   ),
   "inherited compliance must apply pressure test follow-up to every child asset"
 );
+assert.equal(
+  inheritedParsed.warnings.filter((warning) => warning.code === "duplicate_row").length,
+  0,
+  "each CSV equipment row must have a unique import fingerprint"
+);
+
+const sameDeviceSameJobFixture = [
+  hierarchicalHeaders.join(","),
+  hierarchicalHeaders.join(","),
+  hierarchicalRow({
+    "Unique ID": "JC-DUPES",
+    Date: "15/06/2025",
+    "Customer Name": "Duplicate Fingerprint Customer",
+    "Portable Fire Equipment": "Extinguisher 9kg DCP Service",
+    "Unnamed: 8": "",
+    "Unnamed: 10": "Yes",
+    "Unnamed: 11": "Yes",
+    "Unnamed: 12": "Yes",
+    "Unnamed: 13": "Yes",
+    "Unnamed: 14": "Yes",
+    "Unnamed: 16": "Yes",
+    "Technicians Name": "Tech One",
+    "SAQCC Number": "SAQCC-DUP",
+  }),
+  hierarchicalRow({
+    "Portable Fire Equipment": "Extinguisher 9kg DCP Service",
+    "Unnamed: 8": "",
+    "Unnamed: 10": "Yes",
+    "Unnamed: 11": "Yes",
+    "Unnamed: 12": "Yes",
+    "Unnamed: 13": "Yes",
+    "Unnamed: 14": "Yes",
+  }),
+  hierarchicalRow({
+    "Portable Fire Equipment": "Extinguisher 9kg DCP Service",
+    "Unnamed: 8": "",
+    "Unnamed: 10": "Yes",
+    "Unnamed: 11": "Yes",
+    "Unnamed: 12": "Yes",
+    "Unnamed: 13": "Yes",
+    "Unnamed: 14": "Yes",
+  }),
+].join("\n");
+
+const sameDeviceParsed = parseZohoJobcardCsv(sameDeviceSameJobFixture);
+assert.equal(sameDeviceParsed.equipment.length, 3);
+assert.equal(
+  new Set(sameDeviceParsed.equipment.map((item) => item.idempotencyKey)).size,
+  3,
+  "identical-looking assets on one jobcard must still get distinct fingerprints"
+);
+assert.equal(
+  sameDeviceParsed.warnings.filter((warning) => warning.code === "duplicate_row").length,
+  0,
+  "identical-looking assets must not warn as duplicate rows"
+);
 
 console.log("Zoho Jobcard import parser tests passed.");

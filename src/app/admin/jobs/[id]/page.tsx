@@ -14,6 +14,7 @@ import {
   importSourceLabel,
 } from "@/lib/fsm/labels";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
+import { formatPartsUsedAndNotes } from "@/lib/reports/inspection-display";
 import type {
   AssetType,
   DefectSeverity,
@@ -29,6 +30,7 @@ interface InspectionRow {
   result: InspectionResult;
   requires_refill: boolean;
   requires_pressure_test: boolean;
+  checklist: Record<string, boolean | string | string[]>;
   notes: string | null;
   created_at: string;
   asset: {
@@ -101,7 +103,7 @@ export default async function AdminJobDetailPage({
     supabase
       .from("inspections")
       .select(
-        "id, result, requires_refill, requires_pressure_test, notes, created_at, asset:assets(asset_code, asset_type, size_capacity, asset_medium)"
+        "id, result, requires_refill, requires_pressure_test, checklist, notes, created_at, asset:assets(asset_code, asset_type, size_capacity, asset_medium)"
       )
       .eq("job_id", id)
       .order("created_at"),
@@ -360,9 +362,13 @@ export default async function AdminJobDetailPage({
                       </p>
                       <p className="text-xs text-zinc-500 truncate">
                         {fmt(i.created_at)}
-                        {i.requires_refill ? " · refill required" : ""}
-                        {i.requires_pressure_test ? " · pressure testing required" : ""}
-                        {i.notes ? ` · ${i.notes}` : ""}
+                        {" · "}
+                        {formatPartsUsedAndNotes({
+                          checklist: i.checklist ?? {},
+                          requiresRefill: i.requires_refill,
+                          requiresPressureTest: i.requires_pressure_test,
+                          notes: i.notes,
+                        })}
                       </p>
                     </div>
                     <span

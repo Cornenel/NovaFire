@@ -13,6 +13,7 @@ import {
   JOB_TYPE_LABELS,
 } from "@/lib/fsm/labels";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
+import { formatPartsUsedAndNotes } from "@/lib/reports/inspection-display";
 import type {
   AssetType,
   DefectSeverity,
@@ -48,7 +49,7 @@ export interface JobReportData {
     assetLocation: string | null;
     legacyDescription: string | null;
     result: InspectionResult;
-    checklist: Record<string, boolean | string>;
+    checklist: Record<string, boolean | string | string[]>;
     requiresRefill: boolean;
     requiresPressureTest: boolean;
     notes: string | null;
@@ -162,7 +163,7 @@ const fmtDateTime = (iso: string | null) =>
 
 function failedItems(
   assetType: AssetType,
-  checklist: Record<string, boolean | string>
+  checklist: Record<string, boolean | string | string[]>
 ): string {
   const items = getChecklistForAssetType(assetType);
   const failed = items
@@ -262,18 +263,17 @@ export function JobReportDocument({ data }: { data: JobReportData }) {
               <Text style={[s.th, { width: "20%" }]}>Asset IDs</Text>
               <Text style={[s.th, { width: "24%" }]}>Asset</Text>
               <Text style={[s.th, { width: "10%" }]}>Result</Text>
-              <Text style={[s.th, { width: "46%" }]}>Issues / Notes</Text>
+              <Text style={[s.th, { width: "46%" }]}>Parts used and notes</Text>
             </View>
             {data.inspections.map((i, idx) => {
               const issues = failedItems(i.assetType, i.checklist);
-              const extras = [
-                i.requiresRefill ? "Refill required" : null,
-                i.requiresPressureTest ? "Pressure test required" : null,
-                issues || null,
-                i.notes,
-              ]
-                .filter(Boolean)
-                .join(" · ");
+              const extras = formatPartsUsedAndNotes({
+                checklist: i.checklist,
+                requiresRefill: i.requiresRefill,
+                requiresPressureTest: i.requiresPressureTest,
+                notes: i.notes,
+                failedChecklistSummary: issues || null,
+              });
               return (
                 <View key={idx} style={s.tableRow} wrap={false}>
                   <Text style={[s.cell, { width: "20%" }]}>
@@ -301,7 +301,7 @@ export function JobReportDocument({ data }: { data: JobReportData }) {
                   >
                     {i.result.toUpperCase()}
                   </Text>
-                  <Text style={[s.cell, { width: "46%" }]}>{extras || "—"}</Text>
+                  <Text style={[s.cell, { width: "46%" }]}>{extras}</Text>
                 </View>
               );
             })}
