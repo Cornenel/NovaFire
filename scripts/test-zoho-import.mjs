@@ -629,8 +629,16 @@ assert.deepEqual(
 
 const pressureOutcome = parseAnnualServiceResult("Pressure testing required");
 assert.equal(pressureOutcome?.annualServiceCompliant, true);
+assert.equal(pressureOutcome?.annualServiceCompleted, true);
 assert.equal(pressureOutcome?.pressureTestRequired, true);
+assert.equal(pressureOutcome?.additionalWorkRequired, true);
+assert.equal(pressureOutcome?.quoteRequired, true);
+assert.equal(pressureOutcome?.quoteReason, "Pressure Test");
 assert.equal(pressureOutcome?.inspectionPass, true);
+assert.equal(
+  pressureOutcome?.assetStatus,
+  "Annual Service Completed - Pressure Test Required"
+);
 
 const parts = splitServiceParts(
   "DCP Long Operating Head W/Gauge, DCP Powder ABC 40% MAP (P/KG), Nitrogen recharge, DCP 9KG Discharge hose"
@@ -760,22 +768,27 @@ assert.equal(
   "all 14 assets should require pressure testing"
 );
 assert.equal(
-  jcParsed.validation.quote_required_records_created,
-  0,
-  "replacement parts must not create quote required records"
+  jcParsed.validation.quotes_required,
+  14,
+  "pressure testing required must create follow-up quotes"
 );
-assert.equal(jcParsed.validation.parts_used_detected, 1, "one asset row has used parts");
+assert.equal(jcParsed.validation.parts_used, 1, "one asset row has used parts");
+assert.equal(
+  jcParsed.validation.annual_services_completed,
+  14,
+  "all imported assets completed annual service"
+);
 assert.ok(
-  jcParsed.equipment.every(
-    (item) =>
-      item.annualService?.annualServiceCompliant === true &&
-      item.inspection.result === "pass"
-  ),
-  "all assets should pass annual service inspection"
+  jcParsed.equipment.every((item) => item.inspection.result === "pass"),
+  "annual service must import as pass even when pressure test follow-up is required"
+);
+assert.ok(
+  jcParsed.equipment.every((item) => item.followUp?.quoteRequired === true),
+  "pressure test follow-up must be quote required"
 );
 assert.ok(
   jcParsed.equipment.every((item) => item.defect?.shouldCreate !== true),
-  "pressure test due must not create defects"
+  "pressure test follow-up must not create failure defects"
 );
 assert.equal(
   jcParsed.equipment[0].parsedDevice?.deviceSize,

@@ -138,15 +138,14 @@ export function ZohoJobcardImporter() {
 function SummaryCards({ preview }: { preview: NonNullable<ZohoImportActionState["preview"]> }) {
   const validation = preview.validation;
   const cards = [
-    ["Jobcards", validation.jobcards_created],
-    ["Portable assets", validation.portable_assets_imported],
-    ["Fixed assets", validation.fixed_assets_imported],
-    ["Service records", validation.service_records_created],
-    ["Pressure tests due", validation.pressure_tests_required],
-    ["Parts used", validation.parts_used_detected],
-    ["Quote required", validation.quote_required_records_created],
-    ["Duplicates skipped", validation.duplicate_rows_skipped],
-    ["Errors", validation.errors.length],
+    ["Jobcards imported", validation.jobcards_imported],
+    ["Assets imported", validation.assets_imported],
+    ["Annual services completed", validation.annual_services_completed],
+    ["Pressure tests required", validation.pressure_tests_required],
+    ["Quotes required", validation.quotes_required],
+    ["Parts used", validation.parts_used],
+    ["Duplicates skipped", validation.duplicate_records_skipped],
+    ["Import errors", validation.import_errors.length],
   ] as const;
 
   return (
@@ -265,13 +264,15 @@ function ResultPanel({ result }: { result: NonNullable<ZohoImportActionState["re
     ["Assets matched", result.assetsMatched],
     ["Inspections created", result.inspectionsCreated],
     ["Defects created", result.defectsCreated],
-    ["Portable assets", validation.portable_assets_imported],
-    ["Fixed assets", validation.fixed_assets_imported],
-    ["Pressure tests due", validation.pressure_tests_required],
-    ["Parts used (CSV)", validation.parts_used_detected],
+    ["Jobcards imported", validation.jobcards_imported],
+    ["Assets imported", validation.assets_imported],
+    ["Annual services completed", validation.annual_services_completed],
+    ["Pressure tests required", validation.pressure_tests_required],
+    ["Quotes required (CSV)", validation.quotes_required],
+    ["Quotes created", validation.quotes_required_records_created],
+    ["Parts used (CSV)", validation.parts_used],
     ["Parts used (new)", validation.parts_used_records_created],
-    ["Quote required", validation.quote_required_records_created],
-    ["Duplicates skipped", validation.duplicate_rows_skipped],
+    ["Duplicates skipped", validation.duplicate_records_skipped],
     ["Skipped rows", result.skippedRows],
     ["Warning rows", result.warningRows],
   ] as const;

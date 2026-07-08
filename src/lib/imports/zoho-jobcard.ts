@@ -8,6 +8,15 @@ import type {
 export const ZOHO_IMPORT_SOURCE = "zoho_import";
 
 /**
+ * Historical Zoho Jobcard CSV importer.
+ *
+ * Migrates completed technician jobcards from Zoho Forms into permanent asset
+ * service history. Annual service completion and additional follow-up work
+ * (e.g. pressure testing) are modelled separately — a passed annual service
+ * may still require a quoted pressure test workshop service.
+ */
+
+/**
  * Zoho Jobcard CSV column layout (Excel letters A–AR, 44 columns, 0-based indices).
  *
  * Hierarchical export (Unique ID at A, portable at G / index 6):
@@ -132,10 +141,27 @@ export interface ParsedPortableDevice {
 }
 
 export interface AnnualServiceOutcome {
+  annualServiceCompleted: boolean;
   annualServiceCompliant: boolean;
   pressureTestRequired: boolean;
+  additionalWorkRequired: boolean;
+  additionalWorkType: string | null;
+  quoteRequired: boolean;
+  quoteReason: string | null;
+  followUpRequired: boolean;
+  followUpService: string | null;
   assetStatus: string;
   inspectionPass: boolean;
+}
+
+export interface FollowUpWork {
+  shouldCreate: boolean;
+  quoteRequired: boolean;
+  quoteReason: string | null;
+  additionalWorkType: string | null;
+  followUpService: string | null;
+  description: string;
+  recommendedAction: string;
 }
 
 export interface ServicePartsUsed {
@@ -317,6 +343,7 @@ export interface ZohoMappedEquipment {
   parsedDevice: ParsedPortableDevice | null;
   annualService: AnnualServiceOutcome | null;
   partsUsed: ServicePartsUsed | null;
+  followUp: FollowUpWork | null;
   asset: {
     assetType: AssetType;
     originalDescription: string;
@@ -362,17 +389,17 @@ export interface ZohoPreviewJob {
 }
 
 export interface ZohoImportValidation {
-  jobcards_created: number;
-  jobcards_updated: number;
-  portable_assets_imported: number;
-  fixed_assets_imported: number;
-  service_records_created: number;
+  jobcards_imported: number;
+  assets_imported: number;
+  annual_services_completed: number;
   pressure_tests_required: number;
-  parts_used_detected: number;
+  quotes_required: number;
+  parts_used: number;
+  duplicate_records_skipped: number;
+  import_errors: ZohoWarning[];
+  /** Records actually written on confirm import */
   parts_used_records_created: number;
-  quote_required_records_created: number;
-  duplicate_rows_skipped: number;
-  errors: ZohoWarning[];
+  quotes_required_records_created: number;
 }
 
 export interface ZohoParseResult {
@@ -617,19 +644,20 @@ function buildImportValidation(
 ): ZohoImportValidation {
   const jobIds = new Set(equipment.map((e) => e.legacyZohoJobcardId));
   return {
-    jobcards_created: jobIds.size,
-    jobcards_updated: 0,
-    portable_assets_imported: equipment.filter((e) => e.section === "portable").length,
-    fixed_assets_imported: equipment.filter((e) => e.section === "fixed").length,
-    service_records_created: equipment.length,
-    pressure_tests_required: equipment.filter(
-      (e) => e.annualService?.pressureTestRequired || e.inspection.requiresPressureTest
+    jobcards_imported: jobIds.size,
+    assets_imported: equipment.length,
+    annual_services_completed: equipment.filter(
+      (e) => e.annualService?.annualServiceCompleted
     ).length,
-    parts_used_detected: equipment.filter((e) => e.partsUsed?.partsUsed).length,
-    parts_used_records_created: equipment.filter((e) => e.partsUsed?.partsUsed).length,
-    quote_required_records_created: equipment.filter((e) => e.defect?.quoteRequired).length,
-    duplicate_rows_skipped: duplicateRows,
-    errors: warnings.filter((w) => w.severity === "error"),
+    pressure_tests_required: equipment.filter(
+      (e) => e.annualService?.pressureTestRequired
+    ).length,
+    quotes_required: equipment.filter((e) => e.followUp?.quoteRequired).length,
+    parts_used: equipment.filter((e) => e.partsUsed?.partsUsed).length,
+    duplicate_records_skipped: duplicateRows,
+    import_errors: warnings.filter((w) => w.severity === "error"),
+    parts_used_records_created: 0,
+    quotes_required_records_created: 0,
   };
 }
 
@@ -653,17 +681,16 @@ export function normalizeEmail(value: string | null | undefined): string | null 
 
 function emptyResult(warnings: ZohoWarning[]): ZohoParseResult {
   const validation: ZohoImportValidation = {
-    jobcards_created: 0,
-    jobcards_updated: 0,
-    portable_assets_imported: 0,
-    fixed_assets_imported: 0,
-    service_records_created: 0,
+    jobcards_imported: 0,
+    assets_imported: 0,
+    annual_services_completed: 0,
     pressure_tests_required: 0,
-    parts_used_detected: 0,
+    quotes_required: 0,
+    parts_used: 0,
+    duplicate_records_skipped: 0,
+    import_errors: warnings.filter((w) => w.severity === "error"),
     parts_used_records_created: 0,
-    quote_required_records_created: 0,
-    duplicate_rows_skipped: 0,
-    errors: warnings.filter((w) => w.severity === "error"),
+    quotes_required_records_created: 0,
   };
   return {
     headers: [],
@@ -1099,9 +1126,16 @@ export function parseAnnualServiceResult(
 
   if (["yes", "compliant", "pass", "passed"].includes(normalized)) {
     return {
+      annualServiceCompleted: true,
       annualServiceCompliant: true,
       pressureTestRequired: false,
-      assetStatus: "Compliant",
+      additionalWorkRequired: false,
+      additionalWorkType: null,
+      quoteRequired: false,
+      quoteReason: null,
+      followUpRequired: false,
+      followUpService: null,
+      assetStatus: "Annual Service Completed",
       inspectionPass: true,
     };
   }
@@ -1111,17 +1145,31 @@ export function parseAnnualServiceResult(
     normalized.includes("pressure test required")
   ) {
     return {
+      annualServiceCompleted: true,
       annualServiceCompliant: true,
       pressureTestRequired: true,
-      assetStatus: "Service Completed - Pressure Test Due",
+      additionalWorkRequired: true,
+      additionalWorkType: "Pressure Test",
+      quoteRequired: true,
+      quoteReason: "Pressure Test",
+      followUpRequired: true,
+      followUpService: "Pressure Test",
+      assetStatus: "Annual Service Completed - Pressure Test Required",
       inspectionPass: true,
     };
   }
 
   if (["no", "not compliant", "fail", "failed"].includes(normalized)) {
     return {
+      annualServiceCompleted: false,
       annualServiceCompliant: false,
       pressureTestRequired: false,
+      additionalWorkRequired: false,
+      additionalWorkType: null,
+      quoteRequired: false,
+      quoteReason: null,
+      followUpRequired: false,
+      followUpService: null,
       assetStatus: "Non-Compliant",
       inspectionPass: false,
     };
@@ -1300,10 +1348,12 @@ function mapEquipment(
           deviceWeightReading,
           compliance,
           partsUsed,
-          parsedPortable
+          parsedPortable,
+          annualService
         )
-      : mapFixedChecklist(row, headers, columnMap, parsed.assetType, compliance);
+      : mapFixedChecklist(row, headers, columnMap, parsed.assetType, compliance, annualService);
   const defect = buildDefect(compliance, annualService, checklist);
+  const followUp = buildFollowUpWork(annualService);
 
   if (!compliance) {
     warnings.push({
@@ -1355,6 +1405,7 @@ function mapEquipment(
     parsedDevice: parsedPortable,
     annualService,
     partsUsed: section === "portable" ? partsUsed : null,
+    followUp,
     asset: {
       assetType: parsed.assetType,
       originalDescription,
@@ -1416,7 +1467,8 @@ function mapPortableChecklist(
   deviceWeightReading: string | null,
   compliance: string | null,
   partsUsed: ServicePartsUsed,
-  parsedPortable: ParsedPortableDevice | null
+  parsedPortable: ParsedPortableDevice | null,
+  annualService: AnnualServiceOutcome | null
 ): Record<string, string | boolean | string[] | null> {
   const [seal, damage, nozzle, pressure, accessible] =
     columnMap.portableCheckIndices.map((index) => getZohoCell(row, headers, index));
@@ -1426,15 +1478,16 @@ function mapPortableChecklist(
     device_size: parsedPortable?.deviceSize ?? null,
     agent_type: parsedPortable?.agentType ?? null,
     service_type: parsedPortable?.serviceType ?? null,
-    annual_service_compliant: parsedPortable
-      ? parseAnnualServiceResult(compliance)?.annualServiceCompliant ?? null
-      : null,
-    pressure_test_required: parsedPortable
-      ? parseAnnualServiceResult(compliance)?.pressureTestRequired ?? null
-      : null,
-    asset_status: parsedPortable
-      ? parseAnnualServiceResult(compliance)?.assetStatus ?? null
-      : null,
+    annual_service_completed: annualService?.annualServiceCompleted ?? null,
+    annual_service_compliant: annualService?.annualServiceCompliant ?? null,
+    pressure_test_required: annualService?.pressureTestRequired ?? null,
+    additional_work_required: annualService?.additionalWorkRequired ?? null,
+    additional_work_type: annualService?.additionalWorkType ?? null,
+    quote_required: annualService?.quoteRequired ?? null,
+    quote_reason: annualService?.quoteReason ?? null,
+    follow_up_required: annualService?.followUpRequired ?? null,
+    follow_up_service: annualService?.followUpService ?? null,
+    asset_status: annualService?.assetStatus ?? null,
     device_weight_reading: deviceWeightReading,
     seal_and_pin_intact: yesNo(seal),
     no_visible_damage_rust_or_corrosion: yesNo(damage),
@@ -1458,7 +1511,8 @@ function mapFixedChecklist(
   headers: string[],
   columnMap: ZohoColumnMap,
   assetType: AssetType,
-  compliance: string | null
+  compliance: string | null,
+  annualService: AnnualServiceOutcome | null
 ): Record<string, string | boolean | string[] | null> {
   const cellAt = (index: number) => getZohoCell(row, headers, index);
   if (assetType === "hydrant") {
@@ -1473,6 +1527,9 @@ function mapFixedChecklist(
       clearly_marked_and_accessible: yesNo(cellAt(marked)),
       spares_replaced: cellAt(columnMap.fixedSpares),
       compliant_result: compliance,
+      annual_service_completed: annualService?.annualServiceCompleted ?? null,
+      annual_service_compliant: annualService?.annualServiceCompliant ?? null,
+      asset_status: annualService?.assetStatus ?? null,
     };
   }
 
@@ -1497,6 +1554,26 @@ function mapFixedChecklist(
     cabinet_accessible_and_intact: yesNo(cellAt(cabinet)),
     spares_replaced: cellAt(columnMap.fixedSpares),
     compliant_result: compliance,
+    annual_service_completed: annualService?.annualServiceCompleted ?? null,
+    annual_service_compliant: annualService?.annualServiceCompliant ?? null,
+    asset_status: annualService?.assetStatus ?? null,
+  };
+}
+
+function buildFollowUpWork(
+  annualService: AnnualServiceOutcome | null
+): FollowUpWork | null {
+  if (!annualService?.additionalWorkRequired) return null;
+
+  const service = annualService.followUpService ?? annualService.additionalWorkType;
+  return {
+    shouldCreate: true,
+    quoteRequired: annualService.quoteRequired,
+    quoteReason: annualService.quoteReason,
+    additionalWorkType: annualService.additionalWorkType,
+    followUpService: annualService.followUpService,
+    description: `Annual service completed. ${service} required as a separate follow-up service.`,
+    recommendedAction: `Schedule ${service} workshop service, then return the unit to the customer once complete.`,
   };
 }
 
