@@ -6,6 +6,12 @@ import type {
 } from "@/lib/fsm/types";
 
 export const ZOHO_IMPORT_SOURCE = "zoho_import";
+export const ZOHO_FORMS_IMPORT_LABEL = "Zoho Forms Import";
+export const ZOHO_ANNUAL_SERVICE_CATEGORY = "Annual Fire Equipment Service";
+export const PRESSURE_TEST_DEFECT_TYPE = "Pressure Test Required";
+export const PRESSURE_TEST_QUOTE_GROUP_TYPE = "Pressure Testing";
+export const PRESSURE_TEST_QUOTE_REASON =
+  "Pressure testing required for multiple devices";
 
 /**
  * Historical Zoho Jobcard CSV importer.
@@ -160,6 +166,7 @@ export interface FollowUpWork {
   quoteReason: string | null;
   additionalWorkType: string | null;
   followUpService: string | null;
+  defectType: string;
   description: string;
   recommendedAction: string;
 }
@@ -652,7 +659,7 @@ function buildImportValidation(
     pressure_tests_required: equipment.filter(
       (e) => e.annualService?.pressureTestRequired
     ).length,
-    quotes_required: equipment.filter((e) => e.followUp?.quoteRequired).length,
+    quotes_required: countRequiredQuoteGroups(equipment),
     parts_used: equipment.filter((e) => e.partsUsed?.partsUsed).length,
     duplicate_records_skipped: duplicateRows,
     import_errors: warnings.filter((w) => w.severity === "error"),
@@ -1572,9 +1579,44 @@ function buildFollowUpWork(
     quoteReason: annualService.quoteReason,
     additionalWorkType: annualService.additionalWorkType,
     followUpService: annualService.followUpService,
+    defectType: PRESSURE_TEST_DEFECT_TYPE,
     description: `Annual service completed. ${service} required as a separate follow-up service.`,
     recommendedAction: `Schedule ${service} workshop service, then return the unit to the customer once complete.`,
   };
+}
+
+export function equipmentServiceLabel(item: ZohoMappedEquipment): string {
+  return normalizeText(
+    item.parsedDevice?.serviceType ?? item.asset.originalDescription
+  );
+}
+
+/** True only when the CSV explicitly describes an inspection — not an annual service. */
+export function isExplicitInspectionService(
+  item: ZohoMappedEquipment
+): boolean {
+  const text = equipmentServiceLabel(item);
+  if (!text.includes("inspection")) return false;
+  if (text.includes("annual service")) return false;
+  if (/\b(service|servicing)\b/.test(text)) return false;
+  return true;
+}
+
+export function buildPressureTestQuoteGroupKey(
+  legacyJobcardId: string,
+  siteId: string
+): string {
+  return `${legacyJobcardId}-${siteId}-pressure-testing`;
+}
+
+function countRequiredQuoteGroups(equipment: ZohoMappedEquipment[]): number {
+  const jobcardsNeedingQuotes = new Set<string>();
+  for (const item of equipment) {
+    if (item.followUp?.quoteRequired) {
+      jobcardsNeedingQuotes.add(item.legacyZohoJobcardId);
+    }
+  }
+  return jobcardsNeedingQuotes.size;
 }
 
 function yesNo(value: string | null | undefined): boolean | null {
@@ -1844,8 +1886,8 @@ export function buildAssetImportKey(
 export function jobTypeForImportedEquipment(
   equipment: ZohoMappedEquipment[]
 ): JobType {
-  if (equipment.some((e) => e.section === "fixed")) return "inspection";
-  if (equipment.some((e) => e.inspection.requiresPressureTest)) return "pressure_test";
-  if (equipment.some((e) => e.inspection.requiresRefill)) return "refill";
+  if (equipment.some((item) => isExplicitInspectionService(item))) {
+    return "inspection";
+  }
   return "annual_service";
 }

@@ -185,6 +185,9 @@ export interface Job {
   checkin_latitude: number | null;
   checkin_longitude: number | null;
   completed_at: string | null;
+  service_category?: string | null;
+  import_source?: string | null;
+  legacy_zoho_jobcard_id?: string | null;
 }
 
 export interface JobWithRelations extends Job {

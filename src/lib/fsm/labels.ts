@@ -50,6 +50,15 @@ export const JOB_TYPE_LABELS: Record<JobType, string> = {
   pressure_test: "Pressure Test",
 };
 
+export const IMPORT_SOURCE_LABELS: Record<string, string> = {
+  zoho_import: "Zoho Forms Import",
+};
+
+export function importSourceLabel(source: string | null | undefined): string | null {
+  if (!source) return null;
+  return IMPORT_SOURCE_LABELS[source] ?? source;
+}
+
 export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   fire_extinguisher: "Fire Extinguisher",
   hose_reel: "Hose Reel",

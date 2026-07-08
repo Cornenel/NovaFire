@@ -23,13 +23,15 @@ export async function loadAssetTimelineData(
     supabase
       .from("inspections")
       .select(
-        "id, created_at, result, notes, requires_refill, requires_pressure_test, job_id, job:jobs(id, job_number, status, scheduled_date, completed_at)"
+        "id, created_at, result, notes, requires_refill, requires_pressure_test, checklist, import_source, job_id, job:jobs(id, job_number, status, job_type, import_source, scheduled_date, completed_at)"
       )
       .eq("asset_id", assetId)
       .order("created_at", { ascending: true }),
     supabase
       .from("defects")
-      .select("id, created_at, updated_at, defect_type, severity, description, status, job_id")
+      .select(
+        "id, created_at, updated_at, defect_type, severity, description, status, job_id, quote_group_id"
+      )
       .eq("asset_id", assetId)
       .order("created_at", { ascending: true }),
     supabase

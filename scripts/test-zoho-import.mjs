@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import {
   buildZohoColumnMap,
+  jobTypeForImportedEquipment,
+  isExplicitInspectionService,
+  PRESSURE_TEST_DEFECT_TYPE,
   parseAnnualServiceResult,
   parsePortableDeviceDescription,
   parseZohoJobcardCsv,
@@ -769,10 +772,24 @@ assert.equal(
 );
 assert.equal(
   jcParsed.validation.quotes_required,
-  14,
-  "pressure testing required must create follow-up quotes"
+  1,
+  "pressure testing required must create one grouped quote per jobcard"
 );
 assert.equal(jcParsed.validation.parts_used, 1, "one asset row has used parts");
+assert.equal(
+  jobTypeForImportedEquipment(jcParsed.equipment),
+  "annual_service",
+  "zoho service jobcards must import as annual service"
+);
+assert.ok(
+  !jcParsed.equipment.some((item) => isExplicitInspectionService(item)),
+  "annual service device descriptions must not be classified as inspection"
+);
+assert.equal(
+  jcParsed.equipment[0].followUp?.defectType,
+  PRESSURE_TEST_DEFECT_TYPE,
+  "pressure test follow-up must use Pressure Test Required defect type"
+);
 assert.equal(
   jcParsed.validation.annual_services_completed,
   14,

@@ -17,6 +17,8 @@ truncate table
   public.customer_update_history,
   public.import_rows,
   public.import_sessions,
+  public.quote_group_line_items,
+  public.quote_groups,
   public.quote_recommendations,
   public.fire_risks,
   public.reports,

@@ -11,6 +11,7 @@ import {
   JOB_STATUS_LABELS,
   JOB_STATUS_STYLES,
   JOB_TYPE_LABELS,
+  importSourceLabel,
 } from "@/lib/fsm/labels";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import type {
@@ -45,6 +46,7 @@ interface DefectRow {
   status: DefectStatus;
   description: string;
   quote_required: boolean;
+  quote_group_id: string | null;
   asset: { asset_code: string } | null;
 }
 
@@ -88,6 +90,7 @@ export default async function AdminJobDetailPage({
     { data: photosData },
     { data: signature },
     { data: stockUsed },
+    { data: quoteGroupsData },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -104,7 +107,9 @@ export default async function AdminJobDetailPage({
       .order("created_at"),
     supabase
       .from("defects")
-      .select("id, defect_type, severity, status, description, quote_required, asset:assets(asset_code)")
+      .select(
+        "id, defect_type, severity, status, description, quote_required, quote_group_id, asset:assets(asset_code)"
+      )
       .eq("job_id", id),
     supabase
       .from("photos")
@@ -120,6 +125,10 @@ export default async function AdminJobDetailPage({
       .from("stock_usage")
       .select("quantity, stock_item:stock_items(name)")
       .eq("job_id", id),
+    supabase
+      .from("quote_groups")
+      .select("id, quote_type, status, reason, total_assets")
+      .eq("job_id", id),
   ]);
 
   const inspections = (inspectionsData ?? []) as unknown as InspectionRow[];
@@ -129,6 +138,17 @@ export default async function AdminJobDetailPage({
     quantity: number;
     stock_item: { name: string } | null;
   }>;
+  const quoteGroups = (quoteGroupsData ?? []) as Array<{
+    id: string;
+    quote_type: string;
+    status: string;
+    reason: string | null;
+    total_assets: number;
+  }>;
+  const pressureTestCount = inspections.filter((i) => i.requires_pressure_test).length;
+  const isZohoAnnualService =
+    job.import_source === "zoho_import" && job.job_type === "annual_service";
+  const importSource = importSourceLabel(job.import_source);
 
   // Signed URLs for photos and signature
   let photoUrls: Record<string, string> = {};
@@ -189,6 +209,16 @@ export default async function AdminJobDetailPage({
             >
               {JOB_STATUS_LABELS[job.status]}
             </span>
+            {job.service_category ? (
+              <span className="text-[11px] px-2 py-0.5 rounded-full border bg-white/[0.04] text-zinc-400 border-white/10">
+                {job.service_category}
+              </span>
+            ) : null}
+            {importSource ? (
+              <span className="text-[11px] px-2 py-0.5 rounded-full border bg-white/[0.04] text-zinc-400 border-white/10">
+                {importSource}
+              </span>
+            ) : null}
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
@@ -209,6 +239,22 @@ export default async function AdminJobDetailPage({
           </a>
         </div>
       </div>
+
+      {isZohoAnnualService && (
+        <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3">
+          <p className="text-sm text-amber-200">
+            Annual Service completed.
+            {pressureTestCount > 0
+              ? ` Pressure testing required for ${pressureTestCount} device${pressureTestCount === 1 ? "" : "s"}.`
+              : ""}
+            {quoteGroups.length > 0
+              ? ` ${quoteGroups.length} quote required.`
+              : pressureTestCount > 0
+                ? ""
+                : " No additional quotes required."}
+          </p>
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left: timeline + details */}
@@ -293,7 +339,8 @@ export default async function AdminJobDetailPage({
         <div className="lg:col-span-2 space-y-6">
           <div>
             <h2 className="text-sm font-semibold text-zinc-300 mb-3">
-              Inspections ({inspections.length})
+              {isZohoAnnualService ? "Annual service records" : "Inspections"} (
+              {inspections.length})
             </h2>
             {inspections.length === 0 ? (
               <p className="text-zinc-500 text-sm">No inspections recorded.</p>
@@ -314,7 +361,7 @@ export default async function AdminJobDetailPage({
                       <p className="text-xs text-zinc-500 truncate">
                         {fmt(i.created_at)}
                         {i.requires_refill ? " · refill required" : ""}
-                        {i.requires_pressure_test ? " · pressure test required" : ""}
+                        {i.requires_pressure_test ? " · pressure testing required" : ""}
                         {i.notes ? ` · ${i.notes}` : ""}
                       </p>
                     </div>
@@ -350,11 +397,15 @@ export default async function AdminJobDetailPage({
                           {d.asset?.asset_code}
                         </span>
                         {d.defect_type}
-                        {d.quote_required && (
+                        {d.quote_group_id ? (
+                          <span className="text-amber-500/90 text-xs ml-2">
+                            Included in quote group
+                          </span>
+                        ) : d.quote_required ? (
                           <span className="text-amber-500/90 text-xs ml-2">
                             Quote required
                           </span>
-                        )}
+                        ) : null}
                       </p>
                       <span
                         className={cn(

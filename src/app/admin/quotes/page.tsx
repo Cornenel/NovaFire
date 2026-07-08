@@ -27,8 +27,9 @@ export default async function QuotePreparationPage() {
   // 1. Generate staging rows for open defects that don't have one yet
   const { data: openDefects } = await supabase
     .from("defects")
-    .select("id, job_id, asset_id, defect_type, recommended_action, quote_recommendations(id)")
-    .eq("status", "open");
+    .select("id, job_id, asset_id, defect_type, recommended_action, quote_group_id, quote_recommendations(id)")
+    .eq("status", "open")
+    .is("quote_group_id", null);
 
   const missing = (openDefects ?? []).filter(
     (d) => !d.quote_recommendations || d.quote_recommendations.length === 0

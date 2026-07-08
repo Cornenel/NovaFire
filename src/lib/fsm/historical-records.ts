@@ -22,11 +22,15 @@ export interface HistoricalInspection {
   notes?: string | null;
   requires_refill?: boolean;
   requires_pressure_test?: boolean;
+  checklist?: Record<string, unknown> | null;
+  import_source?: string | null;
   job_id: string;
   job?: {
     id?: string;
     job_number?: string | null;
     status?: string | null;
+    job_type?: string | null;
+    import_source?: string | null;
     scheduled_date?: string | null;
     completed_at?: string | null;
   } | null;
@@ -41,6 +45,7 @@ export interface HistoricalDefect {
   severity?: string;
   status: string;
   job_id: string;
+  quote_group_id?: string | null;
 }
 
 export interface HistoricalAssetEvent {
@@ -253,8 +258,7 @@ export function buildAssetTimeline(input: {
   for (const inspection of input.inspections) {
     const date = inspectionEffectiveDate(inspection);
     const jobNumber = inspection.job?.job_number ?? undefined;
-    const servicedTitle =
-      inspection.result === "pass" ? "Serviced" : "Inspection failed";
+    const servicedTitle = servicedInspectionTitle(inspection);
 
     entries.push({
       id: `inspection-${inspection.id}`,
@@ -274,26 +278,33 @@ export function buildAssetTimeline(input: {
         kind: "pressure_test",
         date,
         sortAt: `${inspection.created_at}-pressure`,
-        title: "Pressure test required",
-        detail: inspection.result === "pass" ? "Passed" : "Required after failed inspection",
+        title: "Pressure testing required",
+        detail:
+          inspection.result === "pass"
+            ? "Annual service completed"
+            : "Required after failed inspection",
         jobId: inspection.job_id,
         jobNumber,
-        tone: inspection.result === "pass" ? "positive" : "warning",
+        tone: inspection.result === "pass" ? "warning" : "warning",
       });
     }
   }
 
   for (const defect of input.defects) {
     const date = defect.created_at.slice(0, 10);
+    const isPressureFollowUp = defect.defect_type === "Pressure Test Required";
+    const detail = defect.quote_group_id
+      ? `${defect.description} · Included in quote group`
+      : defect.description;
     entries.push({
       id: `defect-${defect.id}`,
       kind: "defect",
       date,
       sortAt: defect.created_at,
-      title: `Defect: ${defect.defect_type}`,
-      detail: defect.description,
+      title: isPressureFollowUp ? defect.defect_type : `Defect: ${defect.defect_type}`,
+      detail,
       jobId: defect.job_id,
-      tone: "danger",
+      tone: isPressureFollowUp ? "warning" : "danger",
     });
 
     if (RESOLVED_DEFECT_STATUSES.has(defect.status)) {
@@ -412,6 +423,26 @@ export function buildAssetTimeline(input: {
   }
 
   return entries;
+}
+
+function servicedInspectionTitle(inspection: HistoricalInspection): string {
+  if (inspection.result !== "pass") return "Inspection failed";
+
+  const imported =
+    inspection.import_source === "zoho_import" ||
+    inspection.job?.import_source === "zoho_import";
+  const annualCompleted =
+    inspection.checklist?.annual_service_completed === true || imported;
+
+  if (
+    annualCompleted ||
+    inspection.job?.job_type === "annual_service" ||
+    imported
+  ) {
+    return "Annual Service completed";
+  }
+
+  return "Serviced";
 }
 
 function formatMonthYear(isoDate: string): string {

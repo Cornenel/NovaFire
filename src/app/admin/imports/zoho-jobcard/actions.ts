@@ -6,7 +6,13 @@ import { recordImportedInspectionHistory } from "@/lib/fsm/asset-history-sync";
 import { matchExistingCustomer } from "@/lib/fsm/historical-records";
 import {
   ZOHO_IMPORT_SOURCE,
+  ZOHO_ANNUAL_SERVICE_CATEGORY,
+  ZOHO_FORMS_IMPORT_LABEL,
+  PRESSURE_TEST_DEFECT_TYPE,
+  PRESSURE_TEST_QUOTE_GROUP_TYPE,
+  PRESSURE_TEST_QUOTE_REASON,
   buildAssetImportKey,
+  buildPressureTestQuoteGroupKey,
   jobTypeForImportedEquipment,
   normalizeText,
   parseZohoJobcardCsv,
@@ -207,6 +213,12 @@ export async function confirmZohoJobcardImport(
       );
       jobCache.set(legacyJobId, jobId);
 
+      const pressureTestFollowUps: Array<{
+        assetId: string;
+        defectId: string;
+        idempotencyKey: string;
+      }> = [];
+
       for (const item of equipment) {
         const importWarnings = warningsToJson(item.warnings);
         const asset = await findOrCreateAsset(admin, context, site.id, item, result);
@@ -221,6 +233,13 @@ export async function confirmZohoJobcardImport(
         if (duplicateInspection) {
           result.duplicateRows++;
           result.validation.duplicate_records_skipped++;
+          const { data: existingInspection } = await admin
+            .from("inspections")
+            .select("id")
+            .eq("import_idempotency_key", item.idempotencyKey)
+            .eq("import_source", ZOHO_IMPORT_SOURCE)
+            .maybeSingle();
+          inspectionId = (existingInspection?.id as string | undefined) ?? null;
         } else {
           const { data: inspection, error } = await admin
             .from("inspections")
@@ -308,7 +327,7 @@ export async function confirmZohoJobcardImport(
                 job_id: jobId,
                 asset_id: asset.id,
                 technician_id: fallbackTechnicianId,
-                defect_type: item.followUp.followUpService ?? "Additional Work Required",
+                defect_type: item.followUp.defectType,
                 severity: "medium",
                 description: item.followUp.description,
                 recommended_action: item.followUp.recommendedAction,
@@ -329,20 +348,25 @@ export async function confirmZohoJobcardImport(
             }
             defectId = followUpDefect.id;
             result.defectsCreated++;
-            if (item.followUp.quoteRequired) {
-              result.validation.quotes_required_records_created++;
+            pressureTestFollowUps.push({
+              assetId: asset.id,
+              defectId: followUpDefect.id,
+              idempotencyKey: item.idempotencyKey,
+            });
+          } else {
+            const { data: existingFollowUp } = await admin
+              .from("defects")
+              .select("id, quote_group_id")
+              .eq("import_idempotency_key", followUpKey)
+              .maybeSingle();
+            if (existingFollowUp?.id) {
+              defectId = existingFollowUp.id as string;
+              pressureTestFollowUps.push({
+                assetId: asset.id,
+                defectId: existingFollowUp.id as string,
+                idempotencyKey: item.idempotencyKey,
+              });
             }
-
-            await admin.from("quote_recommendations").upsert(
-              {
-                defect_id: followUpDefect.id,
-                job_id: jobId,
-                asset_id: asset.id,
-                recommended_item: item.followUp.quoteReason ?? "Pressure Test",
-                notes: item.followUp.recommendedAction,
-              },
-              { onConflict: "defect_id", ignoreDuplicates: true }
-            );
           }
         }
 
@@ -364,6 +388,19 @@ export async function confirmZohoJobcardImport(
           inspection_id: inspectionId,
           defect_id: defectId,
         });
+      }
+
+      if (pressureTestFollowUps.length > 0) {
+        const createdGroup = await syncPressureTestQuoteGroup(admin, {
+          legacyJobId,
+          jobId,
+          customerId: customer.id,
+          siteId: site.id,
+          followUps: pressureTestFollowUps,
+        });
+        if (createdGroup.created) {
+          result.validation.quotes_required_records_created++;
+        }
       }
     }
 
@@ -567,6 +604,7 @@ async function findOrCreateJob(
       assigned_to: technicianId,
       created_by: importedBy,
       job_type: jobTypeForImportedEquipment(equipment),
+      service_category: ZOHO_ANNUAL_SERVICE_CATEGORY,
       priority: "medium",
       status: "completed",
       scheduled_date: first.job.date ?? new Date().toISOString().slice(0, 10),
@@ -665,6 +703,92 @@ async function rowExists(
     .eq("import_source", ZOHO_IMPORT_SOURCE)
     .maybeSingle();
   return Boolean(data?.id);
+}
+
+async function syncPressureTestQuoteGroup(
+  admin: ReturnType<typeof createAdminClient>,
+  params: {
+    legacyJobId: string;
+    jobId: string;
+    customerId: string;
+    siteId: string;
+    followUps: Array<{
+      assetId: string;
+      defectId: string;
+      idempotencyKey: string;
+    }>;
+  }
+): Promise<{ quoteGroupId: string; created: boolean }> {
+  const quoteGroupKey = buildPressureTestQuoteGroupKey(
+    params.legacyJobId,
+    params.siteId
+  );
+
+  const { data: existing } = await admin
+    .from("quote_groups")
+    .select("id")
+    .eq("quote_group_key", quoteGroupKey)
+    .maybeSingle();
+
+  let quoteGroupId = existing?.id as string | undefined;
+  let created = false;
+
+  if (!quoteGroupId) {
+    const { data, error } = await admin
+      .from("quote_groups")
+      .insert({
+        job_id: params.jobId,
+        customer_id: params.customerId,
+        site_id: params.siteId,
+        quote_group_key: quoteGroupKey,
+        quote_type: PRESSURE_TEST_QUOTE_GROUP_TYPE,
+        quote_group_scope: "Jobcard",
+        status: "quote_required",
+        source: ZOHO_FORMS_IMPORT_LABEL,
+        reason: PRESSURE_TEST_QUOTE_REASON,
+        total_assets: params.followUps.length,
+        import_source: ZOHO_IMPORT_SOURCE,
+        legacy_zoho_jobcard_id: params.legacyJobId,
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      throw new Error(error?.message ?? "Quote group import failed.");
+    }
+    quoteGroupId = data.id as string;
+    created = true;
+  } else {
+    await admin
+      .from("quote_groups")
+      .update({
+        total_assets: params.followUps.length,
+        reason: PRESSURE_TEST_QUOTE_REASON,
+      })
+      .eq("id", quoteGroupId);
+  }
+
+  for (const followUp of params.followUps) {
+    const lineKey = `${followUp.idempotencyKey}|quote-line`;
+    await admin.from("quote_group_line_items").upsert(
+      {
+        quote_group_id: quoteGroupId,
+        asset_id: followUp.assetId,
+        defect_id: followUp.defectId,
+        description: "Pressure test required",
+        quantity: 1,
+        import_idempotency_key: lineKey,
+      },
+      { onConflict: "import_idempotency_key", ignoreDuplicates: true }
+    );
+
+    await admin
+      .from("defects")
+      .update({ quote_group_id: quoteGroupId })
+      .eq("id", followUp.defectId);
+  }
+
+  return { quoteGroupId, created };
 }
 
 function warningsToJson(warnings: ZohoWarning[]) {
