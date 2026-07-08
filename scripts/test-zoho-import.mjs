@@ -197,6 +197,10 @@ assert.equal(
   0,
   "shared technician report text must not create duplicate defects on compliant rows"
 );
+assert.ok(
+  repeatedReport.equipment.every((item) => item.inspection.notes === null),
+  "job-level technician report must not be copied into every inspection notes field"
+);
 
 const extinguisherCsv = [
   headers.join(","),

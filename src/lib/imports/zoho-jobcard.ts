@@ -1150,6 +1150,13 @@ export function splitServiceParts(
   };
 }
 
+function buildAssetInspectionNotes(partsUsed: ServicePartsUsed): string | null {
+  if (!partsUsed.partsUsed || partsUsed.servicePartsUsed.length === 0) {
+    return null;
+  }
+  return partsUsed.servicePartsUsed.join(", ");
+}
+
 function mapEquipment(
   row: CsvRow,
   headers: string[],
@@ -1247,21 +1254,20 @@ function mapEquipment(
       "Next Cylinder Test Date",
     ])
   );
-  const report = job.technicianReport;
+  const inspectionNotes = buildAssetInspectionNotes(partsUsed);
   let checklist =
     section === "portable"
       ? mapPortableChecklist(
           row,
           headers,
           columnMap,
-          report,
           deviceWeightReading,
           compliance,
           partsUsed,
           parsedPortable
         )
-      : mapFixedChecklist(row, headers, columnMap, report, parsed.assetType, compliance);
-  const defect = buildDefect(compliance, annualService, checklist, report);
+      : mapFixedChecklist(row, headers, columnMap, parsed.assetType, compliance);
+  const defect = buildDefect(compliance, annualService, checklist);
 
   if (!compliance) {
     warnings.push({
@@ -1334,11 +1340,13 @@ function mapEquipment(
       result: inspectionPass ? "pass" : "fail",
       requiresPressureTest:
         annualService?.pressureTestRequired ?? containsPressureTest(compliance),
-      requiresRefill: containsAny(`${originalDescription} ${report ?? ""}`, [
-        "refill",
-        "recharge",
-      ]),
-      notes: report,
+      requiresRefill: containsAny(
+        [originalDescription, partsUsed.replacementPartsUsedRaw]
+          .filter(Boolean)
+          .join(" "),
+        ["refill", "recharge"]
+      ),
+      notes: inspectionNotes,
     },
     defect,
     warnings,
@@ -1368,7 +1376,6 @@ function mapPortableChecklist(
   row: CsvRow,
   headers: string[],
   columnMap: ZohoColumnMap,
-  report: string | null,
   deviceWeightReading: string | null,
   compliance: string | null,
   partsUsed: ServicePartsUsed,
@@ -1406,7 +1413,6 @@ function mapPortableChecklist(
     last_pressure_test_date: parseDate(
       getZohoCell(row, headers, columnMap.portableLastPressureTest)
     ),
-    technician_notes: report,
   };
 }
 
@@ -1414,7 +1420,6 @@ function mapFixedChecklist(
   row: CsvRow,
   headers: string[],
   columnMap: ZohoColumnMap,
-  report: string | null,
   assetType: AssetType,
   compliance: string | null
 ): Record<string, string | boolean | string[] | null> {
@@ -1431,7 +1436,6 @@ function mapFixedChecklist(
       clearly_marked_and_accessible: yesNo(cellAt(marked)),
       spares_replaced: cellAt(columnMap.fixedSpares),
       compliant_result: compliance,
-      technician_notes: report,
     };
   }
 
@@ -1456,7 +1460,6 @@ function mapFixedChecklist(
     cabinet_accessible_and_intact: yesNo(cellAt(cabinet)),
     spares_replaced: cellAt(columnMap.fixedSpares),
     compliant_result: compliance,
-    technician_notes: report,
   };
 }
 
@@ -1496,8 +1499,7 @@ function isCompliant(
 function buildDefect(
   compliance: string | null,
   annualService: AnnualServiceOutcome | null,
-  checklist: Record<string, string | boolean | string[] | null>,
-  report: string | null
+  checklist: Record<string, string | boolean | string[] | null>
 ): ZohoMappedEquipment["defect"] {
   if (annualService?.inspectionPass) {
     return null;
@@ -1532,11 +1534,9 @@ function buildDefect(
 
   if (!shouldCreate) return null;
 
-  const combined = [rowSpecificText, report].filter(Boolean).join(" ");
-  const severity = suggestedSeverity(combined);
+  const severity = suggestedSeverity(rowSpecificText);
   const description = [
     compliance ? `Compliance: ${compliance}` : null,
-    report ? `Technician report: ${report}` : null,
     Object.entries(checklist)
       .filter(([, value]) => value === false)
       .map(([key]) => key.replace(/_/g, " "))
@@ -1550,7 +1550,7 @@ function buildDefect(
     quoteRequired: false,
     severity,
     description: description || "Imported Zoho inspection indicates non-compliance.",
-    recommendedAction: recommendedAction(combined),
+    recommendedAction: recommendedAction(rowSpecificText),
   };
 }
 
