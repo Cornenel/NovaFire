@@ -92,17 +92,109 @@ function inviteErrorMessage(message: string): string {
       "(e.g. Resend, SendGrid, or your domain mail). Each failed retry counts toward the limit."
     );
   }
-  if (
+  return message;
+}
+
+function isAlreadyRegisteredError(message: string | undefined): boolean {
+  if (!message) return false;
+  const lower = message.toLowerCase();
+  return (
     lower.includes("already been registered") ||
     lower.includes("already registered") ||
     lower.includes("user already exists")
-  ) {
-    return (
-      "That email already has an account. Open their profile from the list below and use Send password reset, " +
-      "or remove the user in Supabase → Authentication → Users and invite again."
+  );
+}
+
+type StaffProfilePayload = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  vehicle_number: string | null;
+  saqcc_number: string | null;
+  photo_url: string | null;
+  role: "technician" | "admin";
+  is_active: boolean;
+};
+
+async function findAuthUserByEmail(
+  admin: ReturnType<typeof createAdminClient>,
+  email: string
+) {
+  for (let page = 1; page <= 10; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    });
+    if (error) {
+      throw new Error(error.message);
+    }
+    const match = data.users.find(
+      (user) => user.email?.toLowerCase() === email.toLowerCase()
+    );
+    if (match) return match;
+    if (data.users.length < 200) break;
+  }
+  return null;
+}
+
+async function saveStaffProfile(
+  admin: ReturnType<typeof createAdminClient>,
+  profile: StaffProfilePayload
+) {
+  const { error } = await admin
+    .from("profiles")
+    .upsert(profile, { onConflict: "id" });
+  if (error) {
+    technicianErrorRedirect(
+      `Staff profile could not be saved: ${error.message}`
     );
   }
-  return message;
+}
+
+async function sendStaffPasswordEmail(email: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: getAuthRedirectUrl("/auth/set-password"),
+  });
+  if (error) {
+    technicianErrorRedirect(inviteErrorMessage(error.message));
+  }
+}
+
+async function recoverExistingStaffAccount(
+  admin: ReturnType<typeof createAdminClient>,
+  email: string,
+  profile: StaffProfilePayload
+) {
+  let existing;
+  try {
+    existing = await findAuthUserByEmail(admin, email);
+  } catch (error) {
+    technicianErrorRedirect(
+      error instanceof Error
+        ? error.message
+        : "Could not look up the existing account."
+    );
+  }
+
+  if (!existing) {
+    technicianErrorRedirect(
+      "That email already has an auth account but it could not be found. Check Supabase → Authentication → Users."
+    );
+  }
+
+  await saveStaffProfile(admin, { ...profile, id: existing.id });
+  await sendStaffPasswordEmail(email);
+
+  revalidatePath("/admin/technicians");
+  redirect(
+    `/admin/technicians?success=${encodeURIComponent(
+      `Existing account restored for ${email}. A password setup email has been sent.`
+    )}`
+  );
 }
 
 /**
@@ -133,6 +225,20 @@ export async function createTechnician(formData: FormData) {
 
   const admin = getConfiguredAdminClient();
 
+  const profilePayload: StaffProfilePayload = {
+    id: "",
+    first_name: firstName,
+    last_name: lastName,
+    full_name: `${firstName} ${lastName}`,
+    email,
+    phone: strOrNull(formData, "phone"),
+    vehicle_number: strOrNull(formData, "vehicle_number"),
+    saqcc_number: strOrNull(formData, "saqcc_number"),
+    photo_url: strOrNull(formData, "photo_url"),
+    role,
+    is_active: true,
+  };
+
   const { data: invited, error } = await admin.auth.admin.inviteUserByEmail(
     email,
     {
@@ -150,33 +256,14 @@ export async function createTechnician(formData: FormData) {
   );
 
   if (error || !invited.user) {
+    if (isAlreadyRegisteredError(error?.message)) {
+      await recoverExistingStaffAccount(admin, email, profilePayload);
+    }
     technicianErrorRedirect(inviteErrorMessage(error?.message ?? "Invite failed"));
   }
 
-  const profilePayload = {
-    id: invited.user.id,
-    first_name: firstName,
-    last_name: lastName,
-    full_name: `${firstName} ${lastName}`,
-    email,
-    phone: strOrNull(formData, "phone"),
-    vehicle_number: strOrNull(formData, "vehicle_number"),
-    saqcc_number: strOrNull(formData, "saqcc_number"),
-    photo_url: strOrNull(formData, "photo_url"),
-    role,
-    is_active: true,
-  };
-
-  // Upsert in case the signup trigger did not create a profile row yet.
-  const { error: profileError } = await admin
-    .from("profiles")
-    .upsert(profilePayload, { onConflict: "id" });
-
-  if (profileError) {
-    technicianErrorRedirect(
-      `Invite email was sent but the staff profile could not be saved: ${profileError.message}`
-    );
-  }
+  profilePayload.id = invited.user.id;
+  await saveStaffProfile(admin, profilePayload);
 
   revalidatePath("/admin/technicians");
   redirect(
