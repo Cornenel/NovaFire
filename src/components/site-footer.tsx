@@ -14,6 +14,7 @@ const DEFAULT_QUICK = [
   { label: "Why Nova Fire", href: "/#whynovafire" },
   { label: "Industries", href: "/#industries" },
   { label: "Process", href: "/#process" },
+  { label: "Compliance Check", href: "/#compliance-assessment" },
   { label: "Client Portal", href: "/client-portal/login" },
   { label: "Staff Login", href: "/tech-login" },
 ] as const;

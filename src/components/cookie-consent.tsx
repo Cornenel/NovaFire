@@ -55,23 +55,21 @@ export function CookieConsent() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 16 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed bottom-0 left-0 right-0 z-[100] p-4 sm:p-6 pointer-events-none"
+          className="fixed bottom-0 left-0 right-0 z-[100] p-3 sm:p-4 pointer-events-none sm:flex sm:justify-end"
         >
-          <div className="pointer-events-auto max-w-3xl mx-auto rounded-2xl nf-glass-panel backdrop-blur-2xl shadow-[0_-12px_60px_rgba(0,0,0,0.55),0_0_1px_rgba(220,38,38,0.12)_inset] px-5 py-5 sm:px-6 sm:py-6 relative overflow-hidden">
+          <div className="pointer-events-auto w-full sm:max-w-md rounded-xl nf-glass-panel backdrop-blur-2xl shadow-[0_-12px_60px_rgba(0,0,0,0.55),0_0_1px_rgba(220,38,38,0.12)_inset] px-4 py-3.5 sm:px-5 relative overflow-hidden">
             <div
               className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-500/35 to-transparent"
               aria-hidden
             />
             <h2
               id="cookie-consent-title"
-              className="relative text-base font-semibold text-white font-[family-name:var(--font-syne)] tracking-tight"
+              className="relative text-sm font-semibold text-white font-[family-name:var(--font-syne)] tracking-tight"
             >
               Cookies & privacy
             </h2>
-            <p id="cookie-consent-desc" className="relative mt-2 text-sm text-zinc-400 leading-relaxed">
-              We use strictly necessary cookies and similar technologies to run this site (for example
-              session security where you use staff tools). Embedded forms may use third-party cookies
-              as described in our{" "}
+            <p id="cookie-consent-desc" className="relative mt-1.5 text-xs text-zinc-400 leading-relaxed">
+              We use necessary cookies to run this site. See our{" "}
               <Link href="/legal/cookies" className="text-red-400 hover:text-red-300 underline-offset-2 hover:underline">
                 Cookie Policy
               </Link>{" "}
@@ -79,21 +77,20 @@ export function CookieConsent() {
               <Link href="/legal/privacy" className="text-red-400 hover:text-red-300 underline-offset-2 hover:underline">
                 Privacy Policy
               </Link>
-              . You can choose whether we may also enable optional analytics or similar tools if we add
-              them later.
+              .
             </p>
-            <div className="relative mt-5 flex flex-col-reverse sm:flex-row sm:flex-wrap sm:items-center gap-3">
+            <div className="relative mt-3 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => choose("essential")}
-                className="text-sm font-medium text-zinc-400 hover:text-white px-4 py-2.5 rounded-lg nf-btn-ghost transition-colors"
+                className="text-xs font-medium text-zinc-400 hover:text-white px-3 py-2 rounded-lg nf-btn-ghost transition-colors"
               >
                 Essential only
               </button>
               <button
                 type="button"
                 onClick={() => choose("all")}
-                className="text-sm font-semibold text-white nf-btn-primary px-5 py-2.5 rounded-lg transition-[filter]"
+                className="text-xs font-semibold text-white nf-btn-primary px-4 py-2 rounded-lg transition-[filter]"
               >
                 Accept all
               </button>

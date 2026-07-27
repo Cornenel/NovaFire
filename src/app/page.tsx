@@ -3,6 +3,7 @@
 import React from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Shield,
   Flame,
@@ -33,31 +34,37 @@ const SERVICES = [
     icon: Package,
     title: "Fire Equipment Supply & Installation",
     desc: "SABS-approved extinguishers, hose reels, and suppression systems—supplied and professionally installed.",
+    href: "/services/fire-hydrant-supply-installation",
   },
   {
     icon: Flame,
     title: "Fire Equipment Servicing",
     desc: "Certified maintenance and inspection of extinguishers, hose reels, and suppression systems.",
+    href: "/services/fire-extinguisher-servicing",
   },
   {
     icon: Shield,
     title: "Detection System Support",
     desc: "Installation, testing, and monitoring of fire detection and alarm systems.",
+    href: "/services",
   },
   {
     icon: FileCheck,
     title: "Compliance Management",
     desc: "End-to-end compliance tracking and certification aligned with SANS standards.",
+    href: "/#compliance-assessment",
   },
   {
     icon: AlertTriangle,
     title: "Fire Risk Assessments",
     desc: "Comprehensive site audits and risk mitigation strategies.",
+    href: "/services",
   },
   {
     icon: GraduationCap,
     title: "Staff Fire Training",
     desc: "Hands-on extinguisher use and evacuation drill programs.",
+    href: "/training",
   },
 ];
 
@@ -148,65 +155,40 @@ export default function HomePage() {
           >
             <motion.div
               variants={fadeUp}
-              className="mx-auto mb-8 flex items-center justify-center"
+              className="mx-auto mb-6 flex items-center justify-center"
             >
-              <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border border-white/[0.08] nf-glass-panel shadow-[0_0_60px_rgba(220,38,38,0.12)]">
+              <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border border-white/[0.08] nf-glass-panel shadow-[0_0_60px_rgba(220,38,38,0.12)]">
                 <Image
                   src="/brand/logo.png"
-                  alt="Nova Fire"
+                  alt=""
                   fill
-                  sizes="(max-width: 640px) 96px, 112px"
-                  className="p-4 object-contain"
+                  sizes="(max-width: 640px) 64px, 80px"
+                  className="p-3 object-contain"
                   priority
                 />
               </div>
             </motion.div>
-            <motion.p
-              variants={fadeUp}
-              className="nf-eyebrow tracking-[0.38em] mb-6 text-red-400/90"
-            >
-              Fire Protection & Compliance
-            </motion.p>
             <motion.h1
-              variants={stagger}
-              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight text-white leading-[1.05] mb-8 font-[family-name:var(--font-syne)]"
+              variants={fadeUp}
+              className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight text-white leading-[1.02] mb-5 font-[family-name:var(--font-syne)]"
             >
-              <motion.span
-                variants={fadeUp}
-                className="block"
-                transition={{ type: "spring", stiffness: 80, damping: 15 }}
-              >
-                Compliance.
-              </motion.span>
-              <motion.span
-                variants={fadeUp}
-                className="block"
-                transition={{ type: "spring", stiffness: 80, damping: 15 }}
-              >
-                Protection.
-              </motion.span>
-              <motion.span
-                variants={fadeUp}
-                className="relative block"
-                transition={{ type: "spring", stiffness: 80, damping: 15 }}
-              >
-                <span className="relative z-10 block text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-orange-400 to-red-600 bg-[length:200%_auto] animate-[gradient-shift_4s_ease_infinite] drop-shadow-[0_0_40px_rgba(251,146,60,0.35)]">
-                  Confidence.
-                </span>
-                <motion.span
-                  className="absolute -inset-2 rounded-lg bg-red-500/10 blur-xl -z-10"
-                  animate={{ opacity: [0.3, 0.6, 0.3] }}
-                  transition={{ duration: 2.5, repeat: Infinity }}
-                />
-              </motion.span>
+              Nova
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-orange-400 to-red-600 bg-[length:200%_auto] animate-[gradient-shift_4s_ease_infinite] drop-shadow-[0_0_40px_rgba(251,146,60,0.35)]">
+                Fire
+              </span>
             </motion.h1>
             <motion.p
               variants={fadeUp}
-              className="text-lg sm:text-xl text-zinc-400 max-w-2xl mx-auto mb-12 leading-relaxed [text-wrap:balance]"
+              className="text-xl sm:text-2xl md:text-3xl font-semibold text-white/90 mb-5 font-[family-name:var(--font-syne)] tracking-tight [text-wrap:balance]"
             >
-              One audit failure can shut you down. We deliver fire protection systems,
-              servicing, and compliance solutions that keep your business operational
-              and audit-ready.
+              Audit-ready fire compliance for South African facilities.
+            </motion.p>
+            <motion.p
+              variants={fadeUp}
+              className="text-base sm:text-lg text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed [text-wrap:balance]"
+            >
+              One audit failure can shut you down. We supply, service, and certify so your
+              business stays operational.
             </motion.p>
             <motion.div
               variants={fadeUp}
@@ -345,7 +327,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {SERVICES.map((s, idx) => (
               <motion.div
-                key={idx}
+                key={s.title}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-50px" }}
@@ -356,24 +338,24 @@ export default function HomePage() {
                   damping: 20,
                 }}
                 whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                className="group relative p-8 rounded-2xl border border-white/[0.07] nf-glass-panel nf-card-hover overflow-hidden"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 via-transparent to-orange-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                <motion.div
-                  className="relative mb-6"
-                  whileHover={{ scale: 1.1, rotate: 5 }}
-                  transition={{ type: "spring", stiffness: 400 }}
+                <Link
+                  href={s.href}
+                  className="group relative block h-full p-8 rounded-2xl border border-white/[0.07] nf-glass-panel nf-card-hover overflow-hidden"
                 >
-                  <s.icon className="w-11 h-11 text-red-500/90" strokeWidth={1.5} />
-                </motion.div>
-                <h3 className="relative text-xl font-semibold text-white mb-3 font-[family-name:var(--font-syne)]">
-                  {s.title}
-                </h3>
-                <p className="relative text-zinc-400 text-sm leading-relaxed mb-4">{s.desc}</p>
-                <span className="relative inline-flex items-center gap-1 text-xs font-mono text-red-500/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                  Learn more <ArrowRight className="w-3 h-3" />
-                </span>
-                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 via-transparent to-orange-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="relative mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 origin-left">
+                    <s.icon className="w-11 h-11 text-red-500/90" strokeWidth={1.5} />
+                  </div>
+                  <h3 className="relative text-xl font-semibold text-white mb-3 font-[family-name:var(--font-syne)]">
+                    {s.title}
+                  </h3>
+                  <p className="relative text-zinc-400 text-sm leading-relaxed mb-4">{s.desc}</p>
+                  <span className="relative inline-flex items-center gap-1 text-xs font-mono text-red-500/80 group-hover:text-red-400 transition-colors">
+                    Learn more <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                  </span>
+                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                </Link>
               </motion.div>
             ))}
           </div>
