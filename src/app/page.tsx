@@ -155,16 +155,20 @@ export default function HomePage() {
           >
             <motion.div
               variants={fadeUp}
-              className="mx-auto mb-6 flex items-center justify-center"
+              className="mx-auto mb-8 flex items-center justify-center"
             >
-              <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl border border-white/[0.08] nf-glass-panel shadow-[0_0_60px_rgba(220,38,38,0.12)]">
+              <div className="relative">
+                <div
+                  className="absolute inset-0 -m-8 rounded-full bg-[radial-gradient(circle,rgba(251,146,60,0.28)_0%,transparent_70%)] blur-2xl"
+                  aria-hidden
+                />
                 <Image
-                  src="/brand/logo.png"
-                  alt=""
-                  fill
-                  sizes="(max-width: 640px) 64px, 80px"
-                  className="p-3 object-contain"
+                  src="/brand/logo-mark.png"
+                  alt="Nova Fire"
+                  width={508}
+                  height={512}
                   priority
+                  className="relative h-40 w-auto sm:h-48 md:h-56 lg:h-64 drop-shadow-[0_16px_48px_rgba(0,0,0,0.55)]"
                 />
               </div>
             </motion.div>
