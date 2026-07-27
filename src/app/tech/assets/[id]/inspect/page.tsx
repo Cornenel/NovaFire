@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { InspectionForm } from "@/components/tech/inspection-form";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
 import { mapDbAnswers } from "@/lib/checklists/status";
+import { CHECKLIST_VERSION } from "@/lib/checklists/version";
 import type { Asset } from "@/lib/fsm/types";
 import type { OverallEquipmentResult } from "@/lib/checklists/types";
 
@@ -33,7 +34,8 @@ export default async function InspectAssetPage({
     .select("id, status, overall_result")
     .eq("job_id", jobId)
     .eq("asset_id", asset.id)
-    .in("status", ["draft", "in_progress", "reopened"])
+    .eq("checklist_version", CHECKLIST_VERSION)
+    .is("completed_at", null)
     .maybeSingle();
 
   let draftChecklist: {
