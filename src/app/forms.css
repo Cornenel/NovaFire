@@ -1,10 +1,10 @@
 /**
  * Nova Fire – Form Styles
- * Shared form styling for Zoho embeds and custom form components.
+ * Shared form styling for Nova Fire website forms.
  * Red, white, black branding with professional industrial tone.
  */
 
-/* Form embed container – ensures Zoho iframe inherits our theme hints */
+/* Form embed container */
 .novafire-form-embed {
   --nf-input-bg: #101014;
   --nf-input-border: rgba(255, 255, 255, 0.09);

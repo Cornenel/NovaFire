@@ -2,26 +2,8 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { ZohoFormEmbed } from "./zoho-form-embed";
-import { FormLegalNotice } from "@/components/form-legal-notice";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import { Shield, ArrowRight } from "lucide-react";
-
-/**
- * Fire Compliance Self-Assessment
- *
- * ZOHO CRM INTEGRATION:
- * - Create CRM lead on submit
- * - Tag lead as "Website Compliance Lead"
- * - Redirect to /thank-you
- *
- * ZOHO FORM REQUIREMENTS (when configured):
- * - 6–8 questions with conditional logic
- * - Score calculation at the end
- * - Dynamic compliance percentage result
- * - CTA: "Book Professional Inspection"
- */
+import { Shield } from "lucide-react";
+import { ComplianceCheckForm } from "@/components/forms/compliance-check-form";
 
 export function ComplianceAssessment() {
   return (
@@ -67,45 +49,12 @@ export function ComplianceAssessment() {
                   Compliance Check
                 </h3>
                 <p className="text-sm text-zinc-500">
-                  2-minute check • Conditional logic • Score at end
+                  2-minute check • Score at the end • Book an inspection
                 </p>
               </div>
             </div>
             <div className="p-6 sm:p-8">
-              {/* ZOHO FORM EMBED – Nova Fire 2 Minute Fire Compliance Check */}
-              <ZohoFormEmbed
-                formId="compliance-self-assessment"
-                minHeight={500}
-                fallback={
-                  <div className="flex flex-col items-center justify-center py-12 gap-4">
-                    <div className="w-12 h-12 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
-                    <p className="text-zinc-500 text-sm">Loading assessment…</p>
-                  </div>
-                }
-              >
-                <iframe
-                  aria-label="Nova Fire – 2 Minute Fire Compliance Check"
-                  frameBorder="0"
-                  className="w-full min-h-[500px] border-0"
-                  src="https://forms.zohopublic.com/AbakhisaGroup/form/NovaFire2MinuteFireComplianceCheck/formperma/EWhSaaBOV0Rcq34Ly2tmxK_Q44T0y9qg0pakqjJuZ-M"
-                  title="Nova Fire 2 Minute Fire Compliance Check"
-                />
-              </ZohoFormEmbed>
-              <FormLegalNotice className="mt-6" />
-              <div className="mt-6 pt-6 border-t border-white/5 flex flex-col sm:flex-row gap-4 justify-between items-center">
-                <p className="text-xs text-zinc-500">
-                  After submitting, you&apos;ll be redirected to book an inspection.
-                </p>
-                <Button
-                  asChild
-                  className="bg-red-600 hover:bg-red-500 text-white font-semibold px-6"
-                >
-                  <Link href="/thank-you?source=compliance">
-                    Book Professional Inspection
-                    <ArrowRight className="w-4 h-4" />
-                  </Link>
-                </Button>
-              </div>
+              <ComplianceCheckForm />
             </div>
           </motion.div>
         </div>

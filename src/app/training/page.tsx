@@ -5,8 +5,7 @@ import { motion } from "framer-motion";
 import { Navbar } from "@/components/navbar";
 import { EmberBackground } from "@/components/ember-background";
 import { FormSection } from "@/components/forms";
-import { ZohoFormEmbed } from "@/components/forms/zoho-form-embed";
-import { FormLegalNotice } from "@/components/form-legal-notice";
+import { TrainingRegistrationForm } from "@/components/forms/training-registration-form";
 import { SiteFooter } from "@/components/site-footer";
 import Link from "next/link";
 import { GraduationCap } from "lucide-react";
@@ -63,26 +62,7 @@ export default function TrainingPage() {
             label="Fire Safety Training"
             maxWidth="full"
           >
-            {/* ZOHO FORM EMBED – Training Registration Form */}
-            <ZohoFormEmbed
-              formId="training-registration"
-              minHeight={500}
-              fallback={
-                <div className="flex flex-col items-center justify-center py-16 gap-4">
-                  <div className="w-12 h-12 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
-                  <p className="text-zinc-500 text-sm">Loading registration form…</p>
-                </div>
-              }
-            >
-              <iframe
-                aria-label="Training Registration Form"
-                frameBorder="0"
-                className="w-full min-h-[500px] border-0"
-                src="https://forms.zohopublic.com/AbakhisaGroup/form/TrainingRegistrationForm/formperma/3GLSKdCC3uGP32l0v3dVkAyi9Kp0JXDF_-g7xLpC4I4"
-                title="Nova Fire Training Registration"
-              />
-            </ZohoFormEmbed>
-            <FormLegalNotice className="mt-6" />
+            <TrainingRegistrationForm />
           </FormSection>
         </div>
       </section>

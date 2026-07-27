@@ -4,8 +4,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import { EmberBackground } from "@/components/ember-background";
 import { Navbar } from "@/components/navbar";
-import { ZohoFormEmbed } from "@/components/forms/zoho-form-embed";
-import { FormLegalNotice } from "@/components/form-legal-notice";
+import { QuoteRequestForm } from "@/components/forms/quote-request-form";
 import { SiteFooter } from "@/components/site-footer";
 import { ServiceAreaStructuredData } from "@/components/structured-data";
 import { Button } from "@/components/ui/button";
@@ -460,26 +459,7 @@ export default function ServicesPage() {
             </div>
             <div className="lg:col-span-3">
               <div className="rounded-2xl nf-glass-panel p-6 md:p-8 border-white/[0.08]">
-                {/* ZOHO FORM EMBED – Nova Fire Compliance Assessment / Quote Form */}
-                <ZohoFormEmbed
-                  formId="quote-engine"
-                  minHeight={500}
-                  fallback={
-                    <div className="flex flex-col items-center justify-center py-12 gap-4">
-                      <div className="w-10 h-10 rounded-full border-2 border-red-500/30 border-t-red-500 animate-spin" />
-                      <p className="text-zinc-500 text-sm">Loading form…</p>
-                    </div>
-                  }
-                >
-                  <iframe
-                    aria-label="Nova Fire Compliance Assessment Form"
-                    frameBorder="0"
-                    className="w-full min-h-[500px] border-0"
-                    src="https://forms.zohopublic.com/AbakhisaGroup/form/NovaFireComplianceAssessmentForm/formperma/e21SwYu48K_cyg4hGor_mkLWhemphA-JE5hbx9qAYxE"
-                    title="Nova Fire Quote & Compliance Assessment"
-                  />
-                </ZohoFormEmbed>
-                <FormLegalNotice className="mt-6" />
+                <QuoteRequestForm />
               </div>
             </div>
           </div>

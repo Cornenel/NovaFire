@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { FormSection } from "@/components/forms";
-import { ZohoFormEmbed } from "@/components/forms/zoho-form-embed";
-import { FormLegalNotice } from "@/components/form-legal-notice";
+import { ServiceRequestForm } from "@/components/forms/service-request-form";
 
 export default function PortalServiceRequestPage() {
   return (
@@ -20,14 +19,12 @@ export default function PortalServiceRequestPage() {
         schedule the visit.
       </p>
 
-      <FormLegalNotice className="mb-8 max-w-2xl" />
-
       <FormSection
         id="service-request"
         title="Service / call-out request"
         description="Describe the service you need and preferred timing."
       >
-        <ZohoFormEmbed formId="portal-service-request" minHeight={720} />
+        <ServiceRequestForm />
       </FormSection>
     </div>
   );

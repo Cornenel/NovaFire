@@ -9,10 +9,6 @@ export function FormLegalNotice({ className }: { className?: string }) {
       <Link href="/legal/privacy" className="text-zinc-400 hover:text-white underline-offset-2 hover:underline">
         Privacy Policy
       </Link>
-      . Third-party form providers (for example Zoho) may use their own cookies; see our{" "}
-      <Link href="/legal/cookies" className="text-zinc-400 hover:text-white underline-offset-2 hover:underline">
-        Cookie Policy
-      </Link>
       .
     </p>
   );
