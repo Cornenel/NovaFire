@@ -32,11 +32,12 @@ export default async function CompleteJobPage({
 
   if (job.status === "completed") redirect(`/tech/jobs/${id}`);
 
-  const [{ data: inspections }, { data: defects }, { count: photoCount }, { data: stockUsed }] =
+  const [{ data: siteAssets }, { data: inspections }, { data: defects }, { count: photoCount }, { data: stockUsed }] =
     await Promise.all([
+      supabase.from("assets").select("id").eq("site_id", job.site_id),
       supabase
         .from("inspections")
-        .select("result, requires_refill, requires_pressure_test")
+        .select("result, requires_refill, requires_pressure_test, asset_id")
         .eq("job_id", id),
       supabase.from("defects").select("*").eq("job_id", id),
       supabase
@@ -48,6 +49,12 @@ export default async function CompleteJobPage({
         .select("quantity, stock_item:stock_items(name)")
         .eq("job_id", id),
     ]);
+
+  const assetCount = siteAssets?.length ?? 0;
+  const inspectedCount = new Set((inspections ?? []).map((i) => i.asset_id)).size;
+  if (assetCount === 0 || inspectedCount < assetCount) {
+    redirect(`/tech/jobs/${id}`);
+  }
 
   const passCount = (inspections ?? []).filter((i) => i.result === "pass").length;
   const failCount = (inspections ?? []).length - passCount;

@@ -40,9 +40,12 @@ function getPosition(): Promise<{ latitude: number; longitude: number } | null> 
 export function JobWorkflow({
   jobId,
   status: initialStatus,
+  guided = false,
 }: {
   jobId: string;
   status: JobStatus;
+  /** When true, sign-off is handled by JobGuide instead. */
+  guided?: boolean;
 }) {
   const router = useRouter();
   const [status, setStatus] = useState<JobStatus>(initialStatus);
@@ -144,13 +147,15 @@ export function JobWorkflow({
 
       {status === "on_site" && (
         <>
-          <Link
-            href={`/tech/jobs/${jobId}/complete`}
-            className={`${baseBtn} bg-emerald-600 hover:bg-emerald-500 text-white`}
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Sign Off & Complete
-          </Link>
+          {!guided ? (
+            <Link
+              href={`/tech/jobs/${jobId}/complete`}
+              className={`${baseBtn} bg-emerald-600 hover:bg-emerald-500 text-white`}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Sign Off & Complete
+            </Link>
+          ) : null}
           <div className="grid grid-cols-2 gap-2">
             <Link
               href={`/tech/jobs/${jobId}/stock`}

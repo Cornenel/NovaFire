@@ -9,10 +9,9 @@ import {
   ChevronRight,
   CheckCircle2,
   FileDown,
-  Flame,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { JobWorkflow } from "@/components/tech/job-workflow";
+import { JobGuide } from "@/components/tech/job-guide";
 import { featureFlags } from "@/lib/fsm/feature-flags";
 import {
   ASSET_STATUS_STYLES,
@@ -21,7 +20,6 @@ import {
   JOB_PRIORITY_STYLES,
   JOB_STATUS_LABELS,
   JOB_STATUS_STYLES,
-  JOB_TYPE_LABELS,
   resolveJobTypeLabel,
 } from "@/lib/fsm/labels";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
@@ -30,10 +28,13 @@ import { cn } from "@/lib/utils";
 
 export default async function JobDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ asset_added?: string }>;
 }) {
   const { id } = await params;
+  const { asset_added: assetAddedCode } = await searchParams;
   const supabase = await createClient();
 
   const { data } = await supabase
@@ -74,6 +75,8 @@ export default async function JobDetailPage({
         })
       : null;
 
+  const isActive = job.status !== "completed" && job.status !== "cancelled";
+
   return (
     <div>
       <Link
@@ -113,52 +116,54 @@ export default async function JobDetailPage({
         </div>
       </div>
 
-      {/* Workflow actions */}
-      <div className="mb-6">
-        <JobWorkflow jobId={job.id} status={job.status} />
-        {(job.travel_started_at || job.checked_in_at || job.completed_at) && (
-          <div className="mt-3 rounded-xl border border-white/[0.08] nf-glass-panel px-4 py-3 space-y-1">
-            {job.travel_started_at && (
-              <p className="text-xs text-zinc-500">
-                Travel started {fmtTime(job.travel_started_at)}
-              </p>
-            )}
-            {job.checked_in_at && (
-              <p className="text-xs text-zinc-500">
-                Checked in {fmtTime(job.checked_in_at)}
-                {job.checkin_latitude && job.checkin_longitude
-                  ? ` · GPS ${job.checkin_latitude.toFixed(5)}, ${job.checkin_longitude.toFixed(5)}`
-                  : " · no GPS"}
-              </p>
-            )}
-            {job.completed_at && (
-              <p className="text-xs text-emerald-400">
-                Completed {fmtTime(job.completed_at)}
-              </p>
-            )}
-          </div>
-        )}
-        {job.status === "completed" && (
-          <a
-            href={`/api/reports/${job.id}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.03] text-zinc-200 text-sm font-medium hover:bg-white/[0.07] transition-colors"
-          >
-            <FileDown className="w-4 h-4" />
-            Service Report (PDF)
-          </a>
-        )}
-        {featureFlags.fireRiskRegister && job.status !== "cancelled" && (
-          <Link
-            href={`/tech/jobs/${job.id}/risk`}
-            className="mt-3 w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-red-500/20 bg-red-500/[0.04] text-red-300 text-sm font-medium hover:bg-red-500/[0.08] transition-colors"
-          >
-            <Flame className="w-4 h-4" />
-            Log Fire Risk
-          </Link>
-        )}
-      </div>
+      {isActive ? (
+        <div className="mb-6">
+          <JobGuide
+            jobId={job.id}
+            siteId={job.site_id}
+            status={job.status}
+            assets={assets}
+            inspectedAssetIds={inspectedAssetIds}
+            includeFireRisk={featureFlags.fireRiskRegister}
+            assetAddedCode={assetAddedCode}
+          />
+        </div>
+      ) : null}
+
+      {(job.travel_started_at || job.checked_in_at || job.completed_at) && (
+        <div className="mb-6 rounded-xl border border-white/[0.08] nf-glass-panel px-4 py-3 space-y-1">
+          {job.travel_started_at && (
+            <p className="text-xs text-zinc-500">
+              Travel started {fmtTime(job.travel_started_at)}
+            </p>
+          )}
+          {job.checked_in_at && (
+            <p className="text-xs text-zinc-500">
+              Checked in {fmtTime(job.checked_in_at)}
+              {job.checkin_latitude && job.checkin_longitude
+                ? ` · GPS ${job.checkin_latitude.toFixed(5)}, ${job.checkin_longitude.toFixed(5)}`
+                : " · no GPS"}
+            </p>
+          )}
+          {job.completed_at && (
+            <p className="text-xs text-emerald-400">
+              Completed {fmtTime(job.completed_at)}
+            </p>
+          )}
+        </div>
+      )}
+
+      {job.status === "completed" && (
+        <a
+          href={`/api/reports/${job.id}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mb-6 w-full flex items-center justify-center gap-2 py-3 rounded-xl border border-white/10 bg-white/[0.03] text-zinc-200 text-sm font-medium hover:bg-white/[0.07] transition-colors"
+        >
+          <FileDown className="w-4 h-4" />
+          Service Report (PDF)
+        </a>
+      )}
 
       {/* Site details */}
       <div className="rounded-xl border border-white/[0.08] nf-glass-panel p-4 mb-6 space-y-3">
@@ -208,7 +213,11 @@ export default async function JobDetailPage({
       </div>
 
       {assets.length === 0 ? (
-        <p className="text-zinc-500 text-sm">No assets registered at this site.</p>
+        <p className="text-zinc-500 text-sm">
+          {isActive
+            ? "No equipment on file yet — use Add equipment on site above."
+            : "No assets registered at this site."}
+        </p>
       ) : (
         <div className="space-y-2">
           {assets.map((asset) => (
