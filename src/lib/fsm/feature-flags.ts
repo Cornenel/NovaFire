@@ -37,4 +37,12 @@ export const featureFlags = {
     process.env.NEXT_PUBLIC_FF_EXECUTIVE_DASHBOARD !== "false",
   /** Phase 4: Site fire risk register */
   fireRiskRegister: process.env.NEXT_PUBLIC_FF_FIRE_RISK_REGISTER !== "false",
+  /**
+   * SAQCC detailed mandatory asset inspection checklists.
+   * Opt-in: defaults OFF — set NEXT_PUBLIC_FF_MANDATORY_ASSET_INSPECTIONS=true to enable.
+   * (Env alias: MANDATORY_ASSET_INSPECTIONS_ENABLED)
+   */
+  mandatoryAssetInspections:
+    process.env.NEXT_PUBLIC_FF_MANDATORY_ASSET_INSPECTIONS === "true" ||
+    process.env.MANDATORY_ASSET_INSPECTIONS_ENABLED === "true",
 } as const;

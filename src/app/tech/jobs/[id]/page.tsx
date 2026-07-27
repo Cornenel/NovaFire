@@ -13,6 +13,8 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { JobGuide } from "@/components/tech/job-guide";
 import { featureFlags } from "@/lib/fsm/feature-flags";
+import { CHECKLIST_STATUS_LABELS } from "@/lib/checklists/types";
+import { toDisplayStatus } from "@/lib/checklists/status";
 import {
   ASSET_STATUS_STYLES,
   ASSET_STATUS_LABELS,
@@ -60,6 +62,17 @@ export default async function JobDetailPage({
   const inspectedAssetIds = new Set(
     (inspections ?? []).map((i) => i.asset_id as string)
   );
+
+  const checklistStatusByAsset = new Map<string, string>();
+  if (featureFlags.mandatoryAssetInspections) {
+    const { data: checklistRows } = await supabase
+      .from("inspection_checklists")
+      .select("asset_id, status")
+      .eq("job_id", job.id);
+    for (const row of checklistRows ?? []) {
+      checklistStatusByAsset.set(row.asset_id as string, row.status as string);
+    }
+  }
 
   const mapsQuery =
     job.site.latitude && job.site.longitude
@@ -220,7 +233,12 @@ export default async function JobDetailPage({
         </p>
       ) : (
         <div className="space-y-2">
-          {assets.map((asset) => (
+          {assets.map((asset) => {
+            const inspected = inspectedAssetIds.has(asset.id);
+            const checklistDisplay = featureFlags.mandatoryAssetInspections
+              ? toDisplayStatus(checklistStatusByAsset.get(asset.id) ?? null, inspected)
+              : null;
+            return (
             <Link
               key={asset.id}
               href={`/tech/assets/${asset.id}?job=${job.id}`}
@@ -244,6 +262,11 @@ export default async function JobDetailPage({
                 </div>
                 <p className="text-xs text-zinc-500 truncate">
                   {asset.location_description ?? "No location"}
+                  {checklistDisplay ? (
+                    <span className="ml-2 text-[10px] text-zinc-600">
+                      · {CHECKLIST_STATUS_LABELS[checklistDisplay]}
+                    </span>
+                  ) : null}
                 </p>
               </div>
               <span
@@ -256,7 +279,8 @@ export default async function JobDetailPage({
               </span>
               <ChevronRight className="w-4 h-4 text-zinc-600 shrink-0" />
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

@@ -13,6 +13,46 @@ import {
   buildAssetUpdateFromLatestInspection,
   pickLatestInspection,
 } from "@/lib/fsm/historical-records";
+import { CHECKLIST_VERSION } from "@/lib/checklists/version";
+
+async function persistChecklistAnswers(
+  supabase: ReturnType<typeof createClient>,
+  checklistId: string,
+  answers: Array<{
+    sectionKey: string;
+    checkKey: string;
+    label: string;
+    result: string;
+    valueText?: string | null;
+    valueNumber?: number | null;
+    unit?: string | null;
+    notes?: string | null;
+    photoUrls?: string[];
+    requiresAction?: boolean;
+    defectSeverity?: string | null;
+  }>
+) {
+  for (const answer of answers) {
+    const { error } = await supabase.from("inspection_checklist_answers").upsert(
+      {
+        checklist_id: checklistId,
+        section_key: answer.sectionKey,
+        check_key: answer.checkKey,
+        label: answer.label,
+        result: answer.result,
+        value_text: answer.valueText ?? null,
+        value_number: answer.valueNumber ?? null,
+        unit: answer.unit ?? null,
+        notes: answer.notes ?? null,
+        photo_urls: answer.photoUrls ?? [],
+        requires_action: answer.requiresAction ?? false,
+        defect_severity: answer.defectSeverity ?? null,
+      },
+      { onConflict: "checklist_id,section_key,check_key" }
+    );
+    throwIfError(error, "Checklist answer");
+  }
+}
 
 export type OfflineOp =
   | {
@@ -116,6 +156,75 @@ export type OfflineOp =
         jobId: string;
         technicianId: string;
         items: Array<{ stockItemId: string; quantity: number }>;
+      };
+    }
+  | {
+      type: "checklist_draft";
+      payload: {
+        checklistId: string;
+        jobId: string;
+        assetId: string;
+        assetType: string;
+        technicianId: string;
+        answers: Array<{
+          sectionKey: string;
+          checkKey: string;
+          label: string;
+          result: string;
+          valueText?: string | null;
+          valueNumber?: number | null;
+          unit?: string | null;
+          notes?: string | null;
+          photoUrls?: string[];
+          requiresAction?: boolean;
+          defectSeverity?: string | null;
+        }>;
+        overallResult?: string | null;
+        notes?: string | null;
+        finalConditionConfirmed?: boolean;
+        customerInformed?: boolean;
+      };
+    }
+  | {
+      type: "checklist_complete";
+      payload: {
+        checklistId: string;
+        jobId: string;
+        assetId: string;
+        assetType: string;
+        technicianId: string;
+        answers: Array<{
+          sectionKey: string;
+          checkKey: string;
+          label: string;
+          result: string;
+          valueText?: string | null;
+          valueNumber?: number | null;
+          unit?: string | null;
+          notes?: string | null;
+          photoUrls?: string[];
+          requiresAction?: boolean;
+          defectSeverity?: string | null;
+        }>;
+        overallResult: string;
+        notes?: string | null;
+        finalConditionConfirmed: boolean;
+        customerInformed: boolean;
+        inspectionId: string;
+        legacyChecklist: Record<string, boolean>;
+        inspectionResult: "pass" | "fail";
+        requiresRefill: boolean;
+        requiresPressureTest: boolean;
+        serviceDate: string;
+        nextServiceDate: string;
+        defects: Array<{
+          id: string;
+          defectType: string;
+          severity: string;
+          description: string;
+          recommendedAction: string | null;
+          quoteRequired: boolean;
+        }>;
       };
     };
 
@@ -385,6 +494,199 @@ export async function executeOp(op: OfflineOp): Promise<void> {
         });
         throwIfError(error, "Stock usage");
       }
+      break;
+    }
+
+    case "checklist_draft": {
+      const p = op.payload;
+      const now = new Date().toISOString();
+      const { error: headerError } = await supabase.from("inspection_checklists").upsert(
+        {
+          id: p.checklistId,
+          job_id: p.jobId,
+          asset_id: p.assetId,
+          asset_type: p.assetType,
+          checklist_version: CHECKLIST_VERSION,
+          status: "in_progress",
+          started_at: now,
+          completed_by: p.technicianId,
+          overall_result: p.overallResult ?? null,
+          notes: p.notes ?? null,
+          final_condition_confirmed: p.finalConditionConfirmed ?? false,
+          customer_informed: p.customerInformed ?? false,
+        },
+        { onConflict: "id" }
+      );
+      throwIfError(headerError, "Checklist draft");
+      await persistChecklistAnswers(supabase, p.checklistId, p.answers);
+      await supabase.from("inspection_checklist_audit").insert({
+        checklist_id: p.checklistId,
+        actor_id: p.technicianId,
+        action: "draft_saved",
+        details: { answer_count: p.answers.length },
+      });
+      break;
+    }
+
+    case "checklist_complete": {
+      const p = op.payload;
+      const now = new Date().toISOString();
+      const hasFailures = p.answers.some((a) => a.result === "fail");
+      const checklistStatus =
+        p.overallResult === "unable_to_test"
+          ? "unable_to_complete"
+          : hasFailures
+            ? "complete_with_defects"
+            : "complete";
+
+      const { error: inspError } = await supabase.from("inspections").upsert(
+        {
+          id: p.inspectionId,
+          job_id: p.jobId,
+          asset_id: p.assetId,
+          technician_id: p.technicianId,
+          asset_type: p.assetType,
+          checklist: p.legacyChecklist,
+          result: p.inspectionResult,
+          requires_refill: p.requiresRefill,
+          requires_pressure_test: p.requiresPressureTest,
+          notes: p.notes,
+        },
+        { onConflict: "id", ignoreDuplicates: true }
+      );
+      throwIfError(inspError, "Inspection");
+
+      const { error: headerError } = await supabase.from("inspection_checklists").upsert(
+        {
+          id: p.checklistId,
+          job_id: p.jobId,
+          asset_id: p.assetId,
+          inspection_id: p.inspectionId,
+          asset_type: p.assetType,
+          checklist_version: CHECKLIST_VERSION,
+          status: checklistStatus,
+          started_at: now,
+          completed_at: now,
+          completed_by: p.technicianId,
+          overall_result: p.overallResult,
+          notes: p.notes ?? null,
+          final_condition_confirmed: p.finalConditionConfirmed,
+          customer_informed: p.customerInformed,
+        },
+        { onConflict: "id" }
+      );
+      throwIfError(headerError, "Checklist complete");
+      await persistChecklistAnswers(supabase, p.checklistId, p.answers);
+
+      for (const defect of p.defects) {
+        const { error } = await supabase.from("defects").upsert(
+          {
+            id: defect.id,
+            job_id: p.jobId,
+            asset_id: p.assetId,
+            technician_id: p.technicianId,
+            defect_type: defect.defectType,
+            severity: defect.severity,
+            description: defect.description,
+            recommended_action: defect.recommendedAction,
+            quote_required: defect.quoteRequired,
+          },
+          { onConflict: "id", ignoreDuplicates: true }
+        );
+        throwIfError(error, "Checklist defect");
+      }
+
+      const { data: existingInspections } = await supabase
+        .from("inspections")
+        .select(
+          "id, created_at, result, notes, requires_refill, requires_pressure_test, job_id, job:jobs(id, job_number, status, scheduled_date, completed_at)"
+        )
+        .eq("asset_id", p.assetId);
+
+      const latest = pickLatestInspection([
+        ...((existingInspections ?? []) as Array<{
+          id: string;
+          created_at: string;
+          result: "pass" | "fail";
+          notes: string | null;
+          requires_refill: boolean;
+          requires_pressure_test: boolean;
+          job_id: string;
+          job?: {
+            id?: string;
+            job_number?: string | null;
+            status?: string | null;
+            scheduled_date?: string | null;
+            completed_at?: string | null;
+          } | null;
+        }>),
+        {
+          id: p.inspectionId,
+          created_at: now,
+          result: p.inspectionResult,
+          notes: p.notes ?? null,
+          requires_refill: p.requiresRefill,
+          requires_pressure_test: p.requiresPressureTest,
+          job_id: p.jobId,
+          job: { scheduled_date: p.serviceDate },
+        },
+      ]);
+
+      if (latest?.id === p.inspectionId) {
+        const { data: assetRow } = await supabase
+          .from("assets")
+          .select("*")
+          .eq("id", p.assetId)
+          .single();
+
+        const { data: openDefects } = await supabase
+          .from("defects")
+          .select("status, severity, description, defect_type, recommended_action")
+          .eq("asset_id", p.assetId)
+          .eq("status", "open");
+
+        if (assetRow) {
+          const update = buildAssetUpdateFromLatestInspection(
+            assetRow,
+            {
+              id: p.inspectionId,
+              created_at: now,
+              result: p.inspectionResult,
+              notes: p.notes ?? null,
+              requires_refill: p.requiresRefill,
+              requires_pressure_test: p.requiresPressureTest,
+              job_id: p.jobId,
+              job: { scheduled_date: p.serviceDate },
+            },
+            openDefects ?? []
+          );
+          await supabase.from("assets").update(update).eq("id", p.assetId);
+        }
+      }
+
+      await supabase.from("asset_events").insert({
+        asset_id: p.assetId,
+        job_id: p.jobId,
+        technician_id: p.technicianId,
+        event_type: p.inspectionResult === "pass" ? "serviced" : "inspected",
+        details: {
+          result: p.inspectionResult,
+          inspection_id: p.inspectionId,
+          checklist_id: p.checklistId,
+          checklist_version: CHECKLIST_VERSION,
+        },
+      });
+
+      await supabase.from("inspection_checklist_audit").insert({
+        checklist_id: p.checklistId,
+        actor_id: p.technicianId,
+        action: "completed",
+        details: {
+          overall_result: p.overallResult,
+          status: checklistStatus,
+          defect_count: p.defects.length,
+        },
+      });
       break;
     }
   }

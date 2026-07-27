@@ -1,0 +1,123 @@
+import type { ChecklistSectionDefinition } from "../types";
+import { numericCheck, pfCheck, pfChecks } from "./helpers";
+
+export const HOSE_REEL_SECTIONS: ChecklistSectionDefinition[] = [
+  {
+    key: "location_accessibility",
+    title: "Location and accessibility",
+    checks: pfChecks([
+      ["in_recorded_location", "Hose reel is in the recorded location"],
+      ["visible", "Hose reel is visible"],
+      ["access_unobstructed", "Access is unobstructed"],
+      ["signage_installed", "Correct signage is installed"],
+      ["signage_legible", "Signage is visible and legible"],
+      ["cabinet_accessible", "Cabinet is accessible, if fitted"],
+      ["cabinet_opens", "Cabinet opens correctly"],
+      ["securely_mounted", "Reel is securely mounted"],
+      ["no_unsafe_modification", "Installation has no obvious unsafe modification"],
+      ["id_visible", "Identification number is visible"],
+    ]),
+  },
+  {
+    key: "drum_mounting",
+    title: "Drum and mounting",
+    checks: pfChecks([
+      ["drum_rotates", "Drum rotates freely"],
+      ["frame_secure", "Reel frame is secure"],
+      ["bearings_ok", "Bearings or spindle operate acceptably"],
+      ["no_corrosion", "No unacceptable corrosion"],
+      ["no_mechanical_damage", "No mechanical damage"],
+      ["guide_arm_secure", "Guide arm is secure, if fitted"],
+      ["winds_correctly", "Hose winds and unwinds correctly"],
+      ["no_binding", "Reel does not bind during operation"],
+    ]),
+  },
+  {
+    key: "hose_condition",
+    title: "Hose condition",
+    description: "Inspect the full hose length.",
+    checks: pfChecks([
+      ["no_cuts", "Hose has no cuts"],
+      ["no_cracks", "Hose has no cracks"],
+      ["no_bulges", "Hose has no bulges"],
+      ["no_abrasions", "Hose has no abrasions"],
+      ["no_uv_damage", "Hose has no UV deterioration"],
+      ["no_kinks", "Hose has no unacceptable kinks"],
+      ["not_perished", "Hose is not perished"],
+      ["couplings_secure", "Couplings are secure"],
+      ["no_leaks", "Hose connections do not leak"],
+      ["correctly_wound", "Hose is correctly wound after testing"],
+    ]),
+  },
+  {
+    key: "nozzle",
+    title: "Nozzle",
+    checks: pfChecks([
+      ["correct_nozzle", "Correct nozzle is fitted"],
+      ["nozzle_secure", "Nozzle is secure"],
+      ["opens_correctly", "Nozzle opens correctly"],
+      ["closes_correctly", "Nozzle closes correctly"],
+      ["shutoff_works", "Shut-off function works"],
+      ["jet_pattern_ok", "Jet pattern is acceptable"],
+      ["spray_pattern_ok", "Spray pattern is acceptable, where applicable"],
+      ["no_blockage", "Nozzle has no blockage"],
+      ["no_excessive_leak", "Nozzle does not leak excessively"],
+    ]),
+  },
+  {
+    key: "valve_supply",
+    title: "Valve and supply",
+    checks: [
+      ...pfChecks([
+        ["valve_accessible", "Control valve is accessible"],
+        ["valve_opens", "Valve opens correctly"],
+        ["valve_closes", "Valve closes correctly"],
+        ["handwheel_ok", "Valve handwheel or lever is undamaged"],
+        ["valve_no_leak", "Valve does not leak"],
+        ["pipework_no_leak", "Pipework has no visible leakage"],
+        ["pipework_no_corrosion", "Pipework has no unacceptable corrosion"],
+        ["water_available", "Water supply is available"],
+        ["permanently_connected", "Water supply appears permanently connected"],
+        ["no_unauthorised_isolation", "No unauthorised isolation is observed"],
+      ]),
+      pfCheck("unable_to_test_water", "Unable to test — no water supply", {
+        failRequiresPhoto: true,
+        criticalOnFail: true,
+      }),
+    ],
+  },
+  {
+    key: "flow_test",
+    title: "Operational flow test",
+    checks: [
+      pfCheck("water_reached_nozzle", "Water reached nozzle"),
+      pfCheck("hose_extended", "Hose fully extended"),
+      pfCheck("adequate_flow", "Adequate flow observed"),
+      pfCheck("adequate_pressure", "Adequate pressure observed"),
+      pfCheck("leaks_under_operation", "Leaks observed under operating conditions"),
+      pfCheck("nozzle_tested", "Nozzle function tested"),
+      pfCheck("reel_rotation_tested", "Reel rotation tested during flow"),
+      numericCheck("static_pressure", "Static pressure, if measured", "kPa", {
+        mandatory: false,
+      }),
+      numericCheck("residual_pressure", "Residual pressure, if measured", "kPa", {
+        mandatory: false,
+      }),
+      numericCheck("flow_rate", "Flow rate, if measured", "L/min", { mandatory: false }),
+    ],
+  },
+  {
+    key: "completion",
+    title: "Completion",
+    checks: pfChecks([
+      ["hose_drained", "Hose drained where required"],
+      ["hose_rewound", "Hose correctly rewound"],
+      ["valve_position", "Valve returned to correct position"],
+      ["nozzle_in_holder", "Nozzle returned to holder"],
+      ["cabinet_closed", "Cabinet closed"],
+      ["service_label", "Service label fitted"],
+      ["id_confirmed", "Identification confirmed"],
+      ["register_updated", "Fire register updated or queued"],
+    ]),
+  },
+];

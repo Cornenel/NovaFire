@@ -7,8 +7,11 @@ import { runOrQueue } from "@/lib/offline/outbox";
 import { getLocalUserId } from "@/lib/offline/operations";
 import { getChecklistForAssetType } from "@/lib/fsm/checklists";
 import { addMonths, todayInSA } from "@/lib/fsm/dates";
-import type { AssetType, InspectionResult } from "@/lib/fsm/types";
+import type { Asset, AssetType, InspectionResult } from "@/lib/fsm/types";
 import { featureFlags } from "@/lib/fsm/feature-flags";
+import { assetTypeRequiresDetailedChecklist } from "@/lib/checklists/applicability";
+import { AssetInspectionChecklist } from "./asset-inspection-checklist";
+import type { StoredCheckAnswer, OverallEquipmentResult } from "@/lib/checklists/types";
 import { PhotoUpload } from "./photo-upload";
 import { ServiceRecommendations } from "./service-recommendations";
 import { VoiceNoteButton } from "./voice-note-button";
@@ -18,7 +21,37 @@ const EXTINGUISHER_TYPES: AssetType[] = [
   "fire_extinguisher",
 ];
 
-export function InspectionForm({
+export function InspectionForm(props: {
+  jobId: string;
+  assetId: string;
+  assetType: AssetType;
+  asset?: Asset;
+  draftChecklist?: {
+    id: string;
+    answers: StoredCheckAnswer[];
+    overallResult: OverallEquipmentResult | null;
+  } | null;
+}) {
+  if (
+    featureFlags.mandatoryAssetInspections &&
+    props.asset &&
+    assetTypeRequiresDetailedChecklist(props.asset.asset_type)
+  ) {
+    return (
+      <AssetInspectionChecklist
+        jobId={props.jobId}
+        asset={props.asset}
+        initialChecklistId={props.draftChecklist?.id}
+        initialAnswers={props.draftChecklist?.answers ?? []}
+        initialOverallResult={props.draftChecklist?.overallResult}
+      />
+    );
+  }
+
+  return <LegacyInspectionForm {...props} />;
+}
+
+function LegacyInspectionForm({
   jobId,
   assetId,
   assetType,

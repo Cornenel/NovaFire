@@ -14,7 +14,8 @@
     "test:historical-records": "node --import tsx scripts/test-historical-records.mjs",
     "test:portal-access": "node --import tsx scripts/test-portal-access.mjs",
     "test:fire-risks": "node --import tsx scripts/test-fire-risks.mjs",
-    "test": "npm run test:zoho-import && npm run test:historical-records && npm run test:portal-access && npm run test:fire-risks"
+    "test:mandatory-checklists": "node --import tsx scripts/test-mandatory-checklists.mjs",
+    "test": "npm run test:zoho-import && npm run test:historical-records && npm run test:portal-access && npm run test:fire-risks && npm run test:mandatory-checklists"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.2",

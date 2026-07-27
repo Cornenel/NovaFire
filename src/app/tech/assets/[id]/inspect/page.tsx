@@ -4,7 +4,9 @@ import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { InspectionForm } from "@/components/tech/inspection-form";
 import { formatAssetDisplayName } from "@/lib/fsm/asset-display";
+import { mapDbAnswers } from "@/lib/checklists/status";
 import type { Asset } from "@/lib/fsm/types";
+import type { OverallEquipmentResult } from "@/lib/checklists/types";
 
 export default async function InspectAssetPage({
   params,
@@ -25,6 +27,32 @@ export default async function InspectAssetPage({
     .single();
   if (!data) notFound();
   const asset = data as Asset;
+
+  const { data: draftHeader } = await supabase
+    .from("inspection_checklists")
+    .select("id, status, overall_result")
+    .eq("job_id", jobId)
+    .eq("asset_id", asset.id)
+    .in("status", ["draft", "in_progress", "reopened"])
+    .maybeSingle();
+
+  let draftChecklist: {
+    id: string;
+    answers: ReturnType<typeof mapDbAnswers>;
+    overallResult: OverallEquipmentResult | null;
+  } | null = null;
+
+  if (draftHeader) {
+    const { data: answerRows } = await supabase
+      .from("inspection_checklist_answers")
+      .select("*")
+      .eq("checklist_id", draftHeader.id);
+    draftChecklist = {
+      id: draftHeader.id,
+      answers: mapDbAnswers(answerRows ?? []),
+      overallResult: (draftHeader.overall_result as OverallEquipmentResult | null) ?? null,
+    };
+  }
 
   return (
     <div>
@@ -50,6 +78,8 @@ export default async function InspectAssetPage({
         jobId={jobId}
         assetId={asset.id}
         assetType={asset.asset_type}
+        asset={asset}
+        draftChecklist={draftChecklist}
       />
     </div>
   );

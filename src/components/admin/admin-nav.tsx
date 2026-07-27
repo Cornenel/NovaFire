@@ -26,6 +26,9 @@ const ITEMS = [
   ...(featureFlags.quotePreparation
     ? [{ href: "/admin/quotes", label: "Quotes", exact: false }]
     : []),
+  ...(featureFlags.mandatoryAssetInspections
+    ? [{ href: "/admin/checklist-settings", label: "Checklists", exact: false }]
+    : []),
 ];
 
 export function AdminNav() {
