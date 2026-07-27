@@ -39,9 +39,16 @@ bbox = out.getbbox()
 if bbox:
     out = out.crop(bbox)
 
-# Normalize to ~512 max side
+# Add breathing room so the shield tip is never clipped in layout
+pad = 24
 ow, oh = out.size
-scale = 512 / max(ow, oh)
+padded = Image.new("RGBA", (ow + pad * 2, oh + pad * 2), (0, 0, 0, 0))
+padded.paste(out, (pad, pad))
+out = padded
+
+# Normalize to ~560 max side
+ow, oh = out.size
+scale = 560 / max(ow, oh)
 out = out.resize((max(1, int(ow * scale)), max(1, int(oh * scale))), Image.Resampling.LANCZOS)
 out.save(r"public/brand/logo-mark.png", optimize=True)
 print("wrote transparent mark", out.size, "bbox was", bbox)

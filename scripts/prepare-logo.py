@@ -4,9 +4,10 @@ from PIL import Image
 src = Image.open(r"public/brand/logo.png").convert("RGB")
 w, h = src.size
 
-# Shield lives in the upper portion of the lockup (above the wordmark).
-# Empirically ~ top 62% contains the shield with padding.
-shield = src.crop((0, 0, w, int(h * 0.58)))
+# Wordmark begins ~765px on the 1024px lockup; shield ends ~715–725px.
+# Crop through the gap below the shield so the gold border is never clipped.
+shield_bottom = min(h, 755)
+shield = src.crop((0, 0, w, shield_bottom))
 sp = shield.load()
 sw, sh = shield.size
 
@@ -19,25 +20,19 @@ for y in range(sh):
             ys.append(y)
 
 left, top, right, bottom = min(xs), min(ys), max(xs), max(ys)
-pad = 28
-left = max(0, left - pad)
-top = max(0, top - pad)
-right = min(sw - 1, right + pad)
-bottom = min(sh - 1, bottom + pad)
+pad_x, pad_top, pad_bottom = 32, 32, 48
+left = max(0, left - pad_x)
+top = max(0, top - pad_top)
+right = min(sw - 1, right + pad_x)
+bottom = min(sh - 1, bottom + pad_bottom)
 emblem = shield.crop((left, top, right + 1, bottom + 1))
 
-# Upscale for crisp retina display
 ew, eh = emblem.size
-target = 512
+target = 560
 scale = target / max(ew, eh)
-emblem = emblem.resize((max(1, int(ew * scale)), max(1, int(eh * scale))), Image.Resampling.LANCZOS)
+emblem = emblem.resize(
+    (max(1, int(ew * scale)), max(1, int(eh * scale))),
+    Image.Resampling.LANCZOS,
+)
 emblem.save(r"public/brand/logo-mark.png", optimize=True)
 print("wrote public/brand/logo-mark.png", emblem.size)
-
-# Also write a fuller lockup cropped tightly (keep original colors; no pixel hacks)
-full = src.crop((56, 74, 611, 881))
-fw, fh = full.size
-scale = 720 / fh
-full = full.resize((max(1, int(fw * scale)), 720), Image.Resampling.LANCZOS)
-full.save(r"public/brand/logo-lockup.png", optimize=True)
-print("wrote public/brand/logo-lockup.png", full.size)
