@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Save } from "lucide-react";
 import { runOrQueue } from "@/lib/offline/outbox";
 import { getLocalUserId } from "@/lib/offline/operations";
+import { createClient } from "@/lib/supabase/client";
 import { buildApplicabilityContext } from "@/lib/checklists/applicability";
 import { getAllSectionsForAsset } from "@/lib/checklists/definitions";
 import { buildLegacyInspectionChecklist } from "@/lib/checklists/legacy-bridge";
@@ -58,7 +59,9 @@ export function AssetInspectionChecklist({
     [asset.asset_type, ctx.hasCabinet]
   );
 
-  const [checklistId] = useState(() => initialChecklistId ?? crypto.randomUUID());
+  const [checklistId, setChecklistId] = useState(
+    () => initialChecklistId ?? crypto.randomUUID()
+  );
   const [inspectionId] = useState(() => crypto.randomUUID());
   const [answers, setAnswers] = useState<StoredCheckAnswer[]>(initialAnswers);
   const [sectionIndex, setSectionIndex] = useState(0);
@@ -74,6 +77,23 @@ export function AssetInspectionChecklist({
   const [busy, setBusy] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [wasQueued, setWasQueued] = useState(false);
+
+  // Align client id with any existing DB row for this job/asset/version.
+  useEffect(() => {
+    if (initialChecklistId) return;
+    const supabase = createClient();
+    void supabase
+      .from("inspection_checklists")
+      .select("id")
+      .eq("job_id", jobId)
+      .eq("asset_id", asset.id)
+      .eq("checklist_version", CHECKLIST_VERSION)
+      .is("completed_at", null)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.id) setChecklistId(data.id);
+      });
+  }, [asset.id, initialChecklistId, jobId]);
 
   const ctxWithCabinet = useMemo(
     () => ({ ...ctx, hasCabinet }),

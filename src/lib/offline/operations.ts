@@ -55,11 +55,11 @@ async function persistChecklistAnswers(
 }
 
 /** Reuse the DB checklist row for this job/asset/version (avoids duplicate-key errors). */
-async function resolveChecklistId(
+async function findChecklistIdByJobAsset(
   supabase: ReturnType<typeof createClient>,
-  payload: { checklistId: string; jobId: string; assetId: string }
-): Promise<string> {
-  const { data } = await supabase
+  payload: { jobId: string; assetId: string }
+): Promise<string | null> {
+  const { data, error } = await supabase
     .from("inspection_checklists")
     .select("id")
     .eq("job_id", payload.jobId)
@@ -67,7 +67,76 @@ async function resolveChecklistId(
     .eq("checklist_version", CHECKLIST_VERSION)
     .maybeSingle();
 
-  return data?.id ?? payload.checklistId;
+  throwIfError(error, "Checklist lookup");
+  return data?.id ?? null;
+}
+
+type ChecklistHeaderFields = {
+  asset_type: string;
+  status: string;
+  started_at: string;
+  completed_at?: string | null;
+  completed_by: string;
+  overall_result?: string | null;
+  notes?: string | null;
+  final_condition_confirmed?: boolean;
+  customer_informed?: boolean;
+  inspection_id?: string | null;
+};
+
+function isDuplicateKeyError(error: { code?: string; message: string } | null) {
+  return (
+    error?.code === "23505" ||
+    (error?.message ?? "").includes("duplicate key value")
+  );
+}
+
+/**
+ * Insert or update the checklist header by job/asset/version — never by client id alone.
+ * Upsert onConflict:"id" fails when the client UUID differs from the existing row.
+ */
+async function saveChecklistHeader(
+  supabase: ReturnType<typeof createClient>,
+  payload: { checklistId: string; jobId: string; assetId: string },
+  fields: ChecklistHeaderFields,
+  context: string
+): Promise<string> {
+  let existingId = await findChecklistIdByJobAsset(supabase, payload);
+  const checklistId = existingId ?? payload.checklistId;
+
+  const row = {
+    job_id: payload.jobId,
+    asset_id: payload.assetId,
+    checklist_version: CHECKLIST_VERSION,
+    ...fields,
+  };
+
+  if (existingId) {
+    const { error } = await supabase
+      .from("inspection_checklists")
+      .update(row)
+      .eq("id", existingId);
+    throwIfError(error, context);
+    return existingId;
+  }
+
+  const { error: insertError } = await supabase
+    .from("inspection_checklists")
+    .insert({ id: checklistId, ...row });
+
+  if (isDuplicateKeyError(insertError)) {
+    existingId = await findChecklistIdByJobAsset(supabase, payload);
+    if (!existingId) throw new Error(`${context}: duplicate key but row not found`);
+    const { error: updateError } = await supabase
+      .from("inspection_checklists")
+      .update(row)
+      .eq("id", existingId);
+    throwIfError(updateError, context);
+    return existingId;
+  }
+
+  throwIfError(insertError, context);
+  return checklistId;
 }
 
 export type OfflineOp =
@@ -516,14 +585,11 @@ export async function executeOp(op: OfflineOp): Promise<void> {
     case "checklist_draft": {
       const p = op.payload;
       const now = new Date().toISOString();
-      const checklistId = await resolveChecklistId(supabase, p);
-      const { error: headerError } = await supabase.from("inspection_checklists").upsert(
+      const checklistId = await saveChecklistHeader(
+        supabase,
+        p,
         {
-          id: checklistId,
-          job_id: p.jobId,
-          asset_id: p.assetId,
           asset_type: p.assetType,
-          checklist_version: CHECKLIST_VERSION,
           status: "in_progress",
           started_at: now,
           completed_by: p.technicianId,
@@ -531,10 +597,11 @@ export async function executeOp(op: OfflineOp): Promise<void> {
           notes: p.notes ?? null,
           final_condition_confirmed: p.finalConditionConfirmed ?? false,
           customer_informed: p.customerInformed ?? false,
+          completed_at: null,
+          inspection_id: null,
         },
-        { onConflict: "id" }
+        "Checklist draft"
       );
-      throwIfError(headerError, "Checklist draft");
       await persistChecklistAnswers(supabase, checklistId, p.answers);
       await supabase.from("inspection_checklist_audit").insert({
         checklist_id: checklistId,
@@ -573,17 +640,11 @@ export async function executeOp(op: OfflineOp): Promise<void> {
       );
       throwIfError(inspError, "Inspection");
 
-      const checklistId = await resolveChecklistId(supabase, p);
-
-      // Keep checklist open until answers are saved — RLS only allows answer
-      // writes while completed_at is null (status draft/in_progress/reopened).
-      const { error: draftHeaderError } = await supabase.from("inspection_checklists").upsert(
+      const checklistId = await saveChecklistHeader(
+        supabase,
+        p,
         {
-          id: checklistId,
-          job_id: p.jobId,
-          asset_id: p.assetId,
           asset_type: p.assetType,
-          checklist_version: CHECKLIST_VERSION,
           status: "in_progress",
           started_at: now,
           completed_by: p.technicianId,
@@ -591,10 +652,11 @@ export async function executeOp(op: OfflineOp): Promise<void> {
           notes: p.notes ?? null,
           final_condition_confirmed: p.finalConditionConfirmed,
           customer_informed: p.customerInformed,
+          completed_at: null,
+          inspection_id: null,
         },
-        { onConflict: "id" }
+        "Checklist prepare"
       );
-      throwIfError(draftHeaderError, "Checklist prepare");
 
       await persistChecklistAnswers(supabase, checklistId, p.answers);
 
