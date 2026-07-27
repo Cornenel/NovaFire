@@ -3,6 +3,8 @@ import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { JobCreateForm } from "@/components/admin/job-create-form";
 
+export const dynamic = "force-dynamic";
+
 function todayInSA(): string {
   return new Date().toLocaleDateString("en-CA", {
     timeZone: "Africa/Johannesburg",
@@ -13,10 +15,7 @@ export default async function NewJobPage() {
   const supabase = await createClient();
 
   const [{ data: customers }, { data: technicians }] = await Promise.all([
-    supabase
-      .from("customers")
-      .select("id, name, sites(id, name, contact_person, contact_phone)")
-      .order("name"),
+    supabase.from("customers").select("id, name").order("name"),
     supabase
       .from("profiles")
       .select("id, full_name")
@@ -40,11 +39,7 @@ export default async function NewJobPage() {
       </h1>
 
       <JobCreateForm
-        customers={(customers ?? []).map((c) => ({
-          id: c.id,
-          name: c.name,
-          sites: c.sites ?? [],
-        }))}
+        customers={customers ?? []}
         technicians={technicians ?? []}
         defaultDate={todayInSA()}
       />

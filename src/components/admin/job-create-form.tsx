@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { createJob } from "@/app/admin/actions";
+import { useEffect, useState } from "react";
+import { createJob, getCustomerSites, type CustomerSiteOption } from "@/app/admin/actions";
 import { JOB_PRIORITY_LABELS, JOB_TYPE_LABELS } from "@/lib/fsm/labels";
 
 interface CustomerOption {
   id: string;
   name: string;
-  sites: Array<{ id: string; name: string; contact_person: string | null; contact_phone: string | null }>;
 }
 
 interface TechnicianOption {
@@ -29,8 +28,38 @@ export function JobCreateForm({
   defaultDate: string;
 }) {
   const [customerId, setCustomerId] = useState("");
-  const customer = customers.find((c) => c.id === customerId);
-  const sites = customer?.sites ?? [];
+  const [siteId, setSiteId] = useState("");
+  const [sites, setSites] = useState<CustomerSiteOption[]>([]);
+  const [sitesLoading, setSitesLoading] = useState(false);
+
+  useEffect(() => {
+    if (!customerId) {
+      setSites([]);
+      setSiteId("");
+      return;
+    }
+
+    let cancelled = false;
+    setSitesLoading(true);
+
+    getCustomerSites(customerId)
+      .then((nextSites) => {
+        if (cancelled) return;
+        setSites(nextSites);
+        setSiteId((current) =>
+          nextSites.some((site) => site.id === current) ? current : ""
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setSitesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [customerId]);
+
+  const selectedSite = sites.find((site) => site.id === siteId);
 
   return (
     <form action={createJob} className="space-y-4 max-w-xl">
@@ -41,7 +70,10 @@ export function JobCreateForm({
             name="customer_id"
             required
             value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
+            onChange={(e) => {
+              setCustomerId(e.target.value);
+              setSiteId("");
+            }}
             className={inputCls}
           >
             <option value="">Select customer…</option>
@@ -54,9 +86,26 @@ export function JobCreateForm({
         </div>
         <div>
           <label className={labelCls}>Site *</label>
-          <select name="site_id" required className={inputCls} disabled={!customerId}>
+          <select
+            name="site_id"
+            required
+            value={siteId}
+            onChange={(e) => setSiteId(e.target.value)}
+            onFocus={() => {
+              if (!customerId || sitesLoading) return;
+              getCustomerSites(customerId).then(setSites);
+            }}
+            className={inputCls}
+            disabled={!customerId || sitesLoading}
+          >
             <option value="">
-              {customerId ? "Select site…" : "Choose customer first"}
+              {!customerId
+                ? "Choose customer first"
+                : sitesLoading
+                  ? "Loading sites…"
+                  : sites.length === 0
+                    ? "No sites yet — add one on the customer page"
+                    : "Select site…"}
             </option>
             {sites.map((s) => (
               <option key={s.id} value={s.id}>
@@ -64,6 +113,11 @@ export function JobCreateForm({
               </option>
             ))}
           </select>
+          {customerId && !sitesLoading && sites.length === 0 ? (
+            <p className="mt-1.5 text-xs text-amber-400/90">
+              Add a site on the customer record, then reopen this dropdown.
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -120,6 +174,8 @@ export function JobCreateForm({
           <input
             type="text"
             name="contact_person"
+            key={`contact-person-${siteId}`}
+            defaultValue={selectedSite?.contact_person ?? ""}
             placeholder="On-site contact"
             className={inputCls}
           />
@@ -129,6 +185,8 @@ export function JobCreateForm({
           <input
             type="tel"
             name="contact_phone"
+            key={`contact-phone-${siteId}`}
+            defaultValue={selectedSite?.contact_phone ?? ""}
             placeholder="+27 …"
             className={inputCls}
           />

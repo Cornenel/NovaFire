@@ -129,6 +129,7 @@ export async function createCustomer(formData: FormData) {
     .single();
 
   if (error || !data) return;
+  revalidatePath("/admin/jobs/new");
   redirect(`/admin/customers/${data.id}`);
 }
 
@@ -270,6 +271,7 @@ export async function createSite(formData: FormData) {
   });
 
   revalidatePath(`/admin/customers/${customerId}`);
+  revalidatePath("/admin/jobs/new");
 }
 
 // ── Assets ─────────────────────────────────────────────────────────────────
@@ -320,6 +322,30 @@ export async function createAsset(formData: FormData) {
 }
 
 // ── Jobs ───────────────────────────────────────────────────────────────────
+
+export type CustomerSiteOption = {
+  id: string;
+  name: string;
+  contact_person: string | null;
+  contact_phone: string | null;
+};
+
+export async function getCustomerSites(
+  customerId: string
+): Promise<CustomerSiteOption[]> {
+  if (!customerId) return [];
+
+  const { supabase } = await requireDispatcher();
+
+  const { data, error: queryError } = await supabase
+    .from("sites")
+    .select("id, name, contact_person, contact_phone")
+    .eq("customer_id", customerId)
+    .order("name");
+
+  if (queryError) return [];
+  return data ?? [];
+}
 
 export async function createJob(formData: FormData) {
   const { supabase, user } = await requireDispatcher();
