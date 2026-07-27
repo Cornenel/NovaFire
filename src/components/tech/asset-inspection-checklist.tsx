@@ -33,8 +33,8 @@ import { cn } from "@/lib/utils";
 import { PhotoUpload } from "./photo-upload";
 
 const RESULT_BUTTONS: Array<{ value: CheckAnswerResult; label: string; cls: string }> = [
-  { value: "pass", label: "Pass", cls: "bg-emerald-600/25 border-emerald-500/50 text-emerald-400" },
-  { value: "fail", label: "Fail", cls: "bg-red-600/25 border-red-500/50 text-red-400" },
+  { value: "pass", label: "Yes", cls: "bg-emerald-600/25 border-emerald-500/50 text-emerald-400" },
+  { value: "fail", label: "No", cls: "bg-red-600/25 border-red-500/50 text-red-400" },
   { value: "not_applicable", label: "N/A", cls: "bg-white/10 border-white/20 text-zinc-300" },
 ];
 
@@ -411,8 +411,8 @@ export function AssetInspectionChecklist({
             className="w-full px-3 py-2 rounded-lg bg-[#171717] border border-white/10 text-white text-sm"
           />
           <div className="text-xs text-zinc-500 grid grid-cols-2 gap-2">
-            <span>Answered: {progress.answered}</span>
-            <span>Failed: {progress.failed}</span>
+            <span>Yes: {progress.answered - progress.failed - progress.na}</span>
+            <span>No: {progress.failed}</span>
             <span>N/A: {progress.na}</span>
             <span>Outstanding: {progress.outstanding}</span>
           </div>

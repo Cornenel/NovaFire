@@ -556,17 +556,17 @@ export async function executeOp(op: OfflineOp): Promise<void> {
       );
       throwIfError(inspError, "Inspection");
 
-      const { error: headerError } = await supabase.from("inspection_checklists").upsert(
+      // Keep checklist open until answers are saved — RLS only allows answer
+      // writes while completed_at is null (status draft/in_progress/reopened).
+      const { error: draftHeaderError } = await supabase.from("inspection_checklists").upsert(
         {
           id: p.checklistId,
           job_id: p.jobId,
           asset_id: p.assetId,
-          inspection_id: p.inspectionId,
           asset_type: p.assetType,
           checklist_version: CHECKLIST_VERSION,
-          status: checklistStatus,
+          status: "in_progress",
           started_at: now,
-          completed_at: now,
           completed_by: p.technicianId,
           overall_result: p.overallResult,
           notes: p.notes ?? null,
@@ -575,8 +575,23 @@ export async function executeOp(op: OfflineOp): Promise<void> {
         },
         { onConflict: "id" }
       );
-      throwIfError(headerError, "Checklist complete");
+      throwIfError(draftHeaderError, "Checklist prepare");
+
       await persistChecklistAnswers(supabase, p.checklistId, p.answers);
+
+      const { error: headerError } = await supabase
+        .from("inspection_checklists")
+        .update({
+          inspection_id: p.inspectionId,
+          status: checklistStatus,
+          completed_at: now,
+          overall_result: p.overallResult,
+          notes: p.notes ?? null,
+          final_condition_confirmed: p.finalConditionConfirmed,
+          customer_informed: p.customerInformed,
+        })
+        .eq("id", p.checklistId);
+      throwIfError(headerError, "Checklist complete");
 
       for (const defect of p.defects) {
         const { error } = await supabase.from("defects").upsert(
