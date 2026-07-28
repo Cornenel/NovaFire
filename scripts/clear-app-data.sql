@@ -13,6 +13,10 @@ where customer_id is not null
    or portal_site_id is not null;
 
 truncate table
+  public.inspection_checklist_audit,
+  public.inspection_checklist_answers,
+  public.inspection_site_observations,
+  public.inspection_checklists,
   public.asset_compliance_recheck_history,
   public.customer_update_history,
   public.import_rows,
