@@ -52,29 +52,30 @@
 }
 
 :root {
-  /* Nova Fire — industrial forge palette (used across marketing + tools) */
-  --nf-void: #040406;
-  --nf-base: #08080d;
-  --nf-surface: #0c0c14;
-  --nf-raised: #11111a;
-  --nf-rim: #1a1a26;
-  --nf-heat: #ea580c;
-  --nf-flame: #dc2626;
-  --nf-ember-glow: rgba(220, 38, 38, 0.14);
-  --nf-amber-glow: rgba(251, 146, 60, 0.08);
-  --nf-border: rgba(255, 255, 255, 0.055);
-  --nf-border-warm: rgba(220, 38, 38, 0.14);
+  /* Nova Fire — living forge (warm charcoal + ember, not flat black) */
+  --nf-void: #0c0806;
+  --nf-base: #120c0a;
+  --nf-surface: #1a1210;
+  --nf-raised: #221714;
+  --nf-rim: #2e1f1a;
+  --nf-heat: #f97316;
+  --nf-flame: #ef4444;
+  --nf-ember-glow: rgba(239, 68, 68, 0.22);
+  --nf-amber-glow: rgba(251, 146, 60, 0.16);
+  --nf-coal-glow: rgba(127, 29, 29, 0.18);
+  --nf-border: rgba(255, 220, 200, 0.08);
+  --nf-border-warm: rgba(251, 146, 60, 0.22);
   --nf-shine: linear-gradient(
     105deg,
-    rgba(255, 255, 255, 0.06) 0%,
-    rgba(255, 255, 255, 0.02) 40%,
-    rgba(220, 38, 38, 0.09) 55%,
-    rgba(251, 146, 60, 0.06) 75%,
-    rgba(255, 255, 255, 0.03) 100%
+    rgba(255, 237, 213, 0.08) 0%,
+    rgba(255, 255, 255, 0.03) 35%,
+    rgba(239, 68, 68, 0.12) 55%,
+    rgba(251, 146, 60, 0.1) 78%,
+    rgba(255, 237, 213, 0.04) 100%
   );
 
   --radius: 0.5rem;
-  --background: #0a0a0a;
+  --background: #120c0a;
   --foreground: oklch(0.95 0.01 264);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.129 0.042 264.695);
@@ -149,9 +150,11 @@
     @apply text-foreground antialiased;
     background-color: var(--nf-void);
     background-image:
-      radial-gradient(ellipse 130% 70% at 50% -25%, var(--nf-ember-glow), transparent 52%),
-      radial-gradient(ellipse 90% 55% at 100% 0%, var(--nf-amber-glow), transparent 42%),
-      radial-gradient(ellipse 70% 45% at 0% 40%, rgba(127, 29, 29, 0.06), transparent 50%);
+      radial-gradient(ellipse 100% 55% at 50% -8%, rgba(249, 115, 22, 0.2), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 95% 15%, rgba(239, 68, 68, 0.16), transparent 48%),
+      radial-gradient(ellipse 55% 45% at 5% 55%, rgba(127, 29, 29, 0.22), transparent 52%),
+      radial-gradient(ellipse 80% 40% at 50% 100%, rgba(251, 146, 60, 0.1), transparent 55%),
+      linear-gradient(180deg, #140e0b 0%, #0c0806 40%, #110b09 100%);
     background-attachment: fixed;
   }
 }
@@ -167,13 +170,44 @@
 
 @layer utilities {
   .nf-bg-base {
-    background-color: color-mix(in oklab, var(--nf-base) 96%, transparent);
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 0%, rgba(249, 115, 22, 0.07), transparent 55%),
+      color-mix(in oklab, var(--nf-base) 97%, transparent);
   }
   .nf-bg-surface {
-    background-color: color-mix(in oklab, var(--nf-surface) 94%, transparent);
+    background:
+      radial-gradient(ellipse 70% 50% at 80% 20%, rgba(239, 68, 68, 0.06), transparent 50%),
+      color-mix(in oklab, var(--nf-surface) 96%, transparent);
   }
   .nf-bg-raised {
-    background-color: color-mix(in oklab, var(--nf-raised) 92%, transparent);
+    background:
+      linear-gradient(180deg, rgba(249, 115, 22, 0.05) 0%, transparent 35%),
+      color-mix(in oklab, var(--nf-raised) 95%, transparent);
+  }
+  .nf-section-alive {
+    position: relative;
+    isolation: isolate;
+  }
+  .nf-section-alive::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 55% 40% at 15% 30%, rgba(249, 115, 22, 0.1), transparent 60%),
+      radial-gradient(ellipse 50% 45% at 90% 70%, rgba(239, 68, 68, 0.09), transparent 55%);
+  }
+  .nf-heat-band {
+    pointer-events: none;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(251, 146, 60, 0.18) 35%,
+      rgba(239, 68, 68, 0.22) 50%,
+      rgba(251, 146, 60, 0.16) 65%,
+      transparent 100%
+    );
   }
   .nf-border {
     border-color: var(--nf-border);
@@ -184,10 +218,11 @@
   .nf-text-heat {
     background-image: linear-gradient(
       115deg,
-      #fecdd3 0%,
-      #fb923c 28%,
-      #ef4444 52%,
-      #b91c1c 88%
+      #ffedd5 0%,
+      #fdba74 24%,
+      #fb923c 42%,
+      #f87171 62%,
+      #dc2626 100%
     );
     -webkit-background-clip: text;
     background-clip: text;
@@ -195,16 +230,16 @@
   }
   .nf-glass-panel {
     background: linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.04) 0%,
-      rgba(12, 12, 20, 0.75) 45%,
-      rgba(8, 8, 14, 0.9) 100%
+      150deg,
+      rgba(255, 237, 213, 0.07) 0%,
+      rgba(34, 23, 20, 0.72) 42%,
+      rgba(18, 12, 10, 0.88) 100%
     );
     border: 1px solid var(--nf-border);
     box-shadow:
-      0 0 0 1px rgba(0, 0, 0, 0.35) inset,
-      0 24px 64px rgba(0, 0, 0, 0.45),
-      0 0 80px rgba(220, 38, 38, 0.04);
+      0 0 0 1px rgba(255, 200, 160, 0.04) inset,
+      0 24px 64px rgba(20, 8, 4, 0.45),
+      0 0 60px rgba(249, 115, 22, 0.05);
   }
   .nf-card-hover {
     transition:
@@ -214,41 +249,41 @@
       background-color 0.35s ease;
   }
   .nf-card-hover:hover {
-    border-color: color-mix(in oklab, var(--nf-flame) 35%, var(--nf-border));
+    border-color: color-mix(in oklab, var(--nf-heat) 40%, var(--nf-border));
     box-shadow:
-      0 0 0 1px rgba(220, 38, 38, 0.08) inset,
-      0 20px 50px rgba(0, 0, 0, 0.35),
-      0 0 60px rgba(220, 38, 38, 0.07);
+      0 0 0 1px rgba(249, 115, 22, 0.1) inset,
+      0 22px 48px rgba(20, 8, 4, 0.4),
+      0 0 48px rgba(249, 115, 22, 0.1);
   }
   .nf-eyebrow {
-    @apply text-xs font-mono uppercase tracking-[0.28em] text-red-400/95;
+    @apply text-xs font-mono uppercase tracking-[0.28em] text-orange-300/90;
   }
   .nf-btn-primary {
-    background: linear-gradient(165deg, #f87171 0%, #dc2626 38%, #b91c1c 100%);
+    background: linear-gradient(165deg, #fb923c 0%, #ef4444 42%, #b91c1c 100%);
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.12) inset,
+      0 1px 0 rgba(255, 237, 213, 0.2) inset,
       0 0 0 1px rgba(0, 0, 0, 0.2),
-      0 12px 40px rgba(220, 38, 38, 0.35);
+      0 14px 36px rgba(239, 68, 68, 0.38);
   }
   .nf-btn-primary:hover {
-    filter: brightness(1.06);
+    filter: brightness(1.07);
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.15) inset,
+      0 1px 0 rgba(255, 237, 213, 0.25) inset,
       0 0 0 1px rgba(0, 0, 0, 0.25),
-      0 16px 48px rgba(220, 38, 38, 0.45);
+      0 18px 48px rgba(249, 115, 22, 0.42);
   }
   .nf-btn-ghost {
-    border: 1px solid color-mix(in oklab, white 14%, transparent);
-    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid color-mix(in oklab, #ffedd5 16%, transparent);
+    background: rgba(255, 237, 213, 0.04);
     backdrop-filter: blur(10px);
   }
   .nf-btn-ghost:hover {
-    border-color: color-mix(in oklab, var(--nf-flame) 45%, transparent);
-    background: rgba(255, 255, 255, 0.05);
+    border-color: color-mix(in oklab, var(--nf-heat) 50%, transparent);
+    background: rgba(255, 237, 213, 0.08);
   }
   .nf-noise {
     pointer-events: none;
-    opacity: 0.035;
+    opacity: 0.045;
     mix-blend-mode: overlay;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
@@ -259,9 +294,39 @@
   50% { background-position: 100% 50%; }
 }
 
+@keyframes heat-aurora {
+  0%, 100% {
+    opacity: 0.55;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    opacity: 0.85;
+    transform: translate3d(2%, -1%, 0) scale(1.05);
+  }
+  66% {
+    opacity: 0.7;
+    transform: translate3d(-2%, 1%, 0) scale(1.03);
+  }
+}
+
+@keyframes heat-rise {
+  0% {
+    transform: translateY(8%) scaleY(1);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(-4%) scaleY(1.08);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(-18%) scaleY(1.02);
+    opacity: 0.2;
+  }
+}
+
 @keyframes hero-glow-pulse {
-  0%, 100% { opacity: 0.4; transform: scale(1); filter: blur(60px); }
-  50% { opacity: 0.7; transform: scale(1.2); filter: blur(80px); }
+  0%, 100% { opacity: 0.45; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.12); }
 }
 
 @keyframes hero-flame-flicker {
@@ -279,6 +344,14 @@
 @keyframes hero-shimmer {
   0% { background-position: -200% center; }
   100% { background-position: 200% center; }
+}
+
+.nf-aurora {
+  animation: heat-aurora 14s ease-in-out infinite;
+}
+
+.nf-heat-rise {
+  animation: heat-rise 9s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -108,45 +108,19 @@ export default function HomePage() {
       <ScrollProgress />
       <Navbar />
 
-      {/* Hero */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-        {/* Optional hero video layer (place file at /public/hero.mp4) */}
-        <div className="absolute inset-0 z-0 pointer-events-none hidden sm:block">
-          <video
-            className="absolute inset-0 h-full w-full object-cover opacity-[0.22]"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            aria-hidden="true"
-          >
-            <source src="/hero.mp4" type="video/mp4" />
-          </video>
+      {/* Hero — living forge composition */}
+      <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden">
+        <EmberBackground />
+        <div className="absolute inset-0 z-[1] pointer-events-none">
           <div
             className="absolute inset-0"
             style={{
               background:
-                "radial-gradient(ellipse 110% 80% at 50% 10%, rgba(220,38,38,0.22) 0%, transparent 55%), linear-gradient(to bottom, rgba(4,4,6,0.25), rgba(4,4,6,0.85))",
+                "linear-gradient(to bottom, rgba(12,8,6,0.15) 0%, rgba(12,8,6,0.35) 55%, rgba(12,8,6,0.85) 100%)",
             }}
           />
         </div>
-        <EmberBackground />
-        <div className="absolute inset-0 z-[1] flex items-center justify-center pointer-events-none hidden sm:flex">
-          <motion.div
-            className="w-[800px] h-[500px] rounded-full opacity-20"
-            style={{
-              background: "radial-gradient(circle, rgba(220,38,38,0.4) 0%, transparent 70%)",
-              filter: "blur(100px)",
-            }}
-            animate={{
-              scale: [1, 1.3, 1],
-              opacity: [0.15, 0.3, 0.15],
-            }}
-            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-          />
-        </div>
-        <div className="relative z-10 container mx-auto px-6 text-center">
+        <div className="relative z-10 container mx-auto px-6 text-center pt-24 pb-20">
           <motion.div
             initial="hidden"
             animate="visible"
@@ -155,11 +129,11 @@ export default function HomePage() {
           >
             <motion.div
               variants={fadeUp}
-              className="mx-auto mb-8 flex items-center justify-center overflow-visible"
+              className="mx-auto mb-6 flex items-center justify-center overflow-visible"
             >
               <div className="relative overflow-visible pb-2">
                 <div
-                  className="absolute inset-0 -m-10 rounded-full bg-[radial-gradient(circle,rgba(251,146,60,0.28)_0%,transparent_70%)] blur-2xl"
+                  className="absolute inset-0 -m-12 rounded-full bg-[radial-gradient(circle,rgba(251,146,60,0.35)_0%,transparent_68%)] blur-3xl"
                   aria-hidden
                 />
                 <Image
@@ -168,7 +142,7 @@ export default function HomePage() {
                   width={560}
                   height={560}
                   priority
-                  className="relative h-44 w-auto sm:h-52 md:h-60 lg:h-72 drop-shadow-[0_16px_48px_rgba(0,0,0,0.55)]"
+                  className="relative h-40 w-auto sm:h-48 md:h-56 lg:h-64 drop-shadow-[0_20px_50px_rgba(249,115,22,0.25)]"
                 />
               </div>
             </motion.div>
@@ -177,22 +151,16 @@ export default function HomePage() {
               className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-extrabold tracking-tight text-white leading-[1.02] mb-5 font-[family-name:var(--font-syne)]"
             >
               Nova
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-orange-400 to-red-600 bg-[length:200%_auto] animate-[gradient-shift_4s_ease_infinite] drop-shadow-[0_0_40px_rgba(251,146,60,0.35)]">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-100 via-orange-400 to-red-600 bg-[length:200%_auto] animate-[gradient-shift_5s_ease_infinite]">
                 Fire
               </span>
             </motion.h1>
             <motion.p
               variants={fadeUp}
-              className="text-xl sm:text-2xl md:text-3xl font-semibold text-white/90 mb-5 font-[family-name:var(--font-syne)] tracking-tight [text-wrap:balance]"
+              className="text-lg sm:text-xl md:text-2xl font-medium text-orange-50/90 max-w-2xl mx-auto mb-10 leading-relaxed [text-wrap:balance]"
             >
-              Audit-ready fire compliance for South African facilities.
-            </motion.p>
-            <motion.p
-              variants={fadeUp}
-              className="text-base sm:text-lg text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed [text-wrap:balance]"
-            >
-              One audit failure can shut you down. We supply, service, and certify so your
-              business stays operational.
+              Fire protection and compliance that keeps South African facilities
+              open, insured, and audit-ready.
             </motion.p>
             <motion.div
               variants={fadeUp}
@@ -223,32 +191,26 @@ export default function HomePage() {
           </motion.div>
         </div>
         <motion.div
-          className="absolute bottom-10 left-1/2 -translate-x-1/2 z-10 hidden sm:block"
-          animate={{ y: [0, 12, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 hidden sm:flex flex-col items-center gap-2"
+          animate={{ y: [0, 8, 0] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
         >
-          <div className="w-6 h-10 rounded-full border-2 border-white/30 flex justify-center pt-2">
-            <motion.div
-              className="w-1.5 h-1.5 rounded-full bg-red-500"
-              animate={{ opacity: [0.4, 1, 0.4] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            />
-          </div>
+          <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-orange-200/50">
+            Explore
+          </span>
+          <div className="w-px h-8 bg-gradient-to-b from-orange-400/70 to-transparent" />
         </motion.div>
       </section>
 
       {/* Trust Strip with Marquee */}
-      <section className="py-12 border-y border-white/[0.06] nf-bg-base relative overflow-hidden">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.35] bg-[radial-gradient(ellipse_80%_50%_at_50%_0%,rgba(220,38,38,0.08),transparent)]"
-          aria-hidden
-        />
+      <section className="py-14 border-y border-white/[0.06] nf-bg-raised nf-section-alive relative overflow-hidden">
+        <div className="absolute inset-x-0 top-0 h-px nf-heat-band opacity-60" aria-hidden />
         <div className="container mx-auto px-6 relative">
           <motion.p
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className="text-center text-sm text-zinc-500 mb-8 tracking-wide"
+            className="text-center text-sm text-zinc-400 mb-8 tracking-wide"
           >
             Trusted by lodges, estates, and commercial facilities across South Africa
           </motion.p>
@@ -260,7 +222,7 @@ export default function HomePage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="px-6 py-3 rounded-xl border border-white/[0.08] bg-gradient-to-b from-white/[0.05] to-transparent font-mono text-xs text-zinc-400 tracking-[0.2em] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+                className="px-6 py-3 rounded-xl border border-orange-500/15 bg-gradient-to-b from-orange-500/[0.08] to-transparent font-mono text-xs text-orange-100/70 tracking-[0.2em] shadow-[inset_0_1px_0_rgba(255,237,213,0.08)]"
               >
                 {badge}
               </motion.div>
@@ -271,11 +233,7 @@ export default function HomePage() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-24 nf-bg-raised border-y border-white/[0.06] relative">
-        <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_40%_at_50%_50%,rgba(220,38,38,0.04),transparent)]"
-          aria-hidden
-        />
+      <section className="py-24 nf-bg-base border-y border-white/[0.06] nf-section-alive relative">
         <div className="container mx-auto px-6 relative">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-12 md:gap-8">
             {[
@@ -296,7 +254,7 @@ export default function HomePage() {
                   <AnimatedStat
                     value={stat.value}
                     suffix={stat.suffix}
-                    className="nf-text-heat drop-shadow-[0_0_28px_rgba(220,38,38,0.2)]"
+                    className="nf-text-heat drop-shadow-[0_0_28px_rgba(249,115,22,0.25)]"
                   />
                 </div>
                 <p className="text-sm text-zinc-500 font-mono uppercase tracking-[0.18em]">
@@ -309,7 +267,7 @@ export default function HomePage() {
       </section>
 
       {/* Services */}
-      <section id="services" className="py-32 nf-bg-base relative">
+      <section id="services" className="py-32 nf-bg-raised nf-section-alive relative">
         <div className="container mx-auto px-6">
           <motion.div
             initial="hidden"
@@ -347,18 +305,18 @@ export default function HomePage() {
                   href={s.href}
                   className="group relative block h-full p-8 rounded-2xl border border-white/[0.07] nf-glass-panel nf-card-hover overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 via-transparent to-orange-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/12 via-transparent to-red-600/8 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                   <div className="relative mb-6 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3 origin-left">
-                    <s.icon className="w-11 h-11 text-red-500/90" strokeWidth={1.5} />
+                    <s.icon className="w-11 h-11 text-orange-400/90" strokeWidth={1.5} />
                   </div>
                   <h3 className="relative text-xl font-semibold text-white mb-3 font-[family-name:var(--font-syne)]">
                     {s.title}
                   </h3>
                   <p className="relative text-zinc-400 text-sm leading-relaxed mb-4">{s.desc}</p>
-                  <span className="relative inline-flex items-center gap-1 text-xs font-mono text-red-500/80 group-hover:text-red-400 transition-colors">
+                  <span className="relative inline-flex items-center gap-1 text-xs font-mono text-orange-400/80 group-hover:text-orange-300 transition-colors">
                     Learn more <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                   </span>
-                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-orange-400/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 </Link>
               </motion.div>
             ))}
@@ -373,7 +331,7 @@ export default function HomePage() {
             </a>
             <a
               href="/services/fire-extinguisher-servicing"
-              className="inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl border border-white/[0.1] bg-white/[0.03] text-white font-semibold hover:bg-white/[0.06] transition-all duration-300"
+              className="inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl border border-orange-500/20 bg-orange-500/[0.05] text-white font-semibold hover:bg-orange-500/[0.1] transition-all duration-300"
             >
               Fire extinguisher servicing <ArrowRight className="w-4 h-4 opacity-80" />
             </a>
@@ -381,8 +339,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Why Nova Fire - Mission Control */}
-      <section id="whynovafire" className="py-32 nf-bg-raised border-y border-white/[0.06] relative">
+      {/* Why Nova Fire */}
+      <section id="whynovafire" className="py-32 nf-bg-base border-y border-white/[0.06] nf-section-alive relative">
         <div className="container mx-auto px-6">
           <div className="grid lg:grid-cols-2 gap-20 items-center">
             <motion.div
@@ -415,7 +373,7 @@ export default function HomePage() {
                     transition={{ delay: i * 0.1 }}
                     className="flex items-start gap-4 text-zinc-300"
                   >
-                    <CheckCircle2 className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
                     {item}
                   </motion.li>
                 ))}
@@ -428,12 +386,11 @@ export default function HomePage() {
               transition={{ type: "spring", stiffness: 80 }}
               className="relative"
             >
-              {/* Mission Control Dashboard Card */}
-              <div className="relative rounded-2xl nf-glass-panel p-8 overflow-hidden border-white/[0.08]">
-                <div className="absolute top-0 right-0 w-56 h-56 bg-gradient-to-br from-red-600/20 to-orange-500/10 rounded-full blur-3xl" />
+              <div className="relative rounded-2xl nf-glass-panel p-8 overflow-hidden border-orange-500/15">
+                <div className="absolute top-0 right-0 w-56 h-56 bg-gradient-to-br from-orange-500/25 to-red-600/10 rounded-full blur-3xl" />
                 <div className="relative space-y-6">
                   <div className="flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-red-500" />
+                    <Activity className="w-5 h-5 text-orange-400" />
                     <span className="text-sm font-mono text-zinc-500">
                       COMPLIANCE STATUS
                     </span>
@@ -445,7 +402,7 @@ export default function HomePage() {
                           <span className="text-zinc-400 text-sm">{label}</span>
                           <div className="flex items-center gap-2">
                             <motion.div
-                              className="w-2 h-2 rounded-full bg-emerald-500"
+                              className="w-2 h-2 rounded-full bg-emerald-400"
                               animate={{ opacity: [1, 0.4, 1] }}
                               transition={{
                                 duration: 2,
@@ -453,7 +410,7 @@ export default function HomePage() {
                                 delay: i * 0.3,
                               }}
                             />
-                            <span className="text-xs font-mono text-emerald-500/80">
+                            <span className="text-xs font-mono text-emerald-400/80">
                               ACTIVE
                             </span>
                           </div>
@@ -461,8 +418,8 @@ export default function HomePage() {
                       )
                     )}
                   </div>
-                  <div className="pt-4 border-t border-white/5">
-                    <div className="text-3xl font-bold text-white font-mono">
+                  <div className="pt-4 border-t border-orange-500/10">
+                    <div className="text-3xl font-bold text-white font-mono nf-text-heat">
                       24/7
                     </div>
                     <p className="text-zinc-500 text-sm mt-1">
@@ -477,12 +434,12 @@ export default function HomePage() {
       </section>
 
       {/* Testimonial */}
-      <section className="py-32 nf-bg-base relative overflow-hidden">
+      <section className="py-32 nf-bg-raised relative overflow-hidden nf-section-alive">
         <div
-          className="absolute inset-0 opacity-20"
+          className="absolute inset-0 opacity-40"
           style={{
             background:
-              "radial-gradient(ellipse 60% 40% at 50% 50%, rgba(220, 38, 38, 0.15) 0%, transparent 70%)",
+              "radial-gradient(ellipse 60% 45% at 50% 50%, rgba(249, 115, 22, 0.18) 0%, transparent 70%)",
           }}
         />
         <div className="container mx-auto px-6 relative">
@@ -492,14 +449,14 @@ export default function HomePage() {
             viewport={{ once: true }}
             className="max-w-3xl mx-auto text-center"
           >
-            <Quote className="w-12 h-12 text-red-500/30 mx-auto mb-8" />
+            <Quote className="w-12 h-12 text-orange-400/40 mx-auto mb-8" />
             <blockquote className="text-2xl md:text-3xl font-medium text-white leading-relaxed font-[family-name:var(--font-syne)] mb-8">
               &ldquo;Nova Fire doesn&apos;t just check boxes. They understand that our
               guests&apos; safety and our lodge&apos;s ability to operate depend on
               compliance. They make it seamless.&rdquo;
             </blockquote>
             <div>
-              <p className="text-zinc-400 font-semibold">Operations Director</p>
+              <p className="text-zinc-300 font-semibold">Operations Director</p>
               <p className="text-zinc-500 text-sm">Luxury Safari Lodge, Limpopo</p>
             </div>
           </motion.div>
@@ -507,7 +464,7 @@ export default function HomePage() {
       </section>
 
       {/* Industries */}
-      <section id="industries" className="py-32 nf-bg-base">
+      <section id="industries" className="py-32 nf-bg-base nf-section-alive">
         <div className="container mx-auto px-6">
           <motion.div
             initial="hidden"
@@ -540,16 +497,15 @@ export default function HomePage() {
                 }}
                 whileHover={{
                   y: -6,
-                  borderColor: "rgba(220, 38, 38, 0.3)",
                   transition: { duration: 0.2 },
                 }}
-                className="group p-10 rounded-2xl border border-white/[0.07] nf-bg-raised nf-card-hover text-center"
+                className="group p-10 rounded-2xl border border-orange-500/10 nf-glass-panel nf-card-hover text-center"
               >
                 <motion.div
                   whileHover={{ scale: 1.15 }}
                   transition={{ type: "spring", stiffness: 400 }}
                 >
-                  <ind.icon className="w-14 h-14 text-red-500/80 mx-auto mb-5 group-hover:text-red-500 transition-colors" strokeWidth={1.5} />
+                  <ind.icon className="w-14 h-14 text-orange-400/85 mx-auto mb-5 group-hover:text-orange-300 transition-colors" strokeWidth={1.5} />
                 </motion.div>
                 <h3 className="text-lg font-semibold text-white font-[family-name:var(--font-syne)]">
                   {ind.title}
@@ -560,8 +516,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Process - Connected Timeline */}
-      <section id="process" className="py-32 nf-bg-raised border-y border-white/[0.06]">
+      {/* Process */}
+      <section id="process" className="py-32 nf-bg-raised border-y border-white/[0.06] nf-section-alive">
         <div className="container mx-auto px-6">
           <motion.div
             initial="hidden"
@@ -581,10 +537,9 @@ export default function HomePage() {
             </motion.h2>
           </motion.div>
           <div className="relative max-w-5xl mx-auto">
-            {/* Connecting line */}
-            <div className="hidden lg:block absolute top-12 left-[12.5%] right-[12.5%] h-px bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
+            <div className="hidden lg:block absolute top-12 left-[12.5%] right-[12.5%] h-px bg-gradient-to-r from-transparent via-orange-500/35 to-transparent" />
             <motion.div
-              className="hidden lg:block absolute top-12 left-[12.5%] h-px bg-red-500/60"
+              className="hidden lg:block absolute top-12 left-[12.5%] h-px bg-gradient-to-r from-orange-400 to-red-500"
               initial={{ width: "0%" }}
               whileInView={{ width: "75%" }}
               viewport={{ once: true }}
@@ -606,11 +561,10 @@ export default function HomePage() {
                   className="relative text-center"
                 >
                   <motion.div
-                    className="relative z-10 inline-flex items-center justify-center w-24 h-24 rounded-2xl border border-red-500/25 nf-bg-base text-transparent bg-clip-text bg-gradient-to-br from-orange-300 to-red-600 font-mono text-2xl font-bold mb-6 mx-auto shadow-[0_0_40px_rgba(220,38,38,0.12),inset_0_1px_0_rgba(255,255,255,0.06)]"
+                    className="relative z-10 inline-flex items-center justify-center w-24 h-24 rounded-2xl border border-orange-500/30 nf-bg-base text-transparent bg-clip-text bg-gradient-to-br from-amber-200 to-red-600 font-mono text-2xl font-bold mb-6 mx-auto shadow-[0_0_40px_rgba(249,115,22,0.15),inset_0_1px_0_rgba(255,237,213,0.08)]"
                     whileHover={{
                       scale: 1.05,
-                      borderColor: "rgba(220, 38, 38, 0.6)",
-                      boxShadow: "0 0 30px rgba(220, 38, 38, 0.2)",
+                      borderColor: "rgba(249, 115, 22, 0.6)",
                     }}
                   >
                     {String(idx + 1).padStart(2, "0")}
@@ -626,11 +580,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Fire Compliance Self-Assessment */}
       <ComplianceAssessment />
 
-      {/* CTA - Premium Glow */}
-      <section className="py-32 nf-bg-base relative">
+      {/* CTA */}
+      <section className="py-32 nf-bg-base relative nf-section-alive">
         <div className="container mx-auto px-6">
           <SectionDivider />
         </div>
@@ -640,13 +593,13 @@ export default function HomePage() {
           viewport={{ once: true }}
           className="relative mx-6 md:mx-auto max-w-5xl mt-16"
         >
-          <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-orange-500/35 via-red-600/55 to-red-700/35 blur-md opacity-80" />
-          <div className="relative overflow-hidden rounded-2xl border border-red-500/30 nf-bg-base shadow-[0_0_80px_rgba(220,38,38,0.12)]">
+          <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-orange-400/40 via-red-500/50 to-amber-500/35 blur-md opacity-90" />
+          <div className="relative overflow-hidden rounded-2xl border border-orange-500/25 nf-bg-base shadow-[0_0_80px_rgba(249,115,22,0.14)]">
             <div
-              className="absolute inset-0 opacity-50"
+              className="absolute inset-0 opacity-60"
               style={{
                 background:
-                  "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(220, 38, 38, 0.25) 0%, transparent 60%)",
+                  "radial-gradient(ellipse 80% 60% at 50% 50%, rgba(249, 115, 22, 0.22) 0%, transparent 60%)",
               }}
             />
             <div className="relative grid md:grid-cols-2 gap-0">
@@ -659,7 +612,7 @@ export default function HomePage() {
                   and let us handle the rest.
                 </p>
               </div>
-              <div className="p-12 md:p-16 flex flex-col justify-center items-center md:items-end border-t md:border-t-0 md:border-l border-white/5">
+              <div className="p-12 md:p-16 flex flex-col justify-center items-center md:items-end border-t md:border-t-0 md:border-l border-orange-500/10">
                 <motion.a
                   href="#compliance-assessment"
                   whileHover={{ scale: 1.03 }}

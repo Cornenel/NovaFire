@@ -25,9 +25,13 @@ export function Navbar() {
   const headerBg = useTransform(
     scrollY,
     [0, 100],
-    ["rgba(4,4,6,0.55)", "rgba(6,6,10,0.92)"]
+    ["rgba(18,12,10,0.45)", "rgba(18,12,10,0.9)"]
   );
-  const headerShadow = useTransform(scrollY, [0, 80], ["0 0 0 rgba(0,0,0,0)", "0 20px 50px rgba(0,0,0,0.35)"]);
+  const headerShadow = useTransform(
+    scrollY,
+    [0, 80],
+    ["0 0 0 rgba(0,0,0,0)", "0 18px 40px rgba(20,8,4,0.4)"]
+  );
 
   useEffect(() => {
     if (!loginOpen) return;
@@ -56,7 +60,7 @@ export function Navbar() {
       className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06] backdrop-blur-2xl"
     >
       <div
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/35 to-transparent opacity-80"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/45 to-transparent opacity-90"
         aria-hidden
       />
       <div className="container mx-auto flex items-center justify-between gap-4 px-6 py-4">

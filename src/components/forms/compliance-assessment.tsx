@@ -9,7 +9,7 @@ export function ComplianceAssessment() {
   return (
     <section
       id="compliance-assessment"
-      className="py-32 nf-bg-raised border-y border-white/[0.06] scroll-mt-24 relative overflow-hidden"
+      className="py-32 nf-bg-raised border-y border-white/[0.06] scroll-mt-24 relative overflow-hidden nf-section-alive"
     >
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_50%_at_50%_0%,rgba(220,38,38,0.06),transparent)]"

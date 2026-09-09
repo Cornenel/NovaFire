@@ -48,7 +48,7 @@ export function SiteFooter({ variant = "full" }: { variant?: "full" | "compact" 
     return (
       <footer className="relative nf-bg-base border-t border-white/[0.06] py-10 mt-auto">
         <div
-          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/25 to-transparent"
+          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/40 to-transparent"
           aria-hidden
         />
         <div className="container mx-auto px-6 flex flex-col items-center gap-6 text-center">
@@ -70,7 +70,7 @@ export function SiteFooter({ variant = "full" }: { variant?: "full" | "compact" 
   return (
     <footer id="contact" className="relative nf-bg-base border-t border-white/[0.06] pt-20 pb-12">
       <div
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/30 to-transparent"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/45 to-transparent"
         aria-hidden
       />
       <div className="container mx-auto px-6">

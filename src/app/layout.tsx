@@ -68,7 +68,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark scroll-smooth">
       <body
-        className={`${outfit.variable} ${syne.variable} ${jetbrainsMono.variable} font-sans text-white selection:bg-red-950/80 selection:text-red-50`}
+        className={`${outfit.variable} ${syne.variable} ${jetbrainsMono.variable} font-sans text-white selection:bg-orange-950/80 selection:text-orange-50`}
       >
         <OrganizationStructuredData />
         {children}
