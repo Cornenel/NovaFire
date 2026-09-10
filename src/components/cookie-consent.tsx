@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   COOKIE_CONSENT_STORAGE_KEY,
   type CookieConsentLevel,
@@ -13,12 +12,15 @@ function persistConsent(level: CookieConsentLevel) {
   try {
     localStorage.setItem(COOKIE_CONSENT_STORAGE_KEY, level);
   } catch {
-    /* ignore quota / private mode */
+    /* ignore */
   }
   document.documentElement.dataset.cookieConsent = level;
   window.dispatchEvent(new CustomEvent("nf-cookie-consent", { detail: { level } }));
 }
 
+/**
+ * Compact strip under the nav — never covers the hero primary CTA.
+ */
 export function CookieConsent() {
   const [hydrated, setHydrated] = useState(false);
   const [open, setOpen] = useState(false);
@@ -29,66 +31,66 @@ export function CookieConsent() {
       if (isCookieConsentLevel(raw)) {
         document.documentElement.dataset.cookieConsent = raw;
       } else {
-        setOpen(true);
+        // Defer so the hero CTA is never covered on first paint.
+        const t = window.setTimeout(() => setOpen(true), 1200);
+        return () => window.clearTimeout(t);
       }
     } catch {
       setOpen(true);
+    } finally {
+      setHydrated(true);
     }
-    setHydrated(true);
   }, []);
-
-  const choose = (level: CookieConsentLevel) => {
-    persistConsent(level);
-    setOpen(false);
-  };
 
   if (!hydrated || !open) return null;
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          role="dialog"
-          aria-labelledby="cookie-consent-title"
-          aria-describedby="cookie-consent-desc"
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 16 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed bottom-4 left-4 right-4 z-[100] pointer-events-none sm:left-auto sm:right-4 sm:bottom-4 sm:max-w-xs"
-        >
-          <div className="pointer-events-auto w-full rounded-lg border border-[rgba(201,184,164,0.14)] bg-[#161210]/95 backdrop-blur-xl px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
+    <div
+      role="dialog"
+      aria-labelledby="cookie-consent-title"
+      aria-describedby="cookie-consent-desc"
+      className="fixed top-[4.25rem] right-3 left-3 z-[90] sm:left-auto sm:right-4 sm:max-w-[17rem]"
+    >
+      <div className="rounded-md border border-[rgba(201,184,164,0.16)] bg-[#0b0908]/95 px-3 py-2.5 shadow-[0_12px_32px_rgba(0,0,0,0.45)] backdrop-blur-md">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <h2
               id="cookie-consent-title"
-              className="text-sm font-semibold text-[#f5f0e8] font-[family-name:var(--font-syne)]"
+              className="text-[12px] font-semibold text-[#f5f0e8] font-[family-name:var(--font-syne)]"
             >
               Cookies
             </h2>
-            <p id="cookie-consent-desc" className="mt-1 text-xs text-[var(--nf-dust)] leading-relaxed">
-              Necessary cookies only by default.{" "}
-              <Link href="/legal/cookies" className="text-[var(--nf-gold)] hover:underline underline-offset-2">
+            <p id="cookie-consent-desc" className="mt-0.5 text-[11px] leading-snug text-[var(--nf-dust)]">
+              Essential by default.{" "}
+              <Link href="/legal/cookies" className="text-[var(--nf-gold)] underline-offset-2 hover:underline">
                 Policy
               </Link>
             </p>
-            <div className="mt-3 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => choose("essential")}
-                className="text-xs font-medium text-[var(--nf-dust)] hover:text-[#f5f0e8] px-2.5 py-1.5"
-              >
-                Essential
-              </button>
-              <button
-                type="button"
-                onClick={() => choose("all")}
-                className="text-xs font-semibold nf-btn-primary px-3 py-1.5 rounded-md"
-              >
-                Accept
-              </button>
-            </div>
           </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              onClick={() => {
+                persistConsent("essential");
+                setOpen(false);
+              }}
+              className="px-2 py-1 text-[11px] text-[var(--nf-dust)] hover:text-[#f5f0e8]"
+            >
+              OK
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                persistConsent("all");
+                setOpen(false);
+              }}
+              className="rounded nf-btn-primary px-2.5 py-1 text-[11px] font-semibold"
+            >
+              Accept
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

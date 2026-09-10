@@ -11,7 +11,7 @@ const DEFAULT_QUICK = [
   { label: "Services", href: "/services" },
   { label: "Training", href: "/training" },
   { label: "Pick your ground", href: "/#ground" },
-  { label: "Living site map", href: "/#living-map" },
+  { label: "Living site map", href: "/#watch" },
   { label: "Chapters", href: "/#chapters" },
   { label: "Client Portal", href: "/client-portal/login" },
   { label: "Staff Login", href: "/tech-login" },

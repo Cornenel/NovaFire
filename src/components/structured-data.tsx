@@ -8,11 +8,11 @@ export function OrganizationStructuredData() {
     "@context": "https://schema.org",
     "@type": ["Organization", "LocalBusiness"],
     name: "Nova Fire",
-    url: "https://novafire.co.za",
-    logo: "https://novafire.co.za/brand/logo.png",
-    image: "https://novafire.co.za/brand/logo.png",
+    url: "https://www.novafire.co.za",
+    logo: "https://www.novafire.co.za/brand/logo.png",
+    image: "https://www.novafire.co.za/og.png",
     description:
-      "Fire protection, fire equipment servicing, installations, compliance management, fire risk assessments, and staff fire training across South Africa.",
+      "One failed audit closes the lodge. Nova Fire supplies, services, and certifies so doors stay open — a night-watch for South African facilities.",
     address: {
       "@type": "PostalAddress",
       addressCountry: "ZA",

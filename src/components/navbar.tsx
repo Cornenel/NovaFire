@@ -8,7 +8,7 @@ import { Menu, X } from "lucide-react";
 
 const NAV_LINKS = [
   { label: "Ground", href: "/#ground" },
-  { label: "Watch", href: "/#living-map" },
+  { label: "Watch", href: "/#watch" },
   { label: "Chapters", href: "/#chapters" },
   { label: "Proof", href: "/#proof" },
 ];
@@ -58,7 +58,7 @@ export function Navbar() {
 
         <div className="flex items-center gap-2">
           <Link
-            href="/#living-map"
+            href="/#watch"
             className="hidden sm:inline-flex nf-btn-primary px-4 py-2 text-[13px] rounded-md transition-[filter,box-shadow]"
           >
             Check your ground
@@ -95,7 +95,7 @@ export function Navbar() {
                 </Link>
               ))}
               <Link
-                href="/#living-map"
+                href="/#watch"
                 onClick={() => setMobileOpen(false)}
                 className="block mt-2 py-3 text-center rounded-md nf-btn-primary text-sm"
               >

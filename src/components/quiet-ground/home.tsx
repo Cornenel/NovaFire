@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { Navbar } from "@/components/navbar";
 import { SiteFooter } from "@/components/site-footer";
+import { StablePhoto } from "@/components/quiet-ground/stable-photo";
 
 type PointStatus = "ok" | "due" | "fail";
 
@@ -32,6 +32,7 @@ const SECTORS: Record<
     attribution: string;
     fear: string;
     relief: string;
+    systems: Array<{ label: string; status: string; tone: PointStatus }>;
     points: ConstellationPoint[];
   }
 > = {
@@ -46,6 +47,12 @@ const SECTORS: Record<
     attribution: "Operations Director · Luxury safari lodge, Limpopo",
     fear: "One failed audit closes the lodge.",
     relief: "We supply, service, and certify so the doors stay open.",
+    systems: [
+      { label: "Fire systems", status: "ACTIVE", tone: "ok" },
+      { label: "Detection", status: "ACTIVE", tone: "ok" },
+      { label: "Certification", status: "ACTIVE", tone: "ok" },
+      { label: "Hose reel block B", status: "DUE 30D", tone: "due" },
+    ],
     points: [
       { id: "e1", label: "Extinguisher", x: 28, y: 58, status: "ok" },
       { id: "h1", label: "Hose reel", x: 44, y: 52, status: "ok" },
@@ -66,6 +73,12 @@ const SECTORS: Record<
     attribution: "Estate manager · Coastal estate, Western Cape",
     fear: "One missing certificate stalls an entire complex.",
     relief: "We keep SANS paperwork living — not buried in a drawer.",
+    systems: [
+      { label: "Fire systems", status: "ACTIVE", tone: "ok" },
+      { label: "Detection", status: "ACTIVE", tone: "ok" },
+      { label: "Gatehouse kit", status: "DUE 30D", tone: "due" },
+      { label: "Certification", status: "ACTIVE", tone: "ok" },
+    ],
     points: [
       { id: "g1", label: "Gatehouse", x: 32, y: 55, status: "ok" },
       { id: "e1", label: "Extinguisher", x: 48, y: 48, status: "ok" },
@@ -85,6 +98,12 @@ const SECTORS: Record<
     attribution: "Facilities lead · Commercial block, Johannesburg",
     fear: "An insurer letter should not become an evacuation.",
     relief: "Certificates, services, and site truth — one quiet system.",
+    systems: [
+      { label: "Fire systems", status: "ACTIVE", tone: "ok" },
+      { label: "Detection", status: "ATTENTION", tone: "fail" },
+      { label: "Certification", status: "DUE 30D", tone: "due" },
+      { label: "Hose reels", status: "ACTIVE", tone: "ok" },
+    ],
     points: [
       { id: "e1", label: "Extinguisher", x: 26, y: 60, status: "ok" },
       { id: "d1", label: "Detector", x: 42, y: 45, status: "fail" },
@@ -104,6 +123,12 @@ const SECTORS: Record<
     attribution: "Plant manager · Cold-storage facility, Gauteng",
     fear: "A failed check stops production — and the season.",
     relief: "We keep systems watched and certificates current.",
+    systems: [
+      { label: "Fire systems", status: "ACTIVE", tone: "ok" },
+      { label: "Detection", status: "ACTIVE", tone: "ok" },
+      { label: "Plant hose grid", status: "DUE 30D", tone: "due" },
+      { label: "Certification", status: "ACTIVE", tone: "ok" },
+    ],
     points: [
       { id: "e1", label: "Extinguisher", x: 30, y: 58, status: "ok" },
       { id: "d1", label: "Detector", x: 46, y: 42, status: "ok" },
@@ -116,21 +141,21 @@ const SECTORS: Record<
 
 const CHAPTERS = [
   {
-    id: "ground",
+    id: "ground-chapter",
     title: "Ground",
     line: "Supply and install on the site that has to stay open.",
     href: "/services/fire-hydrant-supply-installation",
     image: "/quiet-ground/chapter-ground.png",
   },
   {
-    id: "watch",
+    id: "watch-chapter",
     title: "Watch",
     line: "Service, detection, and monitoring — even at 2am.",
     href: "/services/fire-extinguisher-servicing",
     image: "/quiet-ground/chapter-watch.png",
   },
   {
-    id: "paper",
+    id: "paper-chapter",
     title: "Paper that holds",
     line: "Risk, SANS certification, and drills you can defend.",
     href: "/training",
@@ -151,10 +176,10 @@ function statusColor(status: PointStatus) {
   return "bg-[var(--nf-urgency)] shadow-[0_0_12px_rgba(220,38,38,0.45)]";
 }
 
-function statusLabel(status: PointStatus) {
-  if (status === "ok") return "In date";
-  if (status === "due") return "Due 30d";
-  return "Attention";
+function toneClass(tone: PointStatus) {
+  if (tone === "ok") return "text-[var(--nf-gold)] bg-[rgba(232,163,23,0.1)]";
+  if (tone === "due") return "text-amber-400 bg-amber-500/10";
+  return "text-red-400 bg-red-500/10";
 }
 
 function Constellation({
@@ -217,7 +242,7 @@ export default function QuietGroundHome() {
   const heroPoints = useMemo(() => SECTORS.lodge.points, []);
 
   useEffect(() => {
-    const t = window.setTimeout(() => setOnline(true), 200);
+    const t = window.setTimeout(() => setOnline(true), 180);
     return () => window.clearTimeout(t);
   }, []);
 
@@ -225,32 +250,27 @@ export default function QuietGroundHome() {
     <div className="min-h-screen nf-obsidian text-[#f5f0e8]">
       <Navbar />
 
-      {/* 1. Night hero */}
-      <section className="relative min-h-[100svh] overflow-hidden">
-        <Image
+      {/* 1. Night hero — property must always be visible */}
+      <section className="relative min-h-[100svh] overflow-hidden bg-[#1a1410]">
+        <StablePhoto
           src="/quiet-ground/hero-lodge.png"
-          alt="South African lodge at blue hour"
-          fill
+          alt="South African lodge at blue hour — thatch, lanterns, mopane silhouettes"
           priority
-          className="object-cover object-[center_40%]"
-          sizes="100vw"
+          objectPosition="center 40%"
         />
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 z-[1]"
           style={{
             background:
-              "linear-gradient(90deg, rgba(11,9,8,0.88) 0%, rgba(11,9,8,0.55) 42%, rgba(11,9,8,0.25) 70%, rgba(11,9,8,0.45) 100%), linear-gradient(to top, rgba(11,9,8,0.9) 0%, transparent 45%)",
+              "linear-gradient(90deg, rgba(11,9,8,0.72) 0%, rgba(11,9,8,0.35) 48%, rgba(11,9,8,0.15) 72%, rgba(11,9,8,0.4) 100%), linear-gradient(to top, rgba(11,9,8,0.82) 0%, transparent 42%)",
           }}
         />
-        <Constellation points={heroPoints} active={online} />
+        <div className="absolute inset-0 z-[2]">
+          <Constellation points={heroPoints} active={online} />
+        </div>
 
-        <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-5 pb-16 pt-28 sm:px-6 sm:pb-20 lg:justify-center lg:pb-0">
-          <motion.div
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
-            className="max-w-xl text-left"
-          >
+        <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-6xl flex-col justify-end px-5 pb-20 pt-28 sm:px-6 sm:pb-24 lg:justify-center lg:pb-0">
+          <div className="max-w-xl text-left">
             <p className="nf-eyebrow mb-5">Quiet ground</p>
             <h1 className="font-[family-name:var(--font-syne)] text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.08] tracking-tight text-[#f5f0e8]">
               One failed audit closes the lodge.
@@ -260,7 +280,7 @@ export default function QuietGroundHome() {
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:items-center">
               <Link
-                href="#living-map"
+                href="#watch"
                 className="inline-flex items-center justify-center gap-2 rounded-md nf-btn-primary px-6 py-3.5 text-sm"
               >
                 Check your ground
@@ -272,7 +292,7 @@ export default function QuietGroundHome() {
                 066 270 0293
               </a>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -305,16 +325,12 @@ export default function QuietGroundHome() {
                       : "border-[rgba(201,184,164,0.12)] hover:border-[rgba(232,163,23,0.35)]"
                   }`}
                 >
-                  <Image
-                    src={s.image}
-                    alt={s.title}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                    sizes="(max-width: 768px) 100vw, 50vw"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0b0908] via-[#0b0908]/35 to-transparent" />
-                  <Constellation points={s.points} active={selected || isHover} lit={isHover} />
-                  <div className="absolute inset-x-0 bottom-0 p-5">
+                  <StablePhoto src={s.image} alt={s.title} />
+                  <div className="absolute inset-0 z-[1] bg-gradient-to-t from-[#0b0908] via-[#0b0908]/35 to-transparent" />
+                  <div className="absolute inset-0 z-[2]">
+                    <Constellation points={s.points} active={selected || isHover} lit={isHover} />
+                  </div>
+                  <div className="absolute inset-x-0 bottom-0 z-[3] p-5">
                     <p className="font-[family-name:var(--font-syne)] text-lg sm:text-xl font-semibold">
                       {s.title}
                     </p>
@@ -325,132 +341,96 @@ export default function QuietGroundHome() {
             })}
           </div>
 
-          <AnimatePresence mode="wait">
-            <motion.blockquote
-              key={sector}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              className="mt-10 max-w-3xl border-l border-[var(--nf-gold)]/40 pl-5"
-            >
-              <p className="text-lg sm:text-xl leading-relaxed text-[#f5f0e8]/95 font-[family-name:var(--font-syne)]">
-                “{current.quote}”
-              </p>
-              <footer className="mt-3 text-sm text-[var(--nf-dust)]">{current.attribution}</footer>
-            </motion.blockquote>
-          </AnimatePresence>
+          <blockquote className="mt-10 max-w-3xl border-l border-[var(--nf-gold)]/40 pl-5">
+            <p className="text-lg sm:text-xl leading-relaxed text-[#f5f0e8]/95 font-[family-name:var(--font-syne)]">
+              “{current.quote}”
+            </p>
+            <footer className="mt-3 text-sm text-[var(--nf-dust)]">{current.attribution}</footer>
+          </blockquote>
         </div>
       </section>
 
-      {/* 3. Living site map */}
-      <section id="living-map" className="border-t border-[rgba(201,184,164,0.1)] bg-[#0f0c0a] py-20 sm:py-28 scroll-mt-20">
+      {/* 3. Watch — living site map product surface */}
+      <section
+        id="watch"
+        className="border-t border-[rgba(201,184,164,0.1)] bg-[#0f0c0a] py-20 sm:py-28 scroll-mt-24"
+      >
         <div className="mx-auto max-w-6xl px-5 sm:px-6">
           <div className="mb-10 max-w-2xl">
-            <p className="nf-eyebrow mb-3">Living site map</p>
+            <p className="nf-eyebrow mb-3">Watch</p>
             <h2 className="font-[family-name:var(--font-syne)] text-3xl sm:text-4xl font-bold tracking-tight">
-              Not a brochure. A night-watch for your property.
+              Living site map
             </h2>
             <p className="mt-4 text-[var(--nf-dust)] leading-relaxed">
-              {current.fear} {current.relief}
+              Gold = in date. Amber = due in 30 days. Red = failed or missing. This is the
+              product surface a GM would trust — not a quiz in a tuxedo.
+            </p>
+            <p className="mt-3 text-[var(--nf-dust)] leading-relaxed">
+              <span className="text-[#f5f0e8]">{current.fear}</span> {current.relief}
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-[1.4fr_0.9fr] gap-5 lg:gap-6 items-stretch">
-            {/* Desktop map */}
-            <div className="relative hidden sm:block min-h-[360px] overflow-hidden rounded-lg border border-[rgba(201,184,164,0.12)]">
+          <div className="grid lg:grid-cols-[1.35fr_0.95fr] gap-4 lg:gap-5 items-stretch">
+            <div className="relative min-h-[320px] sm:min-h-[420px] overflow-hidden rounded-lg border border-[rgba(201,184,164,0.12)] bg-[#161210]">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={sector}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.45 }}
+                  transition={{ duration: 0.35 }}
                   className="absolute inset-0"
                 >
-                  <Image
-                    src={current.image}
-                    alt={current.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 60vw"
-                  />
-                  <div className="absolute inset-0 bg-[#0b0908]/35" />
-                  <Constellation points={current.points} active />
+                  <StablePhoto src={current.image} alt={current.title} objectPosition="center" />
+                  <div className="absolute inset-0 z-[1] bg-[#0b0908]/30" />
+                  <div className="absolute inset-0 z-[2]">
+                    <Constellation points={current.points} active />
+                  </div>
                 </motion.div>
               </AnimatePresence>
-              <div className="absolute bottom-4 left-4 flex gap-3 text-[11px] font-mono uppercase tracking-wider text-[var(--nf-dust)]">
-                <span className="inline-flex items-center gap-1.5">
+              <div className="absolute bottom-3 left-3 z-[3] flex flex-wrap gap-3 text-[11px] font-mono uppercase tracking-wider text-[var(--nf-dust)]">
+                <span className="inline-flex items-center gap-1.5 rounded bg-[#0b0908]/70 px-2 py-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-[var(--nf-gold)]" /> In date
                 </span>
-                <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5 rounded bg-[#0b0908]/70 px-2 py-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Due 30d
                 </span>
-                <span className="inline-flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1.5 rounded bg-[#0b0908]/70 px-2 py-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-[var(--nf-urgency)]" /> Attention
                 </span>
               </div>
             </div>
 
-            {/* Mobile system list */}
-            <div className="sm:hidden space-y-2">
-              {current.points.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between rounded-md border border-[rgba(201,184,164,0.12)] bg-[#161210] px-4 py-3"
-                >
-                  <span className="text-sm text-[#f5f0e8]">{p.label}</span>
-                  <span
-                    className={`text-[11px] font-mono uppercase tracking-wider px-2 py-1 rounded ${
-                      p.status === "ok"
-                        ? "text-[var(--nf-gold)] bg-[rgba(232,163,23,0.1)]"
-                        : p.status === "due"
-                          ? "text-amber-400 bg-amber-500/10"
-                          : "text-red-400 bg-red-500/10"
-                    }`}
-                  >
-                    {statusLabel(p.status)}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <div className="rounded-lg border border-[rgba(201,184,164,0.14)] bg-[#161210] p-5 sm:p-6 flex flex-col">
+              <p className="text-sm text-[var(--nf-dust)]">{current.place}</p>
+              <p className="mt-3 font-[family-name:var(--font-syne)] text-4xl font-bold text-[var(--nf-gold)]">
+                {current.score}
+                <span className="ml-2 text-sm font-mono font-normal tracking-wider text-[var(--nf-dust)]">
+                  compliance score
+                </span>
+              </p>
 
-            <div className="rounded-lg border border-[rgba(201,184,164,0.14)] bg-[#161210] p-6 sm:p-7 flex flex-col">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={sector}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="flex-1"
-                >
-                  <p className="text-sm text-[var(--nf-dust)]">{current.place}</p>
-                  <p className="mt-4 font-[family-name:var(--font-syne)] text-4xl font-bold text-[var(--nf-gold)]">
-                    {current.score}
-                    <span className="ml-2 text-sm font-mono font-normal tracking-wider text-[var(--nf-dust)]">
-                      compliance score
+              <ul className="mt-5 space-y-2">
+                {current.systems.map((row) => (
+                  <li
+                    key={row.label}
+                    className="flex items-center justify-between gap-3 rounded-md border border-[rgba(201,184,164,0.1)] px-3 py-2.5"
+                  >
+                    <span className="text-sm text-[#f5f0e8]">{row.label}</span>
+                    <span className={`text-[10px] font-mono uppercase tracking-wider px-2 py-1 rounded ${toneClass(row.tone)}`}>
+                      {row.status}
                     </span>
-                  </p>
-                  <ul className="mt-6 space-y-3 text-sm">
-                    {[
-                      ["Fire systems", "ACTIVE"],
-                      ["Detection", "ACTIVE"],
-                      ["Certification", "ACTIVE"],
-                    ].map(([label, value]) => (
-                      <li key={label} className="flex items-center justify-between border-b border-[rgba(201,184,164,0.08)] pb-3">
-                        <span className="text-[var(--nf-dust)]">{label}</span>
-                        <span className="font-mono text-[11px] tracking-wider text-emerald-400/90">{value}</span>
-                      </li>
-                    ))}
-                    <li className="flex items-center justify-between pt-1">
-                      <span className="text-[var(--nf-dust)]">Next service</span>
-                      <span className="font-mono text-sm text-[#f5f0e8]">{current.nextService}</span>
-                    </li>
-                  </ul>
-                </motion.div>
-              </AnimatePresence>
+                  </li>
+                ))}
+                <li className="flex items-center justify-between px-1 pt-2">
+                  <span className="text-sm text-[var(--nf-dust)]">Next service</span>
+                  <span className="font-mono text-sm text-[#f5f0e8]">{current.nextService}</span>
+                </li>
+              </ul>
+
               <Link
-                href="/#compliance-assessment"
-                className="mt-8 inline-flex items-center justify-center gap-2 rounded-md nf-btn-primary px-5 py-3.5 text-sm"
+                href="#compliance-assessment"
+                className="mt-6 inline-flex items-center justify-center gap-2 rounded-md nf-btn-primary px-5 py-3.5 text-sm"
               >
                 Get this for your site
                 <ArrowRight className="w-4 h-4" />
@@ -463,27 +443,21 @@ export default function QuietGroundHome() {
         </div>
       </section>
 
-      {/* 4. Three chapters */}
-      <section id="chapters" className="border-t border-[rgba(201,184,164,0.1)]">
+      {/* 4. Chapters */}
+      <section id="chapters" className="border-t border-[rgba(201,184,164,0.1)] scroll-mt-24">
         {CHAPTERS.map((chapter, idx) => (
           <article
             key={chapter.id}
-            className="relative min-h-[70vh] sm:min-h-[80vh] overflow-hidden border-b border-[rgba(201,184,164,0.08)]"
+            className="relative min-h-[70vh] sm:min-h-[80vh] overflow-hidden border-b border-[rgba(201,184,164,0.08)] bg-[#1a1410]"
           >
-            <Image
-              src={chapter.image}
-              alt={chapter.title}
-              fill
-              className="object-cover"
-              sizes="100vw"
-            />
+            <StablePhoto src={chapter.image} alt={chapter.title} />
             <div
-              className="absolute inset-0"
+              className="absolute inset-0 z-[1]"
               style={{
                 background:
                   idx % 2 === 0
-                    ? "linear-gradient(90deg, rgba(11,9,8,0.88) 0%, rgba(11,9,8,0.45) 55%, rgba(11,9,8,0.2) 100%)"
-                    : "linear-gradient(270deg, rgba(11,9,8,0.88) 0%, rgba(11,9,8,0.45) 55%, rgba(11,9,8,0.2) 100%)",
+                    ? "linear-gradient(90deg, rgba(11,9,8,0.82) 0%, rgba(11,9,8,0.4) 55%, rgba(11,9,8,0.18) 100%)"
+                    : "linear-gradient(270deg, rgba(11,9,8,0.82) 0%, rgba(11,9,8,0.4) 55%, rgba(11,9,8,0.18) 100%)",
               }}
             />
             <div
@@ -491,12 +465,7 @@ export default function QuietGroundHome() {
                 idx % 2 === 0 ? "justify-start" : "sm:justify-end"
               }`}
             >
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-80px" }}
-                className="max-w-md"
-              >
+              <div className="max-w-md">
                 <p className="nf-eyebrow mb-3">{String(idx + 1).padStart(2, "0")}</p>
                 <h2 className="font-[family-name:var(--font-syne)] text-3xl sm:text-5xl font-bold">
                   {chapter.title}
@@ -510,42 +479,42 @@ export default function QuietGroundHome() {
                 >
                   Learn more <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
-              </motion.div>
+              </div>
             </div>
           </article>
         ))}
       </section>
 
       {/* 5. Proof */}
-      <section id="proof" className="border-t border-[rgba(201,184,164,0.1)] py-20 sm:py-28">
+      <section id="proof" className="border-t border-[rgba(201,184,164,0.1)] py-20 sm:py-28 scroll-mt-24">
         <div className="mx-auto max-w-6xl px-5 sm:px-6">
-          <p className="nf-eyebrow mb-3">Proof of place</p>
+          <p className="nf-eyebrow mb-3">Proof</p>
           <h2 className="font-[family-name:var(--font-syne)] text-3xl sm:text-4xl font-bold max-w-xl">
             Doors staying open — not “great service.”
           </h2>
           <div className="mt-12 grid md:grid-cols-3 gap-4">
             {(["lodge", "estate", "industrial"] as const).map((id) => {
-                const s = SECTORS[id];
-                return (
-                  <figure
-                    key={id}
-                    className="overflow-hidden rounded-lg border border-[rgba(201,184,164,0.12)] bg-[#161210]"
-                  >
-                    <div className="relative aspect-[16/10]">
-                      <Image src={s.image} alt={s.place} fill className="object-cover" sizes="33vw" />
-                    </div>
-                    <figcaption className="p-5">
-                      <p className="text-sm leading-relaxed text-[#f5f0e8]/95">“{s.quote}”</p>
-                      <p className="mt-3 text-xs text-[var(--nf-dust)]">{s.attribution}</p>
-                    </figcaption>
-                  </figure>
-                );
-              })}
+              const s = SECTORS[id];
+              return (
+                <figure
+                  key={id}
+                  className="overflow-hidden rounded-lg border border-[rgba(201,184,164,0.12)] bg-[#161210]"
+                >
+                  <div className="relative aspect-[16/10]">
+                    <StablePhoto src={s.image} alt={s.place} />
+                  </div>
+                  <figcaption className="p-5">
+                    <p className="text-sm leading-relaxed text-[#f5f0e8]/95">“{s.quote}”</p>
+                    <p className="mt-3 text-xs text-[var(--nf-dust)]">{s.attribution}</p>
+                  </figcaption>
+                </figure>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* 6. Process night sequence */}
+      {/* 6. Process */}
       <section id="process" className="border-t border-[rgba(201,184,164,0.1)] bg-[#0f0c0a] py-20 sm:py-28">
         <div className="mx-auto max-w-6xl px-5 sm:px-6">
           <p className="nf-eyebrow mb-3">Night sequence</p>
@@ -556,28 +525,31 @@ export default function QuietGroundHome() {
             {PROCESS.map((p, idx) => (
               <div
                 key={p.step}
-                className="relative overflow-hidden rounded-lg border border-[rgba(201,184,164,0.12)] aspect-[4/5]"
+                className="relative overflow-hidden rounded-lg border border-[rgba(201,184,164,0.12)] aspect-[4/5] bg-[#1a1410]"
               >
-                <Image
+                <StablePhoto
                   src="/quiet-ground/hero-lodge.png"
                   alt=""
-                  fill
-                  className="object-cover"
+                  imageClassName={`brightness-[${0.55 + idx * 0.1}]`}
+                  objectPosition="center"
+                />
+                <div
+                  className="absolute inset-0 z-[1]"
                   style={{
-                    filter: `brightness(${0.55 + idx * 0.12}) saturate(${0.7 + idx * 0.1})`,
+                    background: `linear-gradient(to top, #0b0908 0%, transparent 55%), rgba(11,9,8,${0.15 + idx * 0.05})`,
                   }}
-                  sizes="25vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0b0908] via-transparent to-transparent" />
-                <Constellation
-                  points={heroPoints.map((pt, i) => ({
-                    ...pt,
-                    x: Math.min(85, pt.x + (idx - 1) * 2),
-                    status: i === idx ? "due" : "ok",
-                  }))}
-                  active
-                />
-                <div className="absolute inset-x-0 bottom-0 p-4">
+                <div className="absolute inset-0 z-[2]">
+                  <Constellation
+                    points={heroPoints.map((pt, i) => ({
+                      ...pt,
+                      x: Math.min(85, pt.x + (idx - 1) * 2),
+                      status: i === idx ? "due" : "ok",
+                    }))}
+                    active
+                  />
+                </div>
+                <div className="absolute inset-x-0 bottom-0 z-[3] p-4">
                   <p className="text-[11px] font-mono uppercase tracking-[0.22em] text-[var(--nf-dust)]">
                     {p.light}
                   </p>
@@ -591,10 +563,9 @@ export default function QuietGroundHome() {
         </div>
       </section>
 
-      {/* Compliance CTA surface (keeps existing quiz anchor) */}
       <section
         id="compliance-assessment"
-        className="border-t border-[rgba(201,184,164,0.1)] py-20 sm:py-24 scroll-mt-20"
+        className="border-t border-[rgba(201,184,164,0.1)] py-20 sm:py-24 scroll-mt-24"
       >
         <div className="mx-auto max-w-3xl px-5 sm:px-6 text-center">
           <p className="nf-eyebrow mb-3">For your site</p>
@@ -613,7 +584,7 @@ export default function QuietGroundHome() {
               Call 066 270 0293
             </a>
             <a
-              href="mailto:jacques@novafire.co.za?subject=Quiet%20ground%20—%20site%20check"
+              href="mailto:jacques@novafire.co.za?subject=Quiet%20ground%20site%20check"
               className="inline-flex items-center justify-center rounded-md nf-btn-ghost px-6 py-3.5 text-sm"
             >
               Email Jacques
@@ -622,32 +593,30 @@ export default function QuietGroundHome() {
         </div>
       </section>
 
-      {/* 7. Close */}
-      <section className="relative min-h-[70vh] overflow-hidden">
-        <Image
+      <section className="relative min-h-[70vh] overflow-hidden bg-[#1a1410]">
+        <StablePhoto
           src="/quiet-ground/hero-lodge.png"
           alt=""
-          fill
-          className="object-cover object-center brightness-[0.45]"
-          sizes="100vw"
+          imageClassName="brightness-[0.45]"
         />
-        <div className="absolute inset-0 bg-[#0b0908]/55" />
+        <div className="absolute inset-0 z-[1] bg-[#0b0908]/55" />
         <div className="relative z-10 mx-auto flex min-h-[70vh] max-w-3xl flex-col items-center justify-center px-5 text-center">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/brand/logo-mark.png"
             alt=""
-            width={56}
-            height={56}
+            width={48}
+            height={48}
             className="mb-8 h-12 w-12 rounded-full nf-seal border border-[rgba(232,163,23,0.4)] object-cover opacity-90"
           />
           <h2 className="font-[family-name:var(--font-syne)] text-3xl sm:text-5xl font-bold leading-tight">
-            Fire compliance isn’t optional.
+            Fire compliance isn&apos;t optional.
             <span className="block mt-3 text-[var(--nf-dust)] font-semibold text-2xl sm:text-3xl">
               Quiet ground should be.
             </span>
           </h2>
           <Link
-            href="#living-map"
+            href="#watch"
             className="mt-10 inline-flex items-center justify-center rounded-md nf-btn-primary px-8 py-4 text-sm"
           >
             Check your ground

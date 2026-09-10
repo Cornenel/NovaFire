@@ -1,10 +1,14 @@
 /* NovaFire Tech – service worker
  * - Static assets: cache-first
  * - /tech pages: network-first with cache fallback (offline job viewing)
- * - Never caches API, Supabase, or non-GET requests
+ * - Never caches API, Supabase, RSC payloads, or non-GET requests
+ *
+ * IMPORTANT: Next.js App Router uses separate requests for HTML documents
+ * (navigate) and RSC flight data (client transitions). Caching RSC responses
+ * and serving them as documents shows raw flight text on screen.
  */
 
-const VERSION = "nf-v1";
+const VERSION = "nf-v3";
 const PAGE_CACHE = `${VERSION}-pages`;
 const ASSET_CACHE = `${VERSION}-assets`;
 const OFFLINE_URL = "/offline";
@@ -37,6 +41,9 @@ self.addEventListener("activate", (event) => {
 });
 
 function isCacheableAsset(url) {
+  // Never cache-first marketing photography — a bad entry blanks the hero.
+  if (url.pathname.startsWith("/quiet-ground/")) return false;
+  if (url.pathname === "/og.png") return false;
   return (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
@@ -53,12 +60,37 @@ function isTechPage(url) {
   );
 }
 
+/** Full-page load only — not client-side RSC transitions or prefetches. */
+function isDocumentNavigation(request) {
+  return request.mode === "navigate";
+}
+
+/** Next.js flight / prefetch requests must never be cached or served as HTML. */
+function isRscOrDataRequest(request, url) {
+  if (url.searchParams.has("_rsc")) return true;
+  if (request.headers.get("RSC") === "1") return true;
+  if (request.headers.get("Next-Router-Prefetch") === "1") return true;
+  if (request.headers.get("Next-Action")) return true;
+  const accept = request.headers.get("Accept") ?? "";
+  if (accept.includes("text/x-component")) return true;
+  return false;
+}
+
+function isHtmlDocumentResponse(response) {
+  const type = response.headers.get("content-type") ?? "";
+  return type.includes("text/html");
+}
+
+function pageCacheKey(pathname) {
+  return `page:${pathname}`;
+}
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return; // never touch Supabase etc.
+  if (url.origin !== self.location.origin) return;
   if (url.pathname.startsWith("/api/")) return;
 
   // Static assets: cache-first
@@ -79,19 +111,25 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Tech pages (navigations + prefetches): network-first, cache fallback
+  // Tech pages: only handle full document navigations
   if (isTechPage(url)) {
+    if (!isDocumentNavigation(request) || isRscOrDataRequest(request, url)) {
+      return;
+    }
+
+    const cacheKey = pageCacheKey(url.pathname);
+
     event.respondWith(
       fetch(request)
         .then((response) => {
-          if (response.ok) {
+          if (response.ok && isHtmlDocumentResponse(response)) {
             const clone = response.clone();
-            caches.open(PAGE_CACHE).then((c) => c.put(url.pathname, clone));
+            caches.open(PAGE_CACHE).then((c) => c.put(cacheKey, clone));
           }
           return response;
         })
         .catch(async () => {
-          const cached = await caches.match(url.pathname);
+          const cached = await caches.match(cacheKey);
           if (cached) return cached;
           const offline = await caches.match(OFFLINE_URL);
           return (

@@ -22,7 +22,10 @@ export function OfflinePrefetch({ urls }: { urls: string[] }) {
       for (const url of key.split("|").filter(Boolean)) {
         if (cancelled) return;
         try {
-          await fetch(url, { credentials: "same-origin" });
+          await fetch(url, {
+            credentials: "same-origin",
+            headers: { Accept: "text/html,application/xhtml+xml" },
+          });
         } catch {
           return; // went offline mid-prefetch
         }
