@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Flame } from "lucide-react";
 
 const LEGAL_LINKS = [
   { label: "Privacy", href: "/legal/privacy" },
@@ -11,10 +10,9 @@ const LEGAL_LINKS = [
 const DEFAULT_QUICK = [
   { label: "Services", href: "/services" },
   { label: "Training", href: "/training" },
-  { label: "Why Nova Fire", href: "/#whynovafire" },
-  { label: "Industries", href: "/#industries" },
-  { label: "Process", href: "/#process" },
-  { label: "Compliance Check", href: "/#compliance-assessment" },
+  { label: "Pick your ground", href: "/#ground" },
+  { label: "Living site map", href: "/#living-map" },
+  { label: "Chapters", href: "/#chapters" },
   { label: "Client Portal", href: "/client-portal/login" },
   { label: "Staff Login", href: "/tech-login" },
 ] as const;
@@ -76,19 +74,22 @@ export function SiteFooter({ variant = "full" }: { variant?: "full" | "compact" 
       <div className="container mx-auto px-6">
         <div className="grid md:grid-cols-4 gap-16 mb-16">
           <div>
-            <span className="inline-flex items-center gap-2.5 text-2xl font-bold text-white font-[family-name:var(--font-syne)]">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-red-500/20 bg-gradient-to-br from-red-950/60 to-zinc-950/80 shadow-[0_0_28px_rgba(220,38,38,0.12)]">
-                <Flame className="h-5 w-5 text-orange-400/90" strokeWidth={2} />
+            <span className="inline-flex items-center gap-2.5 text-2xl font-bold text-[#f5f0e8] font-[family-name:var(--font-syne)]">
+              <span className="relative h-10 w-10 overflow-hidden rounded-full nf-seal border border-[rgba(232,163,23,0.4)] bg-[#161210]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/brand/logo-mark.png"
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
               </span>
               <span>
                 Nova
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-orange-400 to-red-600">
-                  Fire
-                </span>
+                <span className="text-[var(--nf-gold)]">Fire</span>
               </span>
             </span>
-            <p className="mt-5 text-zinc-500 text-sm leading-relaxed max-w-xs">
-              Fire protection, compliance, and safety solutions. South Africa.
+            <p className="mt-5 text-[var(--nf-dust)] text-sm leading-relaxed max-w-xs">
+              A night-watch for South African facilities. Fire protection underneath quiet ground.
             </p>
           </div>
           <div>

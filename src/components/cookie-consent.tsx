@@ -55,44 +55,35 @@ export function CookieConsent() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 16 }}
           transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed bottom-0 left-0 right-0 z-[100] p-3 sm:p-4 pointer-events-none sm:flex sm:justify-end"
+          className="fixed bottom-4 left-4 right-4 z-[100] pointer-events-none sm:left-auto sm:right-4 sm:bottom-4 sm:max-w-xs"
         >
-          <div className="pointer-events-auto w-full sm:max-w-md rounded-xl nf-glass-panel backdrop-blur-2xl shadow-[0_-12px_60px_rgba(0,0,0,0.55),0_0_1px_rgba(220,38,38,0.12)_inset] px-4 py-3.5 sm:px-5 relative overflow-hidden">
-            <div
-              className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-500/35 to-transparent"
-              aria-hidden
-            />
+          <div className="pointer-events-auto w-full rounded-lg border border-[rgba(201,184,164,0.14)] bg-[#161210]/95 backdrop-blur-xl px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.45)]">
             <h2
               id="cookie-consent-title"
-              className="relative text-sm font-semibold text-white font-[family-name:var(--font-syne)] tracking-tight"
+              className="text-sm font-semibold text-[#f5f0e8] font-[family-name:var(--font-syne)]"
             >
-              Cookies & privacy
+              Cookies
             </h2>
-            <p id="cookie-consent-desc" className="relative mt-1.5 text-xs text-zinc-400 leading-relaxed">
-              We use necessary cookies to run this site. See our{" "}
-              <Link href="/legal/cookies" className="text-red-400 hover:text-red-300 underline-offset-2 hover:underline">
-                Cookie Policy
-              </Link>{" "}
-              and{" "}
-              <Link href="/legal/privacy" className="text-red-400 hover:text-red-300 underline-offset-2 hover:underline">
-                Privacy Policy
+            <p id="cookie-consent-desc" className="mt-1 text-xs text-[var(--nf-dust)] leading-relaxed">
+              Necessary cookies only by default.{" "}
+              <Link href="/legal/cookies" className="text-[var(--nf-gold)] hover:underline underline-offset-2">
+                Policy
               </Link>
-              .
             </p>
-            <div className="relative mt-3 flex items-center gap-2">
+            <div className="mt-3 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => choose("essential")}
-                className="text-xs font-medium text-zinc-400 hover:text-white px-3 py-2 rounded-lg nf-btn-ghost transition-colors"
+                className="text-xs font-medium text-[var(--nf-dust)] hover:text-[#f5f0e8] px-2.5 py-1.5"
               >
-                Essential only
+                Essential
               </button>
               <button
                 type="button"
                 onClick={() => choose("all")}
-                className="text-xs font-semibold text-white nf-btn-primary px-4 py-2 rounded-lg transition-[filter]"
+                className="text-xs font-semibold nf-btn-primary px-3 py-1.5 rounded-md"
               >
-                Accept all
+                Accept
               </button>
             </div>
           </div>
