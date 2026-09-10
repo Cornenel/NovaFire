@@ -23,7 +23,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://novafire.co.za"),
+  metadataBase: new URL("https://www.novafire.co.za"),
   title: {
     default: "Nova Fire | Fire Protection, Compliance & Safety | South Africa",
     template: "%s | Nova Fire",
@@ -33,19 +33,32 @@ export const metadata: Metadata = {
   alternates: {
     canonical: "/",
   },
+  icons: {
+    icon: [{ url: "/brand/logo-mark.png", type: "image/png" }],
+    apple: [{ url: "/apple-touch-icon.png" }],
+  },
   openGraph: {
     type: "website",
-    url: "https://novafire.co.za",
+    url: "https://www.novafire.co.za",
     siteName: "Nova Fire",
     title: "Nova Fire | Fire Protection, Compliance & Safety | South Africa",
     description:
       "Fire protection systems, servicing, installations, compliance management, risk assessments, and fire safety training across South Africa.",
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: "Nova Fire — quiet ground for South African facilities",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Nova Fire | Fire Protection, Compliance & Safety | South Africa",
     description:
       "Fire protection systems, servicing, installations, compliance management, risk assessments, and fire safety training across South Africa.",
+    images: ["/og.png"],
   },
   robots: {
     index: true,
