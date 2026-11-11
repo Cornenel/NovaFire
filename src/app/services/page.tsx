@@ -13,7 +13,6 @@ import {
   ArrowRight,
   Package,
   Flame,
-  Shield,
   FileCheck,
   ClipboardList,
   Building2,
@@ -53,11 +52,6 @@ const CORE_SERVICES = [
     icon: ClipboardList,
     title: "Site-Specific SLAs",
     desc: "Tailored Service Level Agreements for your facility. Priority response times, scheduled maintenance, compliance reporting, and dedicated account management.",
-  },
-  {
-    icon: Shield,
-    title: "Insurance VAPs",
-    desc: "Insurance-mandated Value Added Programmes and fire risk assessments. Satisfy insurer requirements and optimise premiums with documented compliance.",
   },
 ];
 
