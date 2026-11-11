@@ -15,6 +15,7 @@ export default function robots(): MetadataRoute.Robots {
           "/client-portal",
           "/admin",
           "/admin/",
+          "/api/",
         ],
       },
     ],
