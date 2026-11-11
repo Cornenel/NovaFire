@@ -108,6 +108,13 @@ describe("Zoho configuration", () => {
       valid: true,
       normalized: "https://www.novafire.co.za/api/integrations/zoho/callback",
       problem: null,
+      upgradedFromHttp: false,
+    });
+    expect(inspectRedirectUri("http://www.novafire.co.za/api/integrations/zoho/callback")).toEqual({
+      valid: true,
+      normalized: "https://www.novafire.co.za/api/integrations/zoho/callback",
+      problem: null,
+      upgradedFromHttp: true,
     });
     expect(inspectRedirectUri("https://www.novafire.co.za").problem).toMatch(/path is \//);
   });

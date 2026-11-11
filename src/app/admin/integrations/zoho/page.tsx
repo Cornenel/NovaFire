@@ -2,7 +2,6 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { zohoEnvironmentStatus } from "@/lib/integrations/zoho/config";
-import { ZOHO_BOOKS_READ_SCOPES } from "@/lib/integrations/zoho/types";
 import { ZOHO_NOTICES } from "@/lib/integrations/zoho/notices";
 import {
   disconnectZoho,
@@ -124,7 +123,7 @@ export default async function ZohoBooksAdminPage({
         </p>
       </div>
 
-      {noticeText && (
+      {noticeText && !(notice === "config" && ready) && (
         <p className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
           {noticeText}
         </p>
@@ -174,28 +173,18 @@ export default async function ZohoBooksAdminPage({
             }
           />
         </div>
-        {environment.redirectUri ? (
-          <p className="text-xs text-zinc-300 mt-3 break-all">
-            Callback URL in use: {environment.redirectUriValue}
-            {environment.redirectUriProblem ? `. ${environment.redirectUriProblem}` : ""}
+        {environment.redirectUri && environment.redirectUriValid ? (
+          <p className="text-xs text-zinc-400 mt-3 break-all">
+            Zoho will be sent {environment.redirectUriValue}
+            {environment.redirectUriUpgradedFromHttp
+              ? ". The deployment value starts with http://, so the registered https:// callback is used."
+              : "."}
           </p>
-        ) : (
-          <p className="text-xs text-amber-200 mt-3">
-            ZOHO_REDIRECT_URI is not visible to this deployment. Set it to
-            https://www.novafire.co.za/api/integrations/zoho/callback and redeploy.
+        ) : environment.redirectUri ? (
+          <p className="text-xs text-amber-200 mt-3 break-all">
+            {environment.redirectUriProblem}
           </p>
-        )}
-        <p className="text-xs text-zinc-500 mt-3">
-          Values are never shown. Generate the encryption key on a trusted machine with{" "}
-          <span className="font-mono text-zinc-300">
-            node -e &quot;console.log(require(&apos;crypto&apos;).randomBytes(32).toString(&apos;base64url&apos;))&quot;
-          </span>{" "}
-          and store it only in the deployment environment. Do not commit it.
-        </p>
-        <p className="text-xs text-zinc-500 mt-2">
-          Read-only scopes: {ZOHO_BOOKS_READ_SCOPES.join(", ")}. Items are read through{" "}
-          ZohoBooks.settings.READ. ZohoBooks.items.READ is not a current Books scope.
-        </p>
+        ) : null}
       </section>
 
       <section className={panelClass}>

@@ -55,6 +55,7 @@ export type ZohoEnvStatus = {
   redirectUriValid: boolean;
   redirectUriValue: string;
   redirectUriProblem: string | null;
+  redirectUriUpgradedFromHttp: boolean;
   accountsUrlValid: boolean;
   encryptionKeyValid: boolean;
   missing: string[];
@@ -107,6 +108,7 @@ export function zohoEnvironmentStatus(): ZohoEnvStatus {
     redirectUriValid: redirect.valid,
     redirectUriValue: redirect.normalized ?? redirectUri,
     redirectUriProblem: redirect.problem,
+    redirectUriUpgradedFromHttp: redirect.upgradedFromHttp,
     accountsUrlValid,
     encryptionKeyValid,
     missing,
@@ -154,22 +156,35 @@ export function inspectRedirectUri(value: string): {
   valid: boolean;
   normalized: string | null;
   problem: string | null;
+  upgradedFromHttp: boolean;
 } {
   const cleaned = cleanEnvValue(value);
   if (!cleaned) {
-    return { valid: false, normalized: null, problem: "ZOHO_REDIRECT_URI has no value." };
+    return {
+      valid: false,
+      normalized: null,
+      problem: "ZOHO_REDIRECT_URI has no value.",
+      upgradedFromHttp: false,
+    };
   }
   let url: URL;
   try {
     url = new URL(cleaned);
   } catch {
-    return { valid: false, normalized: null, problem: "ZOHO_REDIRECT_URI is not a URL." };
+    return {
+      valid: false,
+      normalized: null,
+      problem: "ZOHO_REDIRECT_URI is not a URL.",
+      upgradedFromHttp: false,
+    };
   }
-  if (url.protocol !== "https:") {
+  const upgradedFromHttp = url.protocol === "http:";
+  if (!upgradedFromHttp && url.protocol !== "https:") {
     return {
       valid: false,
       normalized: null,
       problem: "ZOHO_REDIRECT_URI must start with https://.",
+      upgradedFromHttp: false,
     };
   }
   if (url.username || url.password) {
@@ -177,6 +192,7 @@ export function inspectRedirectUri(value: string): {
       valid: false,
       normalized: null,
       problem: "ZOHO_REDIRECT_URI must not include a username or password.",
+      upgradedFromHttp: false,
     };
   }
   const path = url.pathname.replace(/\/+$/, "") || "/";
@@ -185,12 +201,14 @@ export function inspectRedirectUri(value: string): {
       valid: false,
       normalized: null,
       problem: `The path is ${path}. Zoho must use /api/integrations/zoho/callback.`,
+      upgradedFromHttp: false,
     };
   }
+  url.protocol = "https:";
   url.hash = "";
   url.search = "";
   url.pathname = path;
-  return { valid: true, normalized: url.toString(), problem: null };
+  return { valid: true, normalized: url.toString(), problem: null, upgradedFromHttp };
 }
 
 export function isValidRedirectUri(value: string): boolean {
