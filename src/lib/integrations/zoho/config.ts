@@ -1,0 +1,207 @@
+import { ZOHO_BOOKS_READ_SCOPES } from "./types";
+
+const ACCOUNTS_HOSTS = new Set([
+  "accounts.zoho.com",
+  "accounts.zoho.eu",
+  "accounts.zoho.in",
+  "accounts.zoho.com.au",
+  "accounts.zoho.jp",
+  "accounts.zohocloud.ca",
+  "accounts.zoho.ca",
+  "accounts.zoho.sa",
+  "accounts.zoho.uk",
+  "accounts.zoho.com.cn",
+]);
+
+const API_ORIGINS = new Set([
+  "https://www.zohoapis.com",
+  "https://www.zohoapis.eu",
+  "https://www.zohoapis.in",
+  "https://www.zohoapis.com.au",
+  "https://www.zohoapis.jp",
+  "https://www.zohoapis.ca",
+  "https://www.zohoapis.sa",
+  "https://www.zohoapis.uk",
+  "https://www.zohoapis.com.cn",
+]);
+
+const LOCATION_ACCOUNTS: Record<string, string> = {
+  us: "https://accounts.zoho.com",
+  eu: "https://accounts.zoho.eu",
+  in: "https://accounts.zoho.in",
+  au: "https://accounts.zoho.com.au",
+  jp: "https://accounts.zoho.jp",
+  ca: "https://accounts.zohocloud.ca",
+  sa: "https://accounts.zoho.sa",
+  uk: "https://accounts.zoho.uk",
+  cn: "https://accounts.zoho.com.cn",
+};
+
+export type ZohoConfig = {
+  clientId: string;
+  clientSecret: string;
+  redirectUri: string;
+  accountsUrl: string;
+  encryptionKey: Buffer;
+  scopes: readonly string[];
+};
+
+export type ZohoEnvStatus = {
+  clientId: boolean;
+  clientSecret: boolean;
+  redirectUri: boolean;
+  accountsUrl: boolean;
+  encryptionKey: boolean;
+  redirectUriValid: boolean;
+  accountsUrlValid: boolean;
+  encryptionKeyValid: boolean;
+  missing: string[];
+};
+
+function trimmed(name: string): string {
+  return process.env[name]?.trim() ?? "";
+}
+
+export function zohoEnvironmentStatus(): ZohoEnvStatus {
+  const clientId = trimmed("ZOHO_CLIENT_ID");
+  const clientSecret = trimmed("ZOHO_CLIENT_SECRET");
+  const redirectUri = trimmed("ZOHO_REDIRECT_URI");
+  const accountsUrl = trimmed("ZOHO_ACCOUNTS_URL");
+  const encryptionKey = trimmed("ZOHO_TOKEN_ENCRYPTION_KEY");
+  const redirectUriValid = isValidRedirectUri(redirectUri);
+  const accountsUrlValid = isAllowedAccountsUrl(accountsUrl);
+  const encryptionKeyValid = decodeEncryptionKey(encryptionKey).ok;
+  const missing: string[] = [];
+  if (!clientId) missing.push("ZOHO_CLIENT_ID");
+  if (!clientSecret) missing.push("ZOHO_CLIENT_SECRET");
+  if (!redirectUri) missing.push("ZOHO_REDIRECT_URI");
+  if (!accountsUrl) missing.push("ZOHO_ACCOUNTS_URL");
+  if (!encryptionKey) missing.push("ZOHO_TOKEN_ENCRYPTION_KEY");
+  return {
+    clientId: Boolean(clientId),
+    clientSecret: Boolean(clientSecret),
+    redirectUri: Boolean(redirectUri),
+    accountsUrl: Boolean(accountsUrl),
+    encryptionKey: Boolean(encryptionKey),
+    redirectUriValid,
+    accountsUrlValid,
+    encryptionKeyValid,
+    missing,
+  };
+}
+
+export function readZohoConfig(): { ok: true; config: ZohoConfig } | { ok: false; missing: string[] } {
+  const status = zohoEnvironmentStatus();
+  if (
+    status.missing.length > 0 ||
+    !status.redirectUriValid ||
+    !status.accountsUrlValid ||
+    !status.encryptionKeyValid
+  ) {
+    const missing = [...status.missing];
+    if (status.redirectUri && !status.redirectUriValid) missing.push("ZOHO_REDIRECT_URI");
+    if (status.accountsUrl && !status.accountsUrlValid) missing.push("ZOHO_ACCOUNTS_URL");
+    if (status.encryptionKey && !status.encryptionKeyValid) {
+      missing.push("ZOHO_TOKEN_ENCRYPTION_KEY");
+    }
+    return { ok: false, missing: [...new Set(missing)] };
+  }
+
+  const decoded = decodeEncryptionKey(trimmed("ZOHO_TOKEN_ENCRYPTION_KEY"));
+  if (!decoded.ok) return { ok: false, missing: ["ZOHO_TOKEN_ENCRYPTION_KEY"] };
+
+  return {
+    ok: true,
+    config: {
+      clientId: trimmed("ZOHO_CLIENT_ID"),
+      clientSecret: trimmed("ZOHO_CLIENT_SECRET"),
+      redirectUri: trimmed("ZOHO_REDIRECT_URI"),
+      accountsUrl: normalizeOrigin(trimmed("ZOHO_ACCOUNTS_URL")),
+      encryptionKey: decoded.key,
+      scopes: ZOHO_BOOKS_READ_SCOPES,
+    },
+  };
+}
+
+export function isValidRedirectUri(value: string): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.pathname === "/api/integrations/zoho/callback" &&
+      url.username === "" &&
+      url.password === "" &&
+      url.search === "" &&
+      url.hash === ""
+    );
+  } catch {
+    return false;
+  }
+}
+
+export function isAllowedAccountsUrl(value: string): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && ACCOUNTS_HOSTS.has(url.hostname) && url.pathname.replace(/\/+$/, "") === "" && url.search === "" && url.hash === "";
+  } catch {
+    return false;
+  }
+}
+
+export function normalizeOrigin(value: string): string {
+  const url = new URL(value);
+  return url.origin;
+}
+
+export function isAllowedApiDomain(value: string): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    const origin = url.origin;
+    return url.protocol === "https:" && API_ORIGINS.has(origin) && (url.pathname === "/" || url.pathname === "");
+  } catch {
+    return false;
+  }
+}
+
+export function resolveAccountsServer(input: {
+  configuredAccountsUrl: string;
+  accountsServer: string | null;
+  location: string | null;
+}): { ok: true; accountsUrl: string } | { ok: false; error: "region" } {
+  const candidates = [
+    input.accountsServer?.trim() ?? "",
+    input.location ? LOCATION_ACCOUNTS[input.location.trim().toLowerCase()] ?? "" : "",
+    input.configuredAccountsUrl,
+  ];
+  for (const candidate of candidates) {
+    if (candidate && isAllowedAccountsUrl(candidate)) {
+      return { ok: true, accountsUrl: normalizeOrigin(candidate) };
+    }
+  }
+  return { ok: false, error: "region" };
+}
+
+export function decodeEncryptionKey(
+  value: string
+): { ok: true; key: Buffer } | { ok: false } {
+  if (!value) return { ok: false };
+  try {
+    const key = Buffer.from(value, "base64url");
+    if (key.length !== 32) return { ok: false };
+    return { ok: true, key };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export function adminAccessDecision(
+  userId: string | null,
+  profile: { role: string; is_active: boolean } | null
+): "ok" | "unauthenticated" | "forbidden" {
+  if (!userId) return "unauthenticated";
+  if (!profile?.is_active || profile.role !== "admin") return "forbidden";
+  return "ok";
+}

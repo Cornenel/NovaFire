@@ -13,6 +13,7 @@ const ITEMS = [
   { href: "/admin/technicians", label: "Technicians", exact: false },
   { href: "/admin/stock", label: "Stock", exact: false },
   { href: "/admin/imports", label: "Imports", exact: false },
+  { href: "/admin/integrations/zoho", label: "Zoho Books", exact: false },
   // Phase 5 additions – flag-gated, removed entirely when disabled
   ...(featureFlags.complianceDashboard
     ? [{ href: "/admin/compliance", label: "Compliance", exact: false }]

@@ -16,8 +16,9 @@
     "test:fire-risks": "node --import tsx scripts/test-fire-risks.mjs",
     "test:mandatory-checklists": "node --import tsx scripts/test-mandatory-checklists.mjs",
     "test:unit": "vitest run",
+    "test:zoho-books": "vitest run src/lib/integrations/zoho",
     "test:e2e": "playwright test",
-    "test": "npm run test:zoho-import && npm run test:historical-records && npm run test:portal-access && npm run test:fire-risks && npm run test:mandatory-checklists",
+    "test": "npm run test:zoho-import && npm run test:historical-records && npm run test:portal-access && npm run test:fire-risks && npm run test:mandatory-checklists && npm run test:zoho-books",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build"
   },
