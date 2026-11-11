@@ -53,22 +53,43 @@ export type ZohoEnvStatus = {
   accountsUrl: boolean;
   encryptionKey: boolean;
   redirectUriValid: boolean;
+  redirectUriValue: string;
+  redirectUriProblem: string | null;
   accountsUrlValid: boolean;
   encryptionKeyValid: boolean;
   missing: string[];
 };
 
-function trimmed(name: string): string {
-  return process.env[name]?.trim() ?? "";
+function serverEnv(name: keyof ReturnType<typeof directEnv>): string {
+  return cleanEnvValue(directEnv()[name] ?? "");
+}
+
+function directEnv() {
+  return {
+    ZOHO_CLIENT_ID: process.env.ZOHO_CLIENT_ID,
+    ZOHO_CLIENT_SECRET: process.env.ZOHO_CLIENT_SECRET,
+    ZOHO_REDIRECT_URI: process.env.ZOHO_REDIRECT_URI,
+    ZOHO_ACCOUNTS_URL: process.env.ZOHO_ACCOUNTS_URL,
+    ZOHO_TOKEN_ENCRYPTION_KEY: process.env.ZOHO_TOKEN_ENCRYPTION_KEY,
+  };
+}
+
+export function cleanEnvValue(value: string | undefined): string {
+  return (value ?? "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\u00A0/g, " ")
+    .trim()
+    .replace(/^['"]+|['"]+$/g, "")
+    .trim();
 }
 
 export function zohoEnvironmentStatus(): ZohoEnvStatus {
-  const clientId = trimmed("ZOHO_CLIENT_ID");
-  const clientSecret = trimmed("ZOHO_CLIENT_SECRET");
-  const redirectUri = trimmed("ZOHO_REDIRECT_URI");
-  const accountsUrl = trimmed("ZOHO_ACCOUNTS_URL");
-  const encryptionKey = trimmed("ZOHO_TOKEN_ENCRYPTION_KEY");
-  const redirectUriValid = isValidRedirectUri(redirectUri);
+  const clientId = serverEnv("ZOHO_CLIENT_ID");
+  const clientSecret = serverEnv("ZOHO_CLIENT_SECRET");
+  const redirectUri = serverEnv("ZOHO_REDIRECT_URI");
+  const accountsUrl = serverEnv("ZOHO_ACCOUNTS_URL");
+  const encryptionKey = serverEnv("ZOHO_TOKEN_ENCRYPTION_KEY");
+  const redirect = inspectRedirectUri(redirectUri);
   const accountsUrlValid = isAllowedAccountsUrl(accountsUrl);
   const encryptionKeyValid = decodeEncryptionKey(encryptionKey).ok;
   const missing: string[] = [];
@@ -83,7 +104,9 @@ export function zohoEnvironmentStatus(): ZohoEnvStatus {
     redirectUri: Boolean(redirectUri),
     accountsUrl: Boolean(accountsUrl),
     encryptionKey: Boolean(encryptionKey),
-    redirectUriValid,
+    redirectUriValid: redirect.valid,
+    redirectUriValue: redirect.normalized ?? redirectUri,
+    redirectUriProblem: redirect.problem,
     accountsUrlValid,
     encryptionKeyValid,
     missing,
@@ -107,37 +130,71 @@ export function readZohoConfig(): { ok: true; config: ZohoConfig } | { ok: false
     return { ok: false, missing: [...new Set(missing)] };
   }
 
-  const decoded = decodeEncryptionKey(trimmed("ZOHO_TOKEN_ENCRYPTION_KEY"));
+  const decoded = decodeEncryptionKey(serverEnv("ZOHO_TOKEN_ENCRYPTION_KEY"));
   if (!decoded.ok) return { ok: false, missing: ["ZOHO_TOKEN_ENCRYPTION_KEY"] };
+  const redirect = inspectRedirectUri(serverEnv("ZOHO_REDIRECT_URI"));
+  if (!redirect.valid || !redirect.normalized) {
+    return { ok: false, missing: ["ZOHO_REDIRECT_URI"] };
+  }
 
   return {
     ok: true,
     config: {
-      clientId: trimmed("ZOHO_CLIENT_ID"),
-      clientSecret: trimmed("ZOHO_CLIENT_SECRET"),
-      redirectUri: trimmed("ZOHO_REDIRECT_URI"),
-      accountsUrl: normalizeOrigin(trimmed("ZOHO_ACCOUNTS_URL")),
+      clientId: serverEnv("ZOHO_CLIENT_ID"),
+      clientSecret: serverEnv("ZOHO_CLIENT_SECRET"),
+      redirectUri: redirect.normalized,
+      accountsUrl: normalizeOrigin(serverEnv("ZOHO_ACCOUNTS_URL")),
       encryptionKey: decoded.key,
       scopes: ZOHO_BOOKS_READ_SCOPES,
     },
   };
 }
 
-export function isValidRedirectUri(value: string): boolean {
-  if (!value) return false;
-  try {
-    const url = new URL(value);
-    return (
-      url.protocol === "https:" &&
-      url.pathname === "/api/integrations/zoho/callback" &&
-      url.username === "" &&
-      url.password === "" &&
-      url.search === "" &&
-      url.hash === ""
-    );
-  } catch {
-    return false;
+export function inspectRedirectUri(value: string): {
+  valid: boolean;
+  normalized: string | null;
+  problem: string | null;
+} {
+  const cleaned = cleanEnvValue(value);
+  if (!cleaned) {
+    return { valid: false, normalized: null, problem: "ZOHO_REDIRECT_URI has no value." };
   }
+  let url: URL;
+  try {
+    url = new URL(cleaned);
+  } catch {
+    return { valid: false, normalized: null, problem: "ZOHO_REDIRECT_URI is not a URL." };
+  }
+  if (url.protocol !== "https:") {
+    return {
+      valid: false,
+      normalized: null,
+      problem: "ZOHO_REDIRECT_URI must start with https://.",
+    };
+  }
+  if (url.username || url.password) {
+    return {
+      valid: false,
+      normalized: null,
+      problem: "ZOHO_REDIRECT_URI must not include a username or password.",
+    };
+  }
+  const path = url.pathname.replace(/\/+$/, "") || "/";
+  if (path !== "/api/integrations/zoho/callback") {
+    return {
+      valid: false,
+      normalized: null,
+      problem: `The path is ${path}. Zoho must use /api/integrations/zoho/callback.`,
+    };
+  }
+  url.hash = "";
+  url.search = "";
+  url.pathname = path;
+  return { valid: true, normalized: url.toString(), problem: null };
+}
+
+export function isValidRedirectUri(value: string): boolean {
+  return inspectRedirectUri(value).valid;
 }
 
 export function isAllowedAccountsUrl(value: string): boolean {

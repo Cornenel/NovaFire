@@ -141,16 +141,50 @@ export default async function ZohoBooksAdminPage({
       <section className={panelClass}>
         <h2 className="text-sm font-semibold text-white mb-3">Server configuration</h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-          {[
-            ["ZOHO_CLIENT_ID", environment.clientId],
-            ["ZOHO_CLIENT_SECRET", environment.clientSecret],
-            ["ZOHO_REDIRECT_URI", environment.redirectUri && environment.redirectUriValid],
-            ["ZOHO_ACCOUNTS_URL", environment.accountsUrl && environment.accountsUrlValid],
-            ["ZOHO_TOKEN_ENCRYPTION_KEY", environment.encryptionKey && environment.encryptionKeyValid],
-          ].map(([label, present]) => (
-            <Stat key={String(label)} label={String(label)} value={present ? "Present" : "Missing"} />
-          ))}
+          <Stat label="ZOHO_CLIENT_ID" value={environment.clientId ? "Present" : "Missing"} />
+          <Stat label="ZOHO_CLIENT_SECRET" value={environment.clientSecret ? "Present" : "Missing"} />
+          <Stat
+            label="ZOHO_REDIRECT_URI"
+            value={
+              !environment.redirectUri
+                ? "Missing"
+                : environment.redirectUriValid
+                  ? "Present"
+                  : "Set, but not the callback URL"
+            }
+          />
+          <Stat
+            label="ZOHO_ACCOUNTS_URL"
+            value={
+              !environment.accountsUrl
+                ? "Missing"
+                : environment.accountsUrlValid
+                  ? "Present"
+                  : "Set, but not a Zoho accounts URL"
+            }
+          />
+          <Stat
+            label="ZOHO_TOKEN_ENCRYPTION_KEY"
+            value={
+              !environment.encryptionKey
+                ? "Missing"
+                : environment.encryptionKeyValid
+                  ? "Present"
+                  : "Set, but not a 32-byte key"
+            }
+          />
         </div>
+        {environment.redirectUri ? (
+          <p className="text-xs text-zinc-300 mt-3 break-all">
+            Callback URL in use: {environment.redirectUriValue}
+            {environment.redirectUriProblem ? `. ${environment.redirectUriProblem}` : ""}
+          </p>
+        ) : (
+          <p className="text-xs text-amber-200 mt-3">
+            ZOHO_REDIRECT_URI is not visible to this deployment. Set it to
+            https://www.novafire.co.za/api/integrations/zoho/callback and redeploy.
+          </p>
+        )}
         <p className="text-xs text-zinc-500 mt-3">
           Values are never shown. Generate the encryption key on a trusted machine with{" "}
           <span className="font-mono text-zinc-300">

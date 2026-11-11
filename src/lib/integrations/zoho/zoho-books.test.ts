@@ -6,6 +6,7 @@ import { planCustomerWrite } from "./apply-plan";
 import { zohoBooksGet, zohoBooksReadOperations } from "./client";
 import {
   adminAccessDecision,
+  inspectRedirectUri,
   isAllowedApiDomain,
   readZohoConfig,
   resolveAccountsServer,
@@ -98,6 +99,17 @@ describe("Zoho configuration", () => {
     restore("ZOHO_REDIRECT_URI", previous.redirect);
     restore("ZOHO_ACCOUNTS_URL", previous.accounts);
     restore("ZOHO_TOKEN_ENCRYPTION_KEY", previous.key);
+  });
+
+  it("accepts the registered callback when it has quotes or a trailing slash", () => {
+    expect(
+      inspectRedirectUri(' "https://www.novafire.co.za/api/integrations/zoho/callback/" ')
+    ).toEqual({
+      valid: true,
+      normalized: "https://www.novafire.co.za/api/integrations/zoho/callback",
+      problem: null,
+    });
+    expect(inspectRedirectUri("https://www.novafire.co.za").problem).toMatch(/path is \//);
   });
 
   it("uses the accounts server Zoho returns and ignores an untrusted host", () => {
