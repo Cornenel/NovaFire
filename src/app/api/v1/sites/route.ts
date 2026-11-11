@@ -1,6 +1,6 @@
 import { requireOpsApiAuth } from "@/lib/api/v1/auth";
-import { listSites } from "@/lib/api/v1/sites";
-import { jsonError, jsonOk } from "@/lib/api/v1/http";
+import { createSiteRecord, listSites } from "@/lib/api/v1/sites";
+import { jsonCreated, jsonError, jsonOk, readJsonBody } from "@/lib/api/v1/http";
 import { isUuid } from "@/lib/api/v1/validation";
 
 /** GET /api/v1/sites?customer_id=&limit=&offset= */
@@ -28,4 +28,17 @@ export async function GET(request: Request) {
 
   if (error) return jsonError(500, error.message);
   return jsonOk({ data: data ?? [], limit, offset });
+}
+
+/** POST /api/v1/sites */
+export async function POST(request: Request) {
+  const auth = await requireOpsApiAuth(request);
+  if ("error" in auth) return jsonError(auth.status, auth.error);
+
+  const body = await readJsonBody<Record<string, unknown>>(request);
+  if ("error" in body) return jsonError(400, body.error);
+
+  const result = await createSiteRecord(auth.ctx.supabase, body.data);
+  if (!result.ok) return jsonError(result.status, result.error);
+  return jsonCreated({ data: result.site });
 }

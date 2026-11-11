@@ -20,11 +20,11 @@ export const SITE_SELECT = [
   "updated_at",
 ].join(",");
 
-export const siteUpdateSchema = z
+export const siteCreateSchema = z
   .object({
-    customer_id: z.string().uuid().optional(),
-    name: z.string().trim().min(1).max(200).optional(),
-    address: z.string().trim().min(1).max(2000).optional(),
+    customer_id: z.string().uuid(),
+    name: z.string().trim().min(1).max(200),
+    address: z.string().trim().min(1).max(2000),
     latitude: z.number().min(-90).max(90).nullable().optional(),
     longitude: z.number().min(-180).max(180).nullable().optional(),
     contact_person: z.string().trim().max(200).nullable().optional(),
@@ -33,6 +33,9 @@ export const siteUpdateSchema = z
   })
   .strict();
 
+export const siteUpdateSchema = siteCreateSchema.partial().strict();
+
+export type SiteCreateInput = z.infer<typeof siteCreateSchema>;
 export type SiteUpdateInput = z.infer<typeof siteUpdateSchema>;
 
 export async function listSites(
@@ -54,6 +57,81 @@ export async function listSites(
 
 export async function getSite(supabase: SupabaseClient, id: string) {
   return supabase.from("sites").select(SITE_SELECT).eq("id", id).single();
+}
+
+export async function createSiteRecord(
+  supabase: SupabaseClient,
+  raw: unknown
+): Promise<
+  | { ok: true; site: Record<string, unknown> }
+  | { ok: false; status: number; error: string }
+> {
+  const parsed = siteCreateSchema.safeParse(raw);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      status: 400,
+      error: parsed.error.issues.map((i) => i.message).join("; "),
+    };
+  }
+
+  if (
+    typeof parsed.data.contact_phone === "string" &&
+    parsed.data.contact_phone &&
+    !isValidSouthAfricanPhone(parsed.data.contact_phone)
+  ) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Enter a valid South African phone number.",
+    };
+  }
+
+  const { data: customer } = await supabase
+    .from("customers")
+    .select("id")
+    .eq("id", parsed.data.customer_id)
+    .maybeSingle();
+  if (!customer) {
+    return { ok: false, status: 400, error: "Target customer_id was not found." };
+  }
+
+  const { data: existing } = await supabase
+    .from("sites")
+    .select("id, name, address")
+    .eq("customer_id", parsed.data.customer_id)
+    .ilike("name", parsed.data.name);
+
+  const exact = (existing ?? []).find(
+    (s) =>
+      String(s.name).trim().toLowerCase() === parsed.data.name.trim().toLowerCase() &&
+      String(s.address).trim().toLowerCase() ===
+        parsed.data.address.trim().toLowerCase()
+  );
+  if (exact) {
+    return {
+      ok: false,
+      status: 409,
+      error: `Site already exists for this customer (id=${exact.id}). Use PATCH to update.`,
+    };
+  }
+
+  const { data: createdRaw, error } = await supabase
+    .from("sites")
+    .insert(parsed.data)
+    .select(SITE_SELECT)
+    .single();
+
+  const created = createdRaw as Record<string, unknown> | null;
+  if (error || !created) {
+    return {
+      ok: false,
+      status: 500,
+      error: error?.message || "Site could not be created.",
+    };
+  }
+
+  return { ok: true, site: created };
 }
 
 export async function updateSiteRecord(

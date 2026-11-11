@@ -1,6 +1,6 @@
 import { requireOpsApiAuth } from "@/lib/api/v1/auth";
-import { listAssets } from "@/lib/api/v1/assets";
-import { jsonError, jsonOk } from "@/lib/api/v1/http";
+import { createAssetRecord, listAssets } from "@/lib/api/v1/assets";
+import { jsonCreated, jsonError, jsonOk, readJsonBody } from "@/lib/api/v1/http";
 import { isUuid } from "@/lib/api/v1/validation";
 
 /** GET /api/v1/assets?site_id=&customer_id=&limit=&offset= */
@@ -34,4 +34,17 @@ export async function GET(request: Request) {
 
   if (error) return jsonError(500, error.message);
   return jsonOk({ data: data ?? [], limit, offset });
+}
+
+/** POST /api/v1/assets */
+export async function POST(request: Request) {
+  const auth = await requireOpsApiAuth(request);
+  if ("error" in auth) return jsonError(auth.status, auth.error);
+
+  const body = await readJsonBody<Record<string, unknown>>(request);
+  if ("error" in body) return jsonError(400, body.error);
+
+  const result = await createAssetRecord(auth.ctx.supabase, body.data);
+  if (!result.ok) return jsonError(result.status, result.error);
+  return jsonCreated({ data: result.asset });
 }
