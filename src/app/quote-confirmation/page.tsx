@@ -28,8 +28,8 @@ export default function QuoteConfirmationPage() {
           Quote request received
         </h1>
         <p className="text-zinc-400 mb-8 leading-relaxed">
-          We&apos;ve created an opportunity in our system and will email your tailored
-          quote within 24 hours. An admin has been notified.
+          We&apos;ve received your request and notified the office. You will receive a
+          scoped quotation by email once it has been reviewed.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link

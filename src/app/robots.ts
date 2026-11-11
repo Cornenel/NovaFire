@@ -1,19 +1,20 @@
 import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
-  const siteUrl = "https://novafire.co.za";
+  const siteUrl = "https://www.novafire.co.za";
   return {
     rules: [
       {
         userAgent: "*",
         allow: "/",
         disallow: [
-          // Internal / staff portals should not be indexed.
           "/tech",
           "/tech/",
           "/tech-login",
           "/tech-restricted",
           "/client-portal",
+          "/admin",
+          "/admin/",
         ],
       },
     ],
@@ -21,4 +22,3 @@ export default function robots(): MetadataRoute.Robots {
     host: siteUrl,
   };
 }
-

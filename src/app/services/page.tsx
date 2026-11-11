@@ -42,12 +42,12 @@ const CORE_SERVICES = [
   {
     icon: Package,
     title: "Installations & Supply",
-    desc: "SABS-approved fire extinguishers, hose reels, and fire hydrants—plus suppression systems and fire blankets—supplied and professionally installed. Full site surveys and equipment specification.",
+    desc: "Fire extinguishers, hose reels and hydrants—plus related equipment such as blankets and suppression systems where scoped—supplied and professionally installed with site surveys and equipment specification.",
   },
   {
     icon: Wrench,
     title: "Servicing of Fixed & Portable Fire Equipment",
-    desc: "Certified maintenance and inspection of portable extinguishers, hose reels, suppression systems, and fixed installations. SANS 1475 compliant servicing schedules.",
+    desc: "Maintenance and inspection of portable extinguishers, hose reels, suppression systems and fixed installations, with servicing schedules aligned to applicable SANS practice.",
   },
   {
     icon: ClipboardList,
@@ -158,11 +158,16 @@ export default function ServicesPage() {
         </div>
       </section>
 
-      {/* Trust strip */}
+      {/* Practice strip — accreditation marks require business verification */}
       <section className="py-6 border-y border-white/[0.06] nf-bg-raised">
         <div className="container mx-auto px-6">
           <div className="flex flex-wrap justify-center gap-6 md:gap-12 text-xs font-mono text-zinc-500 tracking-widest">
-            {["SANS 1475", "SAQCC", "ISO 9001", "BSI Permit Holder"].map((badge) => (
+            {[
+              "SANS-aligned servicing practice",
+              "Documented service records",
+              "Mpumalanga & Limpopo",
+              "Equipment registers",
+            ].map((badge) => (
               <span key={badge}>{badge}</span>
             ))}
           </div>
@@ -419,9 +424,11 @@ export default function ServicesPage() {
 
       {/* Quote section – two-column layout */}
       <section
-        id="request-quote"
+        id="quote"
         className="relative py-20 md:py-28 nf-bg-base scroll-mt-24"
       >
+        {/* Legacy anchor compatibility */}
+        <div id="request-quote" className="absolute -top-24" aria-hidden />
         <div
           className="absolute inset-0 opacity-30"
           style={{
@@ -440,7 +447,7 @@ export default function ServicesPage() {
               </h2>
               <p className="text-zinc-400 leading-relaxed">
                 Tell us your business type, extinguisher needs, and site details.
-                We&apos;ll provide an estimated cost and follow up within 24 hours.
+                Our office will follow up with a scoped estimate.
               </p>
               <ul className="space-y-3 text-sm text-zinc-500">
                 <li className="flex items-center gap-2">
@@ -472,7 +479,7 @@ export default function ServicesPage() {
           <p className="text-zinc-400 mb-6">Need a custom solution or site-specific SLA?</p>
           <div className="flex flex-wrap justify-center gap-4">
             <Button asChild className="bg-red-600 hover:bg-red-500">
-              <Link href="/#contact">Contact Us</Link>
+              <Link href="/contact">Contact Us</Link>
             </Button>
             <Button asChild variant="outline" className="border-white/20 text-zinc-400 hover:text-white">
               <Link href="/">

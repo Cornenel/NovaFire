@@ -49,7 +49,7 @@ export const metadata: Metadata = {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "Nova Fire — quiet ground for South African facilities",
+        alt: "Nova Fire — fire protection and compliance",
       },
     ],
   },
@@ -81,7 +81,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark scroll-smooth">
       <body
-        className={`${outfit.variable} ${syne.variable} ${jetbrainsMono.variable} font-sans text-[#f5f0e8] selection:bg-[rgba(232,163,23,0.35)] selection:text-[#0b0908]`}
+        className={`${outfit.variable} ${syne.variable} ${jetbrainsMono.variable} font-sans text-zinc-50 selection:bg-red-600/35 selection:text-white`}
       >
         <OrganizationStructuredData />
         {children}

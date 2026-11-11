@@ -1,20 +1,39 @@
 import type { MetadataRoute } from "next";
 import { SERVICE_AREAS } from "@/lib/service-areas";
 
-const siteUrl = "https://novafire.co.za";
+const siteUrl = "https://www.novafire.co.za";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
-  // Core public routes you want indexed.
-  const routes: Array<{ path: string; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"]; priority: number }> = [
+  const routes: Array<{
+    path: string;
+    changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"];
+    priority: number;
+  }> = [
     { path: "/", changeFrequency: "weekly", priority: 1 },
     { path: "/services", changeFrequency: "monthly", priority: 0.9 },
-    { path: "/services/fire-extinguisher-servicing", changeFrequency: "monthly", priority: 0.85 },
-    { path: "/services/fire-hose-reel-servicing", changeFrequency: "monthly", priority: 0.85 },
-    { path: "/services/fire-hydrant-supply-installation", changeFrequency: "monthly", priority: 0.85 },
+    {
+      path: "/services/fire-extinguisher-servicing",
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+    {
+      path: "/services/fire-hose-reel-servicing",
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+    {
+      path: "/services/fire-hydrant-supply-installation",
+      changeFrequency: "monthly",
+      priority: 0.85,
+    },
+    { path: "/industries", changeFrequency: "monthly", priority: 0.8 },
+    { path: "/compliance", changeFrequency: "monthly", priority: 0.8 },
     { path: "/areas", changeFrequency: "monthly", priority: 0.7 },
     { path: "/training", changeFrequency: "monthly", priority: 0.7 },
+    { path: "/about", changeFrequency: "monthly", priority: 0.7 },
+    { path: "/contact", changeFrequency: "monthly", priority: 0.8 },
     { path: "/legal/privacy", changeFrequency: "yearly", priority: 0.2 },
     { path: "/legal/terms", changeFrequency: "yearly", priority: 0.2 },
     { path: "/legal/disclaimer", changeFrequency: "yearly", priority: 0.2 },
@@ -30,12 +49,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return [
     ...routes.map((r) => ({
-    url: `${siteUrl}${r.path}`,
-    lastModified: now,
-    changeFrequency: r.changeFrequency,
-    priority: r.priority,
+      url: `${siteUrl}${r.path}`,
+      lastModified: now,
+      changeFrequency: r.changeFrequency,
+      priority: r.priority,
     })),
     ...areaRoutes,
   ];
 }
-

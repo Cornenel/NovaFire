@@ -15,12 +15,12 @@ function ThankYouContent() {
   const messages: Record<string, { title: string; desc: string; cta: string }> = {
     compliance: {
       title: "Thank you for completing the compliance assessment",
-      desc: "We've received your results and will be in touch within 24 hours to schedule your professional fire inspection.",
+      desc: "We've received your results and will be in touch to discuss next steps for a professional fire inspection.",
       cta: "Book Professional Inspection",
     },
     quote: {
       title: "Quote request received",
-      desc: "We've received your details and will follow up within 24 hours with a tailored quote.",
+      desc: "We've received your details and will follow up with a scoped quotation.",
       cta: "View services",
     },
     service: {

@@ -12,7 +12,7 @@ export function OrganizationStructuredData() {
     logo: "https://www.novafire.co.za/brand/logo.png",
     image: "https://www.novafire.co.za/og.png",
     description:
-      "One failed audit closes the lodge. Nova Fire supplies, services, and certifies so doors stay open — a night-watch for South African facilities.",
+      "Nova Fire provides professional fire protection, equipment servicing and compliance support across Mpumalanga and Limpopo, South Africa.",
     address: {
       "@type": "PostalAddress",
       addressCountry: "ZA",

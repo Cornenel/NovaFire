@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 const LEGAL_LINKS = [
@@ -7,14 +8,17 @@ const LEGAL_LINKS = [
   { label: "Disclaimer", href: "/legal/disclaimer" },
 ] as const;
 
-const DEFAULT_QUICK = [
+const QUICK_LINKS = [
   { label: "Services", href: "/services" },
+  { label: "Industries", href: "/industries" },
+  { label: "Compliance", href: "/compliance" },
   { label: "Training", href: "/training" },
-  { label: "Pick your ground", href: "/#ground" },
-  { label: "Living site map", href: "/#watch" },
-  { label: "Chapters", href: "/#chapters" },
-  { label: "Client Portal", href: "/client-portal/login" },
-  { label: "Staff Login", href: "/tech-login" },
+  { label: "Service areas", href: "/areas" },
+  { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
+  { label: "Request a quote", href: "/services#quote" },
+  { label: "Client portal", href: "/client-portal/login" },
+  { label: "Staff login", href: "/tech-login" },
 ] as const;
 
 export function LegalNav({ className }: { className?: string }) {
@@ -23,14 +27,14 @@ export function LegalNav({ className }: { className?: string }) {
       <ul className="flex flex-wrap items-center justify-center gap-x-1 gap-y-2 text-sm text-zinc-500">
         {LEGAL_LINKS.map(({ label, href }, i) => (
           <li key={href} className="flex items-center gap-x-1">
-            {i > 0 && (
-              <span className="text-zinc-700 px-2 select-none" aria-hidden>
+            {i > 0 ? (
+              <span className="select-none px-2 text-zinc-700" aria-hidden>
                 ·
               </span>
-            )}
+            ) : null}
             <Link
               href={href}
-              className="hover:text-orange-200/90 transition-colors px-1 underline-offset-4 hover:underline decoration-red-500/40"
+              className="px-1 underline-offset-4 transition-colors hover:text-zinc-200 hover:underline"
             >
               {label}
             </Link>
@@ -44,21 +48,17 @@ export function LegalNav({ className }: { className?: string }) {
 export function SiteFooter({ variant = "full" }: { variant?: "full" | "compact" }) {
   if (variant === "compact") {
     return (
-      <footer className="relative nf-bg-base border-t border-white/[0.06] py-10 mt-auto">
-        <div
-          className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/40 to-transparent"
-          aria-hidden
-        />
-        <div className="container mx-auto px-6 flex flex-col items-center gap-6 text-center">
+      <footer className="nf-bg-base relative mt-auto border-t border-white/[0.06] py-10">
+        <div className="nf-container flex flex-col items-center gap-6 text-center">
           <LegalNav />
-          <p className="text-zinc-600 text-sm">
+          <p className="text-sm text-zinc-600">
             © {new Date().getFullYear()} Nova Fire. All rights reserved.
           </p>
           <Link
             href="/"
-            className="text-sm font-medium text-orange-400/90 hover:text-orange-300 transition-colors"
+            className="text-sm font-medium text-zinc-400 transition-colors hover:text-white"
           >
-            ← Back to Home
+            ← Back to home
           </Link>
         </div>
       </footer>
@@ -66,79 +66,84 @@ export function SiteFooter({ variant = "full" }: { variant?: "full" | "compact" 
   }
 
   return (
-    <footer id="contact" className="relative nf-bg-base border-t border-white/[0.06] pt-20 pb-12">
+    <footer id="contact" className="nf-bg-base relative border-t border-white/[0.06] pt-20 pb-12">
       <div
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-orange-400/45 to-transparent"
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/40 to-transparent"
         aria-hidden
       />
-      <div className="container mx-auto px-6">
-        <div className="grid md:grid-cols-4 gap-16 mb-16">
+      <div className="nf-container">
+        <div className="mb-16 grid gap-12 md:grid-cols-4 md:gap-10">
           <div>
-            <span className="inline-flex items-center gap-2.5 text-2xl font-bold text-[#f5f0e8] font-[family-name:var(--font-syne)]">
-              <span className="relative h-10 w-10 overflow-hidden rounded-full nf-seal border border-[rgba(232,163,23,0.4)] bg-[#161210]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+            <span className="inline-flex items-center gap-2.5 font-[family-name:var(--font-syne)] text-2xl font-bold text-zinc-50">
+              <span className="nf-seal relative h-10 w-10 overflow-hidden rounded-full border border-red-500/40 bg-[#161616]">
+                <Image
                   src="/brand/logo-mark.png"
                   alt=""
+                  width={80}
+                  height={80}
                   className="h-full w-full object-cover"
                 />
               </span>
               <span>
-                Nova
-                <span className="text-[var(--nf-gold)]">Fire</span>
+                Nova<span className="text-red-500">Fire</span>
               </span>
             </span>
-            <p className="mt-5 text-[var(--nf-dust)] text-sm leading-relaxed max-w-xs">
-              A night-watch for South African facilities. Fire protection underneath quiet ground.
+            <p className="mt-5 max-w-xs text-sm leading-relaxed text-zinc-400">
+              Professional fire protection, equipment servicing and compliance support across
+              Mpumalanga and Limpopo.
             </p>
           </div>
           <div>
-            <h4 className="font-semibold text-white mb-5 text-sm uppercase tracking-wider text-orange-200/70">
-              Quick Links
+            <h4 className="mb-5 text-sm font-semibold tracking-wider text-zinc-300 uppercase">
+              Quick links
             </h4>
-            <ul className="space-y-4 text-sm text-zinc-400">
-              {DEFAULT_QUICK.map(({ label, href }) => (
+            <ul className="space-y-3 text-sm text-zinc-400">
+              {QUICK_LINKS.map(({ label, href }) => (
                 <li key={label}>
-                  <a href={href} className="hover:text-white transition-colors duration-200">
+                  <Link href={href} className="transition-colors hover:text-white">
                     {label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold text-white mb-5 text-sm uppercase tracking-wider text-orange-200/70">
+            <h4 className="mb-5 text-sm font-semibold tracking-wider text-zinc-300 uppercase">
               Contact
             </h4>
             <ul className="space-y-3 text-sm text-zinc-400">
               <li>
-                <a href="tel:+27662700293" className="hover:text-white transition-colors">
+                <a href="tel:+27662700293" className="transition-colors hover:text-white">
                   066 270 0293
                 </a>
               </li>
               <li>
-                <a href="mailto:jacques@novafire.co.za" className="hover:text-white transition-colors">
+                <a
+                  href="mailto:jacques@novafire.co.za"
+                  className="transition-colors hover:text-white"
+                >
                   jacques@novafire.co.za
                 </a>
               </li>
-              <li>South Africa</li>
+              <li>Mpumalanga &amp; Limpopo, South Africa</li>
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold text-white mb-5 text-sm uppercase tracking-wider text-orange-200/70">
-              Accreditations
+            <h4 className="mb-5 text-sm font-semibold tracking-wider text-zinc-300 uppercase">
+              Standards &amp; practice
             </h4>
             <ul className="space-y-3 text-sm text-zinc-400">
-              <li>BSI accredited</li>
-              <li>SANS 1475</li>
-              <li>SAQCC</li>
-              <li>ISO 9001</li>
+              <li>Work aligned to applicable SANS servicing practice</li>
+              <li>Documented service records and equipment registers</li>
+              <li>
+                Specific accreditation marks published only when independently verified
+              </li>
             </ul>
           </div>
         </div>
-        <div className="pt-8 border-t border-white/[0.06] flex flex-col gap-6">
+        <div className="flex flex-col gap-6 border-t border-white/[0.06] pt-8">
           <LegalNav />
-          <p className="text-center text-zinc-600 text-sm">
+          <p className="text-center text-sm text-zinc-600">
             © {new Date().getFullYear()} Nova Fire. All rights reserved.
           </p>
         </div>

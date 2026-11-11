@@ -7,6 +7,10 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "10mb",
     },
   },
+  // Avoid Next inferring a parent workspace lockfile outside this app.
+  turbopack: {
+    root: process.cwd(),
+  },
 };
 
 export default nextConfig;

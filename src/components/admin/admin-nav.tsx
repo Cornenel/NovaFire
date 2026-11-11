@@ -47,8 +47,8 @@ export function AdminNav() {
             className={cn(
               "px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors",
               isActive
-                ? "text-white bg-white/[0.07]"
-                : "text-zinc-400 hover:text-white hover:bg-white/5"
+                ? "bg-red-500/10 text-white ring-1 ring-red-500/25"
+                : "text-zinc-400 hover:bg-white/5 hover:text-white"
             )}
           >
             {item.label}
