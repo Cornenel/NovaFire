@@ -17,7 +17,7 @@ export default function SetPasswordPage() {
             Set your password
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Choose a password to finish setting up your account.
+            Choose a new password for your Nova Fire account.
           </p>
         </div>
         <SetPasswordForm />

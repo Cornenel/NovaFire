@@ -1,8 +1,14 @@
 /**
  * Public app URL for auth email links (invites, password reset).
  *
- * Set NEXT_PUBLIC_SITE_URL to your deployed URL, e.g. https://app.novafire.co.za
+ * Set NEXT_PUBLIC_SITE_URL to your deployed URL, e.g. https://www.novafire.co.za
  * Localhost links only work on the same machine — they fail on technicians' phones.
+ *
+ * In Supabase → Authentication → URL Configuration, allow:
+ *   https://www.novafire.co.za/auth/callback
+ *   https://www.novafire.co.za/auth/confirm
+ *   https://www.novafire.co.za/auth/set-password
+ * Prefer Site URL = https://www.novafire.co.za (hash tokens are forwarded to set-password).
  */
 
 function normalizeSiteUrl(url: string): string {

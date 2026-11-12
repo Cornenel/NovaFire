@@ -26,6 +26,9 @@ export function SetPasswordForm() {
   useEffect(() => {
     async function init() {
       const params = new URLSearchParams(window.location.search);
+      const queryError = params.get("error");
+      if (queryError) setError(queryError);
+
       const code = params.get("code");
 
       // PKCE invite / recovery links: ?code=...
@@ -49,11 +52,17 @@ export function SetPasswordForm() {
           const accessToken = hashParams.get("access_token");
           const refreshToken = hashParams.get("refresh_token");
           if (accessToken && refreshToken) {
-            await supabase.auth.setSession({
+            const { error: sessionError } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken,
             });
             window.history.replaceState(null, "", window.location.pathname);
+            if (sessionError) {
+              setError(sessionError.message);
+              setHasSession(false);
+              setReady(true);
+              return;
+            }
           }
         }
       }
@@ -67,6 +76,25 @@ export function SetPasswordForm() {
     init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  async function resolvePostLoginPath(): Promise<string> {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return "/tech-login";
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profile?.role === "client") return "/client-portal";
+    if (profile?.role === "admin" || profile?.role === "dispatcher") {
+      return "/admin";
+    }
+    return "/tech";
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -83,13 +111,15 @@ export function SetPasswordForm() {
 
     setIsPending(true);
     const { error: updateError } = await supabase.auth.updateUser({ password });
-    setIsPending(false);
-
     if (updateError) {
+      setIsPending(false);
       setError(updateError.message);
       return;
     }
-    router.push("/tech");
+
+    const nextPath = await resolvePostLoginPath();
+    setIsPending(false);
+    router.push(nextPath);
     router.refresh();
   }
 
@@ -108,7 +138,11 @@ export function SetPasswordForm() {
           {error || "This link has expired or was already used."}
         </p>
         <p className="text-xs text-zinc-500">
-          Ask your administrator to send a new invite, or{" "}
+          Request a new link from{" "}
+          <Link href="/forgot-password" className="text-red-400 hover:underline">
+            forgot password
+          </Link>
+          , or{" "}
           <Link href="/tech-login" className="text-red-400 hover:underline">
             sign in
           </Link>{" "}
@@ -164,7 +198,7 @@ export function SetPasswordForm() {
         ) : (
           <KeyRound className="w-4 h-4" />
         )}
-        Set password & sign in
+        Set password & continue
       </button>
     </form>
   );

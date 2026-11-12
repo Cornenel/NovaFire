@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { AuthHashRedirect } from "@/components/auth/auth-hash-redirect";
 import { OrganizationStructuredData } from "@/components/structured-data";
 import { CookieConsent } from "@/components/cookie-consent";
 import "./globals.css";
@@ -92,6 +93,7 @@ export default function RootLayout({
       <body
         className={`${outfit.variable} ${syne.variable} ${jetbrainsMono.variable} font-sans text-zinc-50 selection:bg-red-600/35 selection:text-white`}
       >
+        <AuthHashRedirect />
         <OrganizationStructuredData />
         {children}
         <CookieConsent />
