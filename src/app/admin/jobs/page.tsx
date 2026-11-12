@@ -1,12 +1,19 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { AdminListToolbar } from "@/components/admin/admin-list-toolbar";
+import { AdminPagination } from "@/components/admin/admin-pagination";
+import {
+  buildAdminListHref,
+  ilikePattern,
+  parseAdminListParams,
+  sanitizeSearchTerm,
+} from "@/lib/admin/list-params";
 import {
   JOB_PRIORITY_LABELS,
   JOB_PRIORITY_STYLES,
   JOB_STATUS_LABELS,
   JOB_STATUS_STYLES,
-  JOB_TYPE_LABELS,
   resolveJobTypeLabel,
 } from "@/lib/fsm/labels";
 import type { JobPriority, JobStatus, JobType } from "@/lib/fsm/types";
@@ -39,25 +46,58 @@ const FILTERS: Array<{ value: string; label: string }> = [
 export default async function AdminJobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>;
 }) {
-  const { status: statusFilter = "all" } = await searchParams;
+  const raw = await searchParams;
+  const statusFilter = raw.status || "all";
+  const { q, page, pageSize, from, to } = parseAdminListParams(raw);
   const supabase = await createClient();
 
   let query = supabase
     .from("jobs")
     .select(
-      "id, job_number, scheduled_date, job_type, import_source, service_category, priority, status, customer:customers(name), site:sites(name), technician:profiles!jobs_assigned_to_fkey(full_name)"
+      "id, job_number, scheduled_date, job_type, import_source, service_category, priority, status, customer:customers(name), site:sites(name), technician:profiles!jobs_assigned_to_fkey(full_name)",
+      { count: "exact" }
     )
     .order("scheduled_date", { ascending: false })
-    .limit(100);
+    .range(from, to);
 
   if (statusFilter !== "all") {
     query = query.eq("status", statusFilter);
   }
 
-  const { data } = await query;
+  if (q) {
+    const term = sanitizeSearchTerm(q);
+    const pattern = ilikePattern(term);
+    const [{ data: matchingCustomers }, { data: matchingSites }] =
+      await Promise.all([
+        supabase
+          .from("customers")
+          .select("id")
+          .or(`name.ilike.${pattern},trading_name.ilike.${pattern}`)
+          .limit(100),
+        supabase
+          .from("sites")
+          .select("id")
+          .ilike("name", `%${term}%`)
+          .limit(100),
+      ]);
+
+    const parts = [`job_number.ilike.${pattern}`];
+    const customerIds = (matchingCustomers ?? []).map((c) => c.id as string);
+    const siteIds = (matchingSites ?? []).map((s) => s.id as string);
+    if (customerIds.length > 0) {
+      parts.push(`customer_id.in.(${customerIds.join(",")})`);
+    }
+    if (siteIds.length > 0) {
+      parts.push(`site_id.in.(${siteIds.join(",")})`);
+    }
+    query = query.or(parts.join(","));
+  }
+
+  const { data, count } = await query;
   const jobs = (data ?? []) as unknown as JobRow[];
+  const totalCount = count ?? 0;
 
   return (
     <div>
@@ -74,12 +114,22 @@ export default async function AdminJobsPage({
         </Link>
       </div>
 
-      {/* Status filter */}
+      <AdminListToolbar
+        action="/admin/jobs"
+        q={q}
+        placeholder="Search job number, customer, or site…"
+        hidden={{ status: statusFilter !== "all" ? statusFilter : undefined }}
+      />
+
       <div className="flex flex-wrap gap-1.5 mb-5">
         {FILTERS.map((f) => (
           <Link
             key={f.value}
-            href={f.value === "all" ? "/admin/jobs" : `/admin/jobs?status=${f.value}`}
+            href={buildAdminListHref(
+              "/admin/jobs",
+              { q, status: f.value === "all" ? undefined : f.value },
+              { page: 1 }
+            )}
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
               statusFilter === f.value
@@ -93,7 +143,9 @@ export default async function AdminJobsPage({
       </div>
 
       {jobs.length === 0 ? (
-        <p className="text-zinc-500 text-sm">No jobs found.</p>
+        <p className="text-zinc-500 text-sm">
+          {q || statusFilter !== "all" ? "No jobs match." : "No jobs found."}
+        </p>
       ) : (
         <div className="rounded-xl border border-white/[0.08] nf-glass-panel overflow-x-auto">
           <table className="w-full text-sm">
@@ -160,6 +212,14 @@ export default async function AdminJobsPage({
           </table>
         </div>
       )}
+
+      <AdminPagination
+        pathname="/admin/jobs"
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        params={{ q, status: statusFilter !== "all" ? statusFilter : undefined }}
+      />
     </div>
   );
 }

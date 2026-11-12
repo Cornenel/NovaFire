@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { AdminListToolbar } from "@/components/admin/admin-list-toolbar";
+import { AdminPagination } from "@/components/admin/admin-pagination";
 import { DefectStatusSelect } from "@/components/admin/defect-status-select";
+import {
+  ilikePattern,
+  parseAdminListParams,
+} from "@/lib/admin/list-params";
 import {
   DEFECT_SEVERITY_LABELS,
   DEFECT_SEVERITY_STYLES,
@@ -29,21 +35,37 @@ interface DefectRow {
   technician: { full_name: string } | null;
 }
 
-export default async function AdminDefectsPage() {
+export default async function AdminDefectsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>;
+}) {
+  const raw = await searchParams;
+  const { q, page, pageSize, from, to } = parseAdminListParams(raw);
   const supabase = await createClient();
 
-  const { data } = await supabase
+  let query = supabase
     .from("defects")
     .select(
       `id, defect_type, severity, status, description, recommended_action, quote_required, created_at,
        asset:assets(asset_code, asset_type, size_capacity, asset_medium, site:sites(name, customer:customers(name))),
        job:jobs(id, job_number),
-       technician:profiles(full_name)`
+       technician:profiles(full_name)`,
+      { count: "exact" }
     )
     .order("created_at", { ascending: false })
-    .limit(100);
+    .range(from, to);
 
+  if (q) {
+    const pattern = ilikePattern(q);
+    query = query.or(
+      `defect_type.ilike.${pattern},description.ilike.${pattern},recommended_action.ilike.${pattern}`
+    );
+  }
+
+  const { data, count } = await query;
   const defects = (data ?? []) as unknown as DefectRow[];
+  const totalCount = count ?? 0;
 
   return (
     <div>
@@ -51,8 +73,16 @@ export default async function AdminDefectsPage() {
         Defects
       </h1>
 
+      <AdminListToolbar
+        action="/admin/defects"
+        q={q}
+        placeholder="Search defect type or description…"
+      />
+
       {defects.length === 0 ? (
-        <p className="text-zinc-500 text-sm">No defects recorded.</p>
+        <p className="text-zinc-500 text-sm">
+          {q ? "No defects match that search." : "No defects recorded."}
+        </p>
       ) : (
         <div className="space-y-3">
           {defects.map((d) => (
@@ -120,6 +150,14 @@ export default async function AdminDefectsPage() {
           ))}
         </div>
       )}
+
+      <AdminPagination
+        pathname="/admin/defects"
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        params={{ q }}
+      />
     </div>
   );
 }

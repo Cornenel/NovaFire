@@ -3,25 +3,54 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createSite } from "@/app/admin/actions";
+import { AdminListToolbar } from "@/components/admin/admin-list-toolbar";
+import { AdminPagination } from "@/components/admin/admin-pagination";
 import { CustomerEditPanel } from "@/components/admin/customer-edit-form";
 import { PortalUsersPanel } from "@/components/admin/portal-users-panel";
 import { ComplianceScoreBadge } from "@/components/admin/compliance-score-badge";
+import {
+  ilikePattern,
+  parseAdminListParams,
+} from "@/lib/admin/list-params";
 import { featureFlags } from "@/lib/fsm/feature-flags";
 import { loadCustomerCompliance } from "@/lib/fsm/customer-compliance";
 
 const inputCls =
   "w-full px-3.5 py-2.5 rounded-lg bg-[#171717] border border-white/10 text-white placeholder-zinc-600 text-sm focus:border-red-500/50 focus:outline-none focus:ring-2 focus:ring-red-500/20";
 
+type SiteListRow = {
+  id: string;
+  name: string;
+  address: string;
+  assets: Array<{ count: number }> | null;
+};
+
 export default async function AdminCustomerDetailPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ portal_error?: string }>;
+  searchParams: Promise<{ portal_error?: string; q?: string; page?: string }>;
 }) {
   const { id } = await params;
-  const { portal_error: portalError } = await searchParams;
+  const raw = await searchParams;
+  const { portal_error: portalError } = raw;
+  const { q, page, pageSize, from, to } = parseAdminListParams(raw);
   const supabase = await createClient();
+
+  let sitesQuery = supabase
+    .from("sites")
+    .select("id, name, address, assets(count)", { count: "exact" })
+    .eq("customer_id", id)
+    .order("name")
+    .range(from, to);
+
+  if (q) {
+    const pattern = ilikePattern(q);
+    sitesQuery = sitesQuery.or(
+      `name.ilike.${pattern},address.ilike.${pattern},contact_person.ilike.${pattern}`
+    );
+  }
 
   const [
     { data: customer },
@@ -30,12 +59,10 @@ export default async function AdminCustomerDetailPage({
     },
     { count: importedRowsCount },
     { count: importedJobsCount },
+    { data: sitesData, count: sitesCount },
+    { data: portalSites },
   ] = await Promise.all([
-    supabase
-      .from("customers")
-      .select("*, sites(id, name, address, contact_person, assets(id))")
-      .eq("id", id)
-      .single(),
+    supabase.from("customers").select("*").eq("id", id).single(),
     supabase.auth.getUser(),
     supabase
       .from("import_rows")
@@ -46,8 +73,19 @@ export default async function AdminCustomerDetailPage({
       .select("id", { count: "exact", head: true })
       .eq("customer_id", id)
       .eq("import_source", "zoho_import"),
+    sitesQuery,
+    featureFlags.customerPortal
+      ? supabase
+          .from("sites")
+          .select("id, name")
+          .eq("customer_id", id)
+          .order("name")
+      : Promise.resolve({ data: [] as Array<{ id: string; name: string }> }),
   ]);
   if (!customer) notFound();
+
+  const sites = (sitesData ?? []) as unknown as SiteListRow[];
+  const totalSites = sitesCount ?? 0;
 
   const { data: profile } = user
     ? await supabase
@@ -64,10 +102,9 @@ export default async function AdminCustomerDetailPage({
     (importedRowsCount ?? 0) > 0 ||
     (importedJobsCount ?? 0) > 0;
 
-  const compliance =
-    featureFlags.complianceScore
-      ? await loadCustomerCompliance(supabase, customer.id)
-      : null;
+  const compliance = featureFlags.complianceScore
+    ? await loadCustomerCompliance(supabase, customer.id)
+    : null;
 
   return (
     <div>
@@ -119,7 +156,6 @@ export default async function AdminCustomerDetailPage({
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
-        {/* Sites */}
         <div className="lg:col-span-2">
           <div className="rounded-xl border border-white/[0.08] nf-glass-panel p-4 mb-6">
             <h2 className="text-sm font-semibold text-zinc-300 mb-3">
@@ -148,19 +184,23 @@ export default async function AdminCustomerDetailPage({
           </div>
 
           <h2 className="text-sm font-semibold text-zinc-300 mb-3">
-            Sites ({(customer.sites ?? []).length})
+            Sites ({totalSites}
+            {q ? " matching" : ""})
           </h2>
-          {(customer.sites ?? []).length === 0 ? (
-            <p className="text-zinc-500 text-sm">No sites yet – add one.</p>
+          <AdminListToolbar
+            action={`/admin/customers/${id}`}
+            q={q}
+            placeholder="Search sites by name or address…"
+          />
+          {sites.length === 0 ? (
+            <p className="text-zinc-500 text-sm">
+              {q ? "No sites match that search." : "No sites yet – add one."}
+            </p>
           ) : (
             <div className="rounded-xl border border-white/[0.08] nf-glass-panel divide-y divide-white/5">
-              {customer.sites.map(
-                (s: {
-                  id: string;
-                  name: string;
-                  address: string;
-                  assets: Array<{ id: string }>;
-                }) => (
+              {sites.map((s) => {
+                const assetCount = s.assets?.[0]?.count ?? 0;
+                return (
                   <Link
                     key={s.id}
                     href={`/admin/sites/${s.id}`}
@@ -170,18 +210,25 @@ export default async function AdminCustomerDetailPage({
                       <p className="text-sm text-white">{s.name}</p>
                       <p className="flex items-center gap-1 text-xs text-zinc-500 truncate">
                         <MapPin className="w-3 h-3 shrink-0" />
-                        {s.address} · {(s.assets ?? []).length} assets
+                        {s.address} · {assetCount} asset
+                        {assetCount === 1 ? "" : "s"}
                       </p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-zinc-600 shrink-0" />
                   </Link>
-                )
-              )}
+                );
+              })}
             </div>
           )}
+          <AdminPagination
+            pathname={`/admin/customers/${id}`}
+            page={page}
+            pageSize={pageSize}
+            totalCount={totalSites}
+            params={{ q }}
+          />
         </div>
 
-        {/* Add site */}
         <div>
           <h2 className="text-sm font-semibold text-zinc-300 mb-3">New Site</h2>
           <form
@@ -217,7 +264,7 @@ export default async function AdminCustomerDetailPage({
         <div className="mt-8">
           <PortalUsersPanel
             customerId={customer.id}
-            sites={(customer.sites ?? []).map((site: { id: string; name: string }) => ({
+            sites={(portalSites ?? []).map((site) => ({
               id: site.id,
               name: site.name,
             }))}

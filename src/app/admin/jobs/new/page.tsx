@@ -14,15 +14,12 @@ function todayInSA(): string {
 export default async function NewJobPage() {
   const supabase = await createClient();
 
-  const [{ data: customers }, { data: technicians }] = await Promise.all([
-    supabase.from("customers").select("id, name").order("name"),
-    supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("role", ["technician", "dispatcher", "admin"])
-      .eq("is_active", true)
-      .order("full_name"),
-  ]);
+  const { data: technicians } = await supabase
+    .from("profiles")
+    .select("id, full_name")
+    .in("role", ["technician", "dispatcher", "admin"])
+    .eq("is_active", true)
+    .order("full_name");
 
   return (
     <div>
@@ -39,7 +36,6 @@ export default async function NewJobPage() {
       </h1>
 
       <JobCreateForm
-        customers={customers ?? []}
         technicians={technicians ?? []}
         defaultDate={todayInSA()}
       />

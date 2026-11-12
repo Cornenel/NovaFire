@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createJob, getCustomerSites, type CustomerSiteOption } from "@/app/admin/actions";
+import { useEffect, useState, useTransition } from "react";
+import {
+  createJob,
+  getCustomerSites,
+  searchCustomers,
+  type CustomerSearchOption,
+  type CustomerSiteOption,
+} from "@/app/admin/actions";
 import { JOB_PRIORITY_LABELS, JOB_TYPE_LABELS } from "@/lib/fsm/labels";
-
-interface CustomerOption {
-  id: string;
-  name: string;
-}
 
 interface TechnicianOption {
   id: string;
@@ -19,18 +20,32 @@ const inputCls =
 const labelCls = "block text-xs text-zinc-400 mb-1.5";
 
 export function JobCreateForm({
-  customers,
   technicians,
   defaultDate,
 }: {
-  customers: CustomerOption[];
   technicians: TechnicianOption[];
   defaultDate: string;
 }) {
+  const [customerQuery, setCustomerQuery] = useState("");
+  const [customerResults, setCustomerResults] = useState<CustomerSearchOption[]>(
+    []
+  );
   const [customerId, setCustomerId] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [siteId, setSiteId] = useState("");
   const [sites, setSites] = useState<CustomerSiteOption[]>([]);
   const [sitesLoading, setSitesLoading] = useState(false);
+  const [isSearching, startSearch] = useTransition();
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      startSearch(async () => {
+        const results = await searchCustomers(customerQuery, 25);
+        setCustomerResults(results);
+      });
+    }, 200);
+    return () => window.clearTimeout(handle);
+  }, [customerQuery]);
 
   useEffect(() => {
     if (!customerId) {
@@ -66,23 +81,62 @@ export function JobCreateForm({
       <div className="grid sm:grid-cols-2 gap-4">
         <div>
           <label className={labelCls}>Customer *</label>
-          <select
-            name="customer_id"
-            required
-            value={customerId}
-            onChange={(e) => {
-              setCustomerId(e.target.value);
-              setSiteId("");
-            }}
-            className={inputCls}
-          >
-            <option value="">Select customer…</option>
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <input type="hidden" name="customer_id" value={customerId} required />
+          {customerId ? (
+            <div className="flex items-center gap-2">
+              <div className={`${inputCls} flex-1 truncate`}>{customerName}</div>
+              <button
+                type="button"
+                onClick={() => {
+                  setCustomerId("");
+                  setCustomerName("");
+                  setCustomerQuery("");
+                  setSiteId("");
+                }}
+                className="shrink-0 rounded-lg border border-white/10 px-3 py-2.5 text-xs text-zinc-400 hover:text-white"
+              >
+                Change
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <input
+                type="search"
+                value={customerQuery}
+                onChange={(e) => setCustomerQuery(e.target.value)}
+                placeholder="Search customers…"
+                className={inputCls}
+                autoComplete="off"
+              />
+              <div className="max-h-48 overflow-y-auto rounded-lg border border-white/10 divide-y divide-white/5">
+                {isSearching && (
+                  <p className="px-3 py-2 text-xs text-zinc-500">Searching…</p>
+                )}
+                {!isSearching && customerResults.length === 0 && (
+                  <p className="px-3 py-2 text-xs text-zinc-500">
+                    {customerQuery
+                      ? "No customers found."
+                      : "Type to search customers."}
+                  </p>
+                )}
+                {customerResults.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setCustomerId(c.id);
+                      setCustomerName(c.name);
+                      setCustomerQuery(c.name);
+                      setSiteId("");
+                    }}
+                    className="block w-full px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/[0.04]"
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
         <div>
           <label className={labelCls}>Site *</label>
@@ -205,7 +259,8 @@ export function JobCreateForm({
 
       <button
         type="submit"
-        className="px-6 py-3 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-sm transition-colors"
+        disabled={!customerId}
+        className="px-6 py-3 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-sm transition-colors disabled:opacity-50"
       >
         Create Job
       </button>

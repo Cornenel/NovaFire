@@ -347,6 +347,40 @@ export async function getCustomerSites(
   return data ?? [];
 }
 
+export type CustomerSearchOption = {
+  id: string;
+  name: string;
+};
+
+/** Typeahead search for job create / admin pickers. */
+export async function searchCustomers(
+  query: string,
+  limit = 25
+): Promise<CustomerSearchOption[]> {
+  const { supabase } = await requireDispatcher();
+  const term = query
+    .replace(/[%_,()"]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  let q = supabase
+    .from("customers")
+    .select("id, name")
+    .order("name")
+    .limit(Math.min(Math.max(limit, 1), 50));
+
+  if (term) {
+    const pattern = `"%${term}%"`;
+    q = q.or(
+      `name.ilike.${pattern},trading_name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern}`
+    );
+  }
+
+  const { data, error } = await q;
+  if (error) return [];
+  return data ?? [];
+}
+
 export async function createJob(formData: FormData) {
   const { supabase, user } = await requireDispatcher();
 

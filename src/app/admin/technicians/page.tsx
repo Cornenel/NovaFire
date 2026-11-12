@@ -2,7 +2,13 @@ import Link from "next/link";
 import { Users, AlertCircle, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createTechnician } from "@/app/admin/technician-actions";
+import { AdminListToolbar } from "@/components/admin/admin-list-toolbar";
+import { AdminPagination } from "@/components/admin/admin-pagination";
 import { CopySetupLink } from "@/components/admin/copy-setup-link";
+import {
+  ilikePattern,
+  parseAdminListParams,
+} from "@/lib/admin/list-params";
 import type { Profile } from "@/lib/fsm/types";
 import { cn } from "@/lib/utils";
 
@@ -15,27 +21,43 @@ const labelCls = "block text-xs text-zinc-400 mb-1.5";
 export default async function TechniciansPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; success?: string; setupLink?: string }>;
+  searchParams: Promise<{
+    error?: string;
+    success?: string;
+    setupLink?: string;
+    q?: string;
+    page?: string;
+  }>;
 }) {
-  const { error, success, setupLink } = await searchParams;
+  const raw = await searchParams;
+  const { error, success, setupLink } = raw;
+  const { q, page, pageSize, from, to } = parseAdminListParams(raw);
   const supabase = await createClient();
 
+  let techsQuery = supabase
+    .from("profiles")
+    .select("*", { count: "exact" })
+    .in("role", ["technician", "dispatcher", "admin"])
+    .order("is_active", { ascending: false })
+    .order("full_name")
+    .range(from, to);
+
+  if (q) {
+    const pattern = ilikePattern(q);
+    techsQuery = techsQuery.or(
+      `full_name.ilike.${pattern},email.ilike.${pattern},phone.ilike.${pattern},vehicle_number.ilike.${pattern}`
+    );
+  }
+
   const [
-    { data: techsData },
+    { data: techsData, count: techsCount },
     {
       data: { user },
     },
-  ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("*")
-      .in("role", ["technician", "dispatcher", "admin"])
-      .order("is_active", { ascending: false })
-      .order("full_name"),
-    supabase.auth.getUser(),
-  ]);
+  ] = await Promise.all([techsQuery, supabase.auth.getUser()]);
 
   const technicians = (techsData ?? []) as Profile[];
+  const totalCount = techsCount ?? 0;
   const { data: currentProfile } = user
     ? await supabase
         .from("profiles")
@@ -88,8 +110,15 @@ export default async function TechniciansPage({
       <div className="grid lg:grid-cols-3 gap-8">
         {/* List */}
         <div className="lg:col-span-2">
+          <AdminListToolbar
+            action="/admin/technicians"
+            q={q}
+            placeholder="Search name, email, phone, van…"
+          />
           {technicians.length === 0 ? (
-            <p className="text-zinc-500 text-sm">No staff accounts yet.</p>
+            <p className="text-zinc-500 text-sm">
+              {q ? "No staff match that search." : "No staff accounts yet."}
+            </p>
           ) : (
             <div className="rounded-xl border border-white/[0.08] nf-glass-panel divide-y divide-white/5">
               {technicians.map((t) => {
@@ -148,6 +177,14 @@ export default async function TechniciansPage({
               })}
             </div>
           )}
+
+          <AdminPagination
+            pathname="/admin/technicians"
+            page={page}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            params={{ q }}
+          />
         </div>
 
         {/* Add staff */}

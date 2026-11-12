@@ -1,5 +1,13 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { AdminListToolbar } from "@/components/admin/admin-list-toolbar";
+import { AdminPagination } from "@/components/admin/admin-pagination";
+import {
+  buildAdminListHref,
+  ilikePattern,
+  parseAdminListParams,
+} from "@/lib/admin/list-params";
 import {
   FIRE_RISK_SEVERITY_LABELS,
   FIRE_RISK_SEVERITY_STYLES,
@@ -17,20 +25,23 @@ export const metadata = { title: "Fire Risks | NovaFire Admin" };
 export default async function AdminFireRisksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>;
 }) {
   if (!featureFlags.fireRiskRegister) notFound();
 
-  const { status = "open" } = await searchParams;
+  const raw = await searchParams;
+  const status = raw.status || "open";
+  const { q, page, pageSize, from, to } = parseAdminListParams(raw);
   const supabase = await createClient();
 
   let query = supabase
     .from("fire_risks")
     .select(
-      "id, risk_type, severity, description, recommended_action, status, location_description, created_at, customer:customers(name), site:sites(name)"
+      "id, risk_type, severity, description, recommended_action, status, location_description, created_at, customer:customers(name), site:sites(name)",
+      { count: "exact" }
     )
     .order("created_at", { ascending: false })
-    .limit(200);
+    .range(from, to);
 
   if (status === "open") {
     query = query.in("status", ["open", "in_progress"]);
@@ -38,7 +49,15 @@ export default async function AdminFireRisksPage({
     query = query.eq("status", status);
   }
 
-  const { data: risks } = await query;
+  if (q) {
+    const pattern = ilikePattern(q);
+    query = query.or(
+      `description.ilike.${pattern},recommended_action.ilike.${pattern},location_description.ilike.${pattern}`
+    );
+  }
+
+  const { data: risks, count } = await query;
+  const totalCount = count ?? 0;
 
   const filters = [
     { key: "open", label: "Open / in progress" },
@@ -56,11 +75,22 @@ export default async function AdminFireRisksPage({
         Site fire risk observations separate from equipment defects.
       </p>
 
+      <AdminListToolbar
+        action="/admin/fire-risks"
+        q={q}
+        placeholder="Search description, location, action…"
+        hidden={{ status }}
+      />
+
       <div className="flex flex-wrap gap-2 mb-6">
         {filters.map((filter) => (
-          <a
+          <Link
             key={filter.key}
-            href={`/admin/fire-risks?status=${filter.key}`}
+            href={buildAdminListHref(
+              "/admin/fire-risks",
+              { q, status: filter.key },
+              { page: 1 }
+            )}
             className={cn(
               "px-3 py-1.5 rounded-lg text-xs border",
               status === filter.key
@@ -69,12 +99,14 @@ export default async function AdminFireRisksPage({
             )}
           >
             {filter.label}
-          </a>
+          </Link>
         ))}
       </div>
 
       {(risks ?? []).length === 0 ? (
-        <p className="text-sm text-zinc-500">No fire risks found.</p>
+        <p className="text-sm text-zinc-500">
+          {q ? "No fire risks match that search." : "No fire risks found."}
+        </p>
       ) : (
         <div className="space-y-3">
           {(risks ?? []).map((risk) => (
@@ -141,6 +173,14 @@ export default async function AdminFireRisksPage({
           ))}
         </div>
       )}
+
+      <AdminPagination
+        pathname="/admin/fire-risks"
+        page={page}
+        pageSize={pageSize}
+        totalCount={totalCount}
+        params={{ q, status }}
+      />
     </div>
   );
 }
