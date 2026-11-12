@@ -20,6 +20,13 @@ const TRAILING_SUFFIXES = new Set([
   "co",
 ]);
 
+/** Fuzzy name floor for auto-verify when a unique contact detail also agrees. */
+const AUTO_NAME_SCORE = 0.5;
+/** Soft floor used only to surface review candidates (not auto-link). */
+const REVIEW_NAME_SCORE = 0.4;
+/** Names are treated as compatible corroboration at this Jaccard/subset score. */
+const COMPATIBLE_NAME_SCORE = 0.34;
+
 export function normalizeCompanyName(value: string | null | undefined): string {
   const tokens = (value ?? "")
     .toLowerCase()
@@ -86,14 +93,16 @@ function bestNameScore(contact: ZohoContact, customer: NovaCustomer): number {
   for (const left of incoming) {
     for (const right of existing) {
       best = Math.max(best, jaccard(left, right));
-      if (isTokenSubset(left, right) || isTokenSubset(right, left)) best = Math.max(best, 0.67);
+      if (isTokenSubset(left, right) || isTokenSubset(right, left)) {
+        best = Math.max(best, 0.67);
+      }
     }
   }
   return best;
 }
 
 function namesCompatible(contact: ZohoContact, customer: NovaCustomer): boolean {
-  return exactName(contact, customer) || bestNameScore(contact, customer) >= 0.34;
+  return exactName(contact, customer) || bestNameScore(contact, customer) >= COMPATIBLE_NAME_SCORE;
 }
 
 function exactName(contact: ZohoContact, customer: NovaCustomer): boolean {
@@ -106,7 +115,9 @@ function exactName(contact: ZohoContact, customer: NovaCustomer): boolean {
 }
 
 function contactPhones(contact: ZohoContact): string[] {
-  return [contact.phone, contact.mobile].map((value) => normalizePhone(value)).filter(Boolean);
+  return [contact.phone, contact.mobile]
+    .map((value) => normalizePhone(value))
+    .filter(Boolean);
 }
 
 function emailsMatch(contact: ZohoContact, customer: NovaCustomer): boolean {
@@ -120,7 +131,10 @@ function phonesMatch(contact: ZohoContact, customer: NovaCustomer): boolean {
   return Boolean(customerPhone) && phones.has(customerPhone);
 }
 
-function identifierMatch(contact: ZohoContact, customer: NovaCustomer): "vat" | "registration" | null {
+function identifierMatch(
+  contact: ZohoContact,
+  customer: NovaCustomer
+): "vat" | "registration" | null {
   const vat = normalizeIdentifier(contact.vatNumber);
   const registration = normalizeIdentifier(contact.registrationNumber);
   if (vat.length >= 6 && vat === normalizeIdentifier(customer.vatNumber)) return "vat";
@@ -144,6 +158,22 @@ function candidate(
     reason,
     score,
   };
+}
+
+function contactContradiction(
+  contact: ZohoContact,
+  customer: NovaCustomer
+): boolean {
+  const contactEmail = normalizeEmail(contact.email);
+  const emailConflicts =
+    Boolean(contactEmail) &&
+    Boolean(normalizeEmail(customer.email)) &&
+    !emailsMatch(contact, customer);
+  const phoneConflicts =
+    contactPhones(contact).length > 0 &&
+    Boolean(normalizePhone(customer.phone)) &&
+    !phonesMatch(contact, customer);
+  return emailConflicts && phoneConflicts;
 }
 
 export function matchZohoContact(input: {
@@ -214,14 +244,20 @@ export function matchZohoContact(input: {
       method: "legacy_zoho_customer_id",
       confidence: "low",
       reason: "More than one Nova Fire customer stores this Zoho contact id.",
-      candidates: legacy.map((customer) => candidate(customer, "Shared legacy Zoho id", 0.4)),
+      candidates: legacy.map((customer) =>
+        candidate(customer, "Shared legacy Zoho id", 0.4)
+      ),
     };
   }
 
   const identifierHits = input.customers
-    .map((customer) => ({ customer, kind: identifierMatch(input.contact, customer) }))
-    .filter((hit): hit is { customer: NovaCustomer; kind: "vat" | "registration" } =>
-      Boolean(hit.kind)
+    .map((customer) => ({
+      customer,
+      kind: identifierMatch(input.contact, customer),
+    }))
+    .filter(
+      (hit): hit is { customer: NovaCustomer; kind: "vat" | "registration" } =>
+        Boolean(hit.kind)
     );
   if (identifierHits.length === 1) {
     const hit = identifierHits[0]!;
@@ -232,7 +268,8 @@ export function matchZohoContact(input: {
         customerId: hit.customer.id,
         method: hit.kind === "vat" ? "vat_number" : "registration_number",
         confidence: "high",
-        reason: "A unique business identifier matches and the names are compatible.",
+        reason:
+          "A unique business identifier matches and the names are compatible.",
         candidates: [candidate(hit.customer, "Unique business identifier", 0.98)],
       };
     }
@@ -260,38 +297,20 @@ export function matchZohoContact(input: {
     };
   }
 
-  const exact = input.customers.filter((customer) => exactName(input.contact, customer));
+  const exact = input.customers.filter((customer) =>
+    exactName(input.contact, customer)
+  );
   if (exact.length === 1) {
     const customer = exact[0]!;
-    const emailSupports = emailsMatch(input.contact, customer) && !emailIsShared;
-    const phoneSupports = phonesMatch(input.contact, customer) && !contactPhoneShared;
-    const emailConflicts =
-      Boolean(contactEmail) &&
-      Boolean(normalizeEmail(customer.email)) &&
-      !emailsMatch(input.contact, customer);
-    const phoneConflicts =
-      contactPhones(input.contact).length > 0 &&
-      Boolean(normalizePhone(customer.phone)) &&
-      !phonesMatch(input.contact, customer);
-    const contradictory = emailConflicts && phoneConflicts;
-    const noContactData =
-      !contactEmail &&
-      contactPhones(input.contact).length === 0 &&
-      !normalizeEmail(customer.email) &&
-      !normalizePhone(customer.phone);
-    if (
-      !mappedCustomerIds.has(customer.id) &&
-      !contradictory &&
-      (emailSupports || phoneSupports || noContactData)
-    ) {
+    const contradictory = contactContradiction(input.contact, customer);
+    if (!mappedCustomerIds.has(customer.id) && !contradictory) {
       return {
         category: "verified_match",
         customerId: customer.id,
         method: "normalized_name",
         confidence: "high",
-        reason: noContactData
-          ? "The normalised company name is unique and neither record has a conflicting contact."
-          : "The normalised company name is unique and a contact detail agrees.",
+        reason:
+          "The normalised company name is unique and contact details do not contradict it.",
         candidates: [candidate(customer, "Normalised company name", 0.9)],
       };
     }
@@ -302,7 +321,7 @@ export function matchZohoContact(input: {
       confidence: "medium",
       reason: mappedCustomerIds.has(customer.id)
         ? "The name matches a customer already mapped to another Zoho contact."
-        : "The company name matches, but the contact details do not confirm it.",
+        : "The company name matches, but email and phone both disagree.",
       candidates: [candidate(customer, "Name needs confirmation", 0.6)],
     };
   }
@@ -313,16 +332,88 @@ export function matchZohoContact(input: {
       method: "normalized_name",
       confidence: "low",
       reason: "More than one Nova Fire customer has this normalised name.",
-      candidates: exact.map((customer) => candidate(customer, "Duplicate normalised name", 0.5)),
+      candidates: exact.map((customer) =>
+        candidate(customer, "Duplicate normalised name", 0.5)
+      ),
+    };
+  }
+
+  // Unique email/phone with compatible names → solid auto-match.
+  const emailHits = contactEmail
+    ? input.customers.filter(
+        (customer) =>
+          normalizeEmail(customer.email) === contactEmail &&
+          !mappedCustomerIds.has(customer.id)
+      )
+    : [];
+  if (!emailIsShared && emailHits.length === 1) {
+    const customer = emailHits[0]!;
+    if (namesCompatible(input.contact, customer)) {
+      return {
+        category: "verified_match",
+        customerId: customer.id,
+        method: "unique_email",
+        confidence: "high",
+        reason:
+          "A unique email matches and the company names are compatible.",
+        candidates: [candidate(customer, "Unique email with compatible name", 0.92)],
+      };
+    }
+    return {
+      category: "needs_review",
+      customerId: null,
+      method: "unique_email",
+      confidence: "medium",
+      reason:
+        "A unique email matches, but the company names need confirmation.",
+      candidates: [candidate(customer, "Unique email needs confirmation", 0.75)],
+    };
+  }
+
+  const phoneHits = contactPhones(input.contact).length
+    ? input.customers.filter((customer) => {
+        const phone = normalizePhone(customer.phone);
+        return (
+          Boolean(phone) &&
+          contactPhones(input.contact).includes(phone) &&
+          !mappedCustomerIds.has(customer.id)
+        );
+      })
+    : [];
+  if (!contactPhoneShared && phoneHits.length === 1) {
+    const customer = phoneHits[0]!;
+    if (namesCompatible(input.contact, customer)) {
+      return {
+        category: "verified_match",
+        customerId: customer.id,
+        method: "unique_phone",
+        confidence: "high",
+        reason:
+          "A unique phone number matches and the company names are compatible.",
+        candidates: [candidate(customer, "Unique phone with compatible name", 0.9)],
+      };
+    }
+    return {
+      category: "needs_review",
+      customerId: null,
+      method: "unique_phone",
+      confidence: "medium",
+      reason:
+        "A unique phone number matches, but the company names need confirmation.",
+      candidates: [candidate(customer, "Unique phone needs confirmation", 0.72)],
     };
   }
 
   const similar = input.customers
-    .map((customer) => ({ customer, score: bestNameScore(input.contact, customer) }))
-    .filter((item) => item.score >= 0.5)
+    .map((customer) => ({
+      customer,
+      score: bestNameScore(input.contact, customer),
+    }))
+    .filter((item) => item.score >= REVIEW_NAME_SCORE)
     .sort((a, b) => b.score - a.score);
 
   const supporting = similar.filter((item) => {
+    if (item.score < AUTO_NAME_SCORE) return false;
     const emailOk = emailsMatch(input.contact, item.customer) && !emailIsShared;
     const phoneOk = phonesMatch(input.contact, item.customer) && !contactPhoneShared;
     return (emailOk || phoneOk) && !mappedCustomerIds.has(item.customer.id);
@@ -333,14 +424,21 @@ export function matchZohoContact(input: {
       customerId: supporting[0]!.customer.id,
       method: "abbreviated_name",
       confidence: "high",
-      reason: "The trading name is contained in the legal name and a unique contact detail agrees.",
+      reason:
+        "The trading name is contained in the legal name and a unique contact detail agrees.",
       candidates: [
-        candidate(supporting[0]!.customer, "Abbreviated name with contact support", supporting[0]!.score),
+        candidate(
+          supporting[0]!.customer,
+          "Abbreviated name with contact support",
+          supporting[0]!.score
+        ),
       ],
     };
   }
 
-  const reviewPool = similar.filter((item) => item.score >= 0.5).slice(0, 5);
+  const reviewPool = similar
+    .filter((item) => !mappedCustomerIds.has(item.customer.id))
+    .slice(0, 5);
   if (reviewPool.length > 0) {
     return {
       category: "needs_review",
@@ -348,7 +446,7 @@ export function matchZohoContact(input: {
       method: "fuzzy_name",
       confidence: "low",
       reason:
-        "The company names are similar. A shared email or phone number is not enough to link them automatically.",
+        "The company names are similar. Confirm the correct Nova Fire customer before linking.",
       candidates: reviewPool.map((item) =>
         candidate(item.customer, "Similar company name", item.score)
       ),

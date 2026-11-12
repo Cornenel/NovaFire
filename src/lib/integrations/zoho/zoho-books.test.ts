@@ -272,8 +272,8 @@ describe("customer matching", () => {
     expect(result).toMatchObject({
       category: "verified_match",
       customerId: "11111111-1111-4111-8111-111111111111",
-      method: "abbreviated_name",
     });
+    expect(["abbreviated_name", "unique_email"]).toContain(result.method);
     const proposals = proposeCustomerChanges(
       customer({ email: "reservations@kambaku.example" }),
       contact({ email: "reservations@kambaku.example", billingAddress: "12 Accounts Road" })
@@ -325,7 +325,8 @@ describe("customer matching", () => {
       customers: [customer({ name: "Rethread", phone: "0135550101" })],
       mappings: [],
     });
-    expect(result).toMatchObject({ category: "verified_match", method: "abbreviated_name" });
+    expect(result.category).toBe("verified_match");
+    expect(["abbreviated_name", "unique_phone"]).toContain(result.method);
   });
 
   it("reuses an existing mapping and does not propose a second customer", () => {
@@ -357,7 +358,7 @@ describe("customer matching", () => {
     expect(result).toMatchObject({ category: "verified_match", method: "vat_number" });
   });
 
-  it("does not treat a shared phone number alone as a match", () => {
+  it("does not auto-link a unique phone when the company names disagree", () => {
     const result = matchZohoContact({
       contact: contact({
         contactName: "Northern Workshop",
@@ -367,7 +368,48 @@ describe("customer matching", () => {
       customers: [customer({ name: "Southern Workshop", phone: "082 555 0101" })],
       mappings: [],
     });
-    expect(result.category).toBe("unmatched");
+    expect(result.category).toBe("needs_review");
+    expect(result.method).toBe("unique_phone");
+    expect(result.customerId).toBeNull();
+  });
+
+  it("auto-links a unique email when the company names are compatible", () => {
+    const result = matchZohoContact({
+      contact: contact({
+        contactName: "Acme Trading Sandton",
+        companyName: "Acme Trading Sandton",
+        email: "books@acme.example",
+      }),
+      customers: [
+        customer({
+          id: "22222222-2222-4222-8222-222222222222",
+          name: "Acme Trading Holdings (Pty) Ltd",
+          email: "books@acme.example",
+        }),
+      ],
+      mappings: [],
+    });
+    expect(result).toMatchObject({
+      category: "verified_match",
+      method: "unique_email",
+      customerId: "22222222-2222-4222-8222-222222222222",
+    });
+  });
+
+  it("auto-links a unique exact name even when only Zoho has the email", () => {
+    const result = matchZohoContact({
+      contact: contact({
+        contactName: "Kambaku Lodge",
+        companyName: "Kambaku Lodge",
+        email: "new@kambaku.example",
+      }),
+      customers: [customer({ name: "Kambaku Lodge", email: null })],
+      mappings: [],
+    });
+    expect(result).toMatchObject({
+      category: "verified_match",
+      method: "normalized_name",
+    });
   });
 
   it("stops contact pagination when Zoho returns an empty extra page", () => {

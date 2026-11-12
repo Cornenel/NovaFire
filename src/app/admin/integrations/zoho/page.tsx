@@ -279,10 +279,11 @@ export default async function ZohoBooksAdminPage({
       <section className={panelClass}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-white">Customer preview</h2>
+            <h2 className="text-sm font-semibold text-white">Compare customers</h2>
             <p className="text-xs text-zinc-500 mt-1">
-              A preview reads Zoho contacts and compares them with Nova Fire. It does not create
-              or edit customers until an administrator applies an approved result.
+              Reads Zoho Books contacts, matches them to Nova Fire customers, and proposes filling
+              missing details (VAT, registration, billing, email, phone). Nothing is written until
+              you apply the results.
             </p>
           </div>
           <form action={startZohoCustomerPreview}>
@@ -291,7 +292,7 @@ export default async function ZohoBooksAdminPage({
               type="submit"
               disabled={!connection?.last_connection_test_ok}
             >
-              Start dry run
+              Compare with Zoho
             </button>
           </form>
         </div>

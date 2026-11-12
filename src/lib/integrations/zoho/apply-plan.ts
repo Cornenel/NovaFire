@@ -9,12 +9,15 @@ import {
   type ZohoContact,
 } from "./types";
 
+/** Fields Zoho may overwrite when the proposal action is `update` (not conflict). */
 const APPLY_ON_APPROVAL = new Set<CustomerEnrichableField>([
   "name",
   "trading_name",
   "vat_number",
   "registration_number",
   "billing_address",
+  // Missing-only fills for these come through `add` (always safe).
+  // `update` for email/phone/contact_person is never proposed; conflicts stay opt-in.
 ]);
 
 function clean(value: string | null | undefined): string | null {

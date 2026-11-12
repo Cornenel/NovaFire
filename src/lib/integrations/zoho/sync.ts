@@ -6,9 +6,9 @@ import { getConnection } from "./connection";
 import { matchZohoContact, normalizeCompanyName, normalizeIdentifier } from "./matching";
 import { countProposalActions, proposeCustomerChanges } from "./proposals";
 import { getValidAccessToken } from "./tokens";
-import type { FieldProposal, NovaCustomer, ZohoContact } from "./types";
+import type { NovaCustomer, ZohoContact } from "./types";
 
-const DETAIL_LIMIT = 250;
+const DETAIL_LIMIT = 500;
 const STALE_RUN_MS = 20 * 60 * 1000;
 
 type SyncItemRow = {
@@ -176,9 +176,22 @@ export async function runCustomerPreview(input: {
       match: matchZohoContact({ contact, customers, mappings }),
     }));
 
+    // Prefer detail for review + verified so VAT/reg/address proposals are solid.
+    const detailPriority = [...matches].sort((a, b) => {
+      const rank = (category: string) =>
+        category === "needs_review"
+          ? 0
+          : category === "verified_match"
+            ? 1
+            : category === "conflict"
+              ? 2
+              : 3;
+      return rank(a.match.category) - rank(b.match.category);
+    });
+
     let detailFetched = 0;
     let detailSkipped = 0;
-    for (const item of matches) {
+    for (const item of detailPriority) {
       if (item.match.category === "unmatched") continue;
       if (detailFetched >= DETAIL_LIMIT) {
         detailSkipped += 1;
@@ -191,8 +204,16 @@ export async function runCustomerPreview(input: {
         contactId: item.contact.contactId,
       });
       detailFetched += 1;
-      if (detailed.ok && detailed.contact) item.contact = detailed.contact;
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      if (detailed.ok && detailed.contact) {
+        item.contact = detailed.contact;
+        // Rematch with richer contact data (VAT / registration / address).
+        item.match = matchZohoContact({
+          contact: item.contact,
+          customers,
+          mappings,
+        });
+      }
+      await new Promise((resolve) => setTimeout(resolve, 120));
     }
 
     const customerById = new Map(customers.map((customer) => [customer.id, customer]));
@@ -325,16 +346,33 @@ async function ensureMapping(input: {
     }
     return { ok: false, error: "The customer mapping could not be saved." };
   }
+
+  // Persist Books id on the customer so future previews verify instantly.
+  await admin()
+    .from("customers")
+    .update({ legacy_zoho_customer_id: input.zohoContactId })
+    .eq("id", input.customerId)
+    .is("legacy_zoho_customer_id", null);
+
   return { ok: true };
 }
 
+/**
+ * Apply approved work for a preview run.
+ * - applyVerified: also treat pending verified_match rows as approved
+ * - applySaved: also apply link / create_customer decisions already saved
+ * Default: both true (one-click apply of everything ready).
+ */
 export async function applyCustomerDecisions(input: {
   actorId: string;
   supabase: SupabaseClient;
   runId: string;
   applyVerified?: boolean;
+  applySaved?: boolean;
   applyConflicts?: boolean;
 }): Promise<{ ok: true; applied: number; failed: number } | { ok: false; error: string }> {
+  const applyVerified = input.applyVerified !== false;
+  const applySaved = input.applySaved !== false;
   const connection = await getConnection();
   if (!connection?.organization_id) {
     return { ok: false, error: "Zoho Books is not connected to an organisation." };
@@ -366,10 +404,14 @@ export async function applyCustomerDecisions(input: {
   for (const raw of items as SyncItemRow[]) {
     if (raw.apply_status === "applied") continue;
     const treatAsVerified =
-      input.applyVerified === true &&
+      applyVerified &&
       raw.category === "verified_match" &&
       (raw.decision === "pending" || raw.decision === "approve_update");
-    const decision = treatAsVerified ? "approve_update" : raw.decision;
+    const decision = treatAsVerified
+      ? "approve_update"
+      : applySaved
+        ? raw.decision
+        : "pending";
     if (decision === "pending" || decision === "skip" || decision === "reject") continue;
 
     const contact = raw.zoho_snapshot;
@@ -381,18 +423,22 @@ export async function applyCustomerDecisions(input: {
           : raw.customer_id;
     const customer = targetId ? customerById.get(targetId) ?? null : null;
     const plausible = Array.isArray(raw.candidates) ? raw.candidates.length : 0;
-    const storedProposals = Array.isArray(raw.proposed_changes)
-      ? (raw.proposed_changes as FieldProposal[])
-      : undefined;
+    // Always recompute proposals from live customer + Zoho snapshot so missing
+    // fields are filled even if the preview snapshot went stale.
     const plan = planCustomerWrite({
       decision: decision as "approve_update" | "link" | "create_customer",
       customer,
       contact,
-      proposals: decision === "link" ? undefined : storedProposals,
-      applyConflicts: treatAsVerified ? input.applyConflicts === true : raw.apply_conflicts,
+      proposals: customer ? proposeCustomerChanges(customer, contact) : undefined,
+      applyConflicts: treatAsVerified
+        ? input.applyConflicts === true
+        : raw.apply_conflicts,
       confirmDistinct: raw.confirm_distinct,
       plausibleCandidateCount: plausible,
-      identifierTaken: decision === "create_customer" ? identifierTaken(contact, customers) : false,
+      identifierTaken:
+        decision === "create_customer"
+          ? identifierTaken(contact, customers)
+          : false,
     });
 
     if (plan.type === "noop") {
@@ -526,11 +572,26 @@ export async function applyCustomerDecisions(input: {
     }
   }
 
+  const { data: currentRun } = await admin()
+    .from("zoho_books_sync_runs")
+    .select("summary")
+    .eq("id", input.runId)
+    .maybeSingle();
+  const previousSummary =
+    (currentRun?.summary as Record<string, unknown> | null) ?? {};
+
   await admin()
     .from("zoho_books_sync_runs")
     .update({
+      mode: "apply",
       status: failed > 0 ? "awaiting_review" : "completed",
       completed_at: new Date().toISOString(),
+      summary: {
+        ...previousSummary,
+        lastApplied: applied,
+        lastFailed: failed,
+        lastAppliedAt: new Date().toISOString(),
+      },
     })
     .eq("id", input.runId);
 

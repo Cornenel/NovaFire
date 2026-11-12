@@ -105,6 +105,23 @@ export async function startZohoCustomerPreview() {
   redirect(`/admin/integrations/zoho/${result.runId}?notice=preview`);
 }
 
+/** One-click: fill missing fields on verified matches + apply saved link/create decisions. */
+export async function applyAllZohoChanges(formData: FormData) {
+  const auth = await adminContext();
+  const runId = String(formData.get("run_id") ?? "");
+  const result = await applyCustomerDecisions({
+    actorId: auth.userId,
+    supabase: auth.supabase,
+    runId,
+    applyVerified: true,
+    applySaved: true,
+    applyConflicts: formData.get("apply_conflicts") === "true",
+  });
+  revalidatePath("/admin/customers");
+  revalidatePath(`/admin/integrations/zoho/${runId}`);
+  go(`/admin/integrations/zoho/${runId}`, result.ok ? "applied" : "apply_failed");
+}
+
 export async function applyVerifiedZohoMatches(formData: FormData) {
   const auth = await adminContext();
   const runId = String(formData.get("run_id") ?? "");
@@ -113,6 +130,7 @@ export async function applyVerifiedZohoMatches(formData: FormData) {
     supabase: auth.supabase,
     runId,
     applyVerified: true,
+    applySaved: false,
     applyConflicts: formData.get("apply_conflicts") === "true",
   });
   revalidatePath("/admin/customers");
@@ -151,6 +169,8 @@ export async function applySavedZohoDecisions(formData: FormData) {
     actorId: auth.userId,
     supabase: auth.supabase,
     runId,
+    applyVerified: false,
+    applySaved: true,
   });
   revalidatePath("/admin/customers");
   revalidatePath(`/admin/integrations/zoho/${runId}`);
