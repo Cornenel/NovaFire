@@ -41,6 +41,33 @@ const REWRITE_EXEMPT_PREFIXES = [
 
 export async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone();
+
+  /**
+   * Supabase Site URL is often the homepage. Recovery/invite emails then land
+   * on /?code=… or /?token_hash=…&type=recovery. Catch those before marketing
+   * renders and send them to the auth handlers.
+   */
+  if (!url.pathname.startsWith("/auth/")) {
+    const code = url.searchParams.get("code");
+    const tokenHash = url.searchParams.get("token_hash");
+    const type = url.searchParams.get("type");
+
+    if (tokenHash && type) {
+      const confirm = new URL("/auth/confirm", request.url);
+      confirm.searchParams.set("token_hash", tokenHash);
+      confirm.searchParams.set("type", type);
+      confirm.searchParams.set("next", "/auth/set-password");
+      return NextResponse.redirect(confirm);
+    }
+
+    if (code) {
+      const callback = new URL("/auth/callback", request.url);
+      callback.searchParams.set("code", code);
+      callback.searchParams.set("next", "/auth/set-password");
+      return NextResponse.redirect(callback);
+    }
+  }
+
   const hostname = (request.headers.get("host") ?? "").replace(/:\d+$/, "");
   const parts = hostname.split(".");
   // co.za: novafire.co.za = apex (3 parts), firetech.novafire.co.za = 4 parts

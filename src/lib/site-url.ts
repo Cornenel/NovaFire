@@ -4,11 +4,16 @@
  * Set NEXT_PUBLIC_SITE_URL to your deployed URL, e.g. https://www.novafire.co.za
  * Localhost links only work on the same machine — they fail on technicians' phones.
  *
- * In Supabase → Authentication → URL Configuration, allow:
- *   https://www.novafire.co.za/auth/callback
- *   https://www.novafire.co.za/auth/confirm
- *   https://www.novafire.co.za/auth/set-password
- * Prefer Site URL = https://www.novafire.co.za (hash tokens are forwarded to set-password).
+ * In Supabase → Authentication → URL Configuration:
+ *   Site URL: https://www.novafire.co.za
+ *   Redirect URLs (add all):
+ *     https://www.novafire.co.za/**
+ *     https://www.novafire.co.za/auth/callback
+ *     https://www.novafire.co.za/auth/callback?next=/auth/set-password
+ *     https://www.novafire.co.za/auth/confirm
+ *     https://www.novafire.co.za/auth/set-password
+ * When sending a recovery from the Supabase dashboard, set Redirect To to:
+ *   https://www.novafire.co.za/auth/callback?next=/auth/set-password
  */
 
 function normalizeSiteUrl(url: string): string {
