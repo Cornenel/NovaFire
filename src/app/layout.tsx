@@ -1,25 +1,34 @@
 import type { Metadata } from "next";
-import { Outfit, JetBrains_Mono, Syne } from "next/font/google";
+import localFont from "next/font/local";
 import { OrganizationStructuredData } from "@/components/structured-data";
 import { CookieConsent } from "@/components/cookie-consent";
 import "./globals.css";
 import "./forms.css";
 
-const outfit = Outfit({
+/**
+ * Self-hosted fonts (Google OFL sources) so production builds do not fetch
+ * fonts.gstatic.com. Next 16 Turbopack currently fails when Google returns
+ * extensionless /l/font?kit= URLs (vercel/next.js#99114).
+ */
+const outfit = localFont({
+  src: "./fonts/Outfit-Variable.ttf",
   variable: "--font-outfit",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700",
+  display: "swap",
 });
 
-const syne = Syne({
+const syne = localFont({
+  src: "./fonts/Syne-Variable.ttf",
   variable: "--font-syne",
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
+  weight: "600 800",
+  display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
+const jetbrainsMono = localFont({
+  src: "./fonts/JetBrainsMono-Variable.ttf",
   variable: "--font-jetbrains",
-  subsets: ["latin"],
+  weight: "100 800",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
