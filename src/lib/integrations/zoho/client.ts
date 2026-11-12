@@ -1,7 +1,14 @@
 import { isAllowedApiDomain, normalizeOrigin } from "./config";
 import { sanitizeExternalError } from "./crypto";
 
-const READ_PATHS = ["/organizations", "/contacts", "/items", "/estimates", "/invoices"];
+const READ_PATHS = [
+  "/organizations",
+  "/contacts",
+  "/items",
+  "/itemdetails",
+  "/estimates",
+  "/invoices",
+];
 
 export type ZohoGetResult =
   | { ok: true; body: unknown }

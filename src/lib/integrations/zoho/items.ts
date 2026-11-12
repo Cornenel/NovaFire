@@ -163,8 +163,66 @@ function pageHasMore(body: unknown, received: number): boolean {
 }
 
 /**
+ * Zoho list `/items` often omits or under-specifies `product_type`.
+ * Bulk `/itemdetails` carries the goods vs service flag used by Books exports.
+ */
+async function enrichProductTypes(input: {
+  apiDomain: string;
+  accessToken: string;
+  organizationId: string;
+  items: ZohoCatalogItem[];
+  fetchImpl?: typeof fetch;
+}): Promise<{ ok: true; items: ZohoCatalogItem[] } | { ok: false; error: string }> {
+  const byId = new Map(input.items.map((item) => [item.itemId, item]));
+  const ids = [...byId.keys()];
+  const batchSize = 50;
+
+  for (let offset = 0; offset < ids.length; offset += batchSize) {
+    const chunk = ids.slice(offset, offset + batchSize);
+    const result = await zohoBooksGet({
+      apiDomain: input.apiDomain,
+      accessToken: input.accessToken,
+      path: "/itemdetails",
+      query: {
+        organization_id: input.organizationId,
+        item_ids: chunk.join(","),
+      },
+      fetchImpl: input.fetchImpl,
+    });
+    if (!result.ok) return { ok: false, error: result.error };
+
+    const record = asRecord(result.body);
+    const detailRows = Array.isArray(record?.items)
+      ? record.items
+      : Array.isArray(record?.itemdetails)
+        ? record.itemdetails
+        : [];
+
+    for (const row of detailRows) {
+      const detailed = parseItem(row);
+      if (!detailed) continue;
+      const existing = byId.get(detailed.itemId);
+      if (!existing) continue;
+      // Detail payload wins for product_type / classification.
+      byId.set(detailed.itemId, {
+        ...existing,
+        ...detailed,
+        name: existing.name || detailed.name,
+        sku: detailed.sku ?? existing.sku,
+        unit: detailed.unit ?? existing.unit,
+        status: detailed.status ?? existing.status,
+      });
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 120));
+  }
+
+  return { ok: true, items: [...byId.values()] };
+}
+
+/**
  * Paginated Zoho Books catalogue: inventory goods AND services.
- * Uses Status.All so inactive catalogue rows are included too.
+ * Uses Status.All, then enriches via /itemdetails so Product Type is correct.
  */
 export async function listAllCatalogItems(input: {
   apiDomain: string;
@@ -209,7 +267,15 @@ export async function listAllCatalogItems(input: {
     await new Promise((resolve) => setTimeout(resolve, 120));
   }
 
-  return { ok: true, items };
+  const enriched = await enrichProductTypes({
+    apiDomain: input.apiDomain,
+    accessToken: input.accessToken,
+    organizationId: input.organizationId,
+    items,
+    fetchImpl: input.fetchImpl,
+  });
+  // Prefer itemdetails Product Type; if Zoho rejects the bulk call, keep list rows.
+  return enriched.ok ? enriched : { ok: true, items };
 }
 
 /** @deprecated Prefer listAllCatalogItems — kept for call-site compatibility. */

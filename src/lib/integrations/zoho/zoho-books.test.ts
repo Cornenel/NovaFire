@@ -594,4 +594,41 @@ describe("Zoho catalogue classification", () => {
       }).isService
     ).toBe(true);
   });
+
+  it("never classifies goods named like services as services", async () => {
+    const { classifyZohoCatalogItem } = await import("./items");
+    const classified = classifyZohoCatalogItem({
+      item_type: "sales_and_purchases",
+      product_type: "goods",
+      name: "Extinguisher service 9KG DCP",
+      track_inventory: false,
+      stock_on_hand: "",
+    });
+    expect(classified.isInventory).toBe(true);
+    expect(classified.isService).toBe(false);
+  });
+});
+
+describe("Zoho Items.csv export", () => {
+  it("classifies the Books export by Product Type only", async () => {
+    const { readFileSync, existsSync } = await import("node:fs");
+    const csvPath = "C:/Users/ic kempton/Downloads/Items.csv";
+    if (!existsSync(csvPath)) return;
+
+    const { parseZohoItemsCsv } = await import("./csv");
+    const parsed = parseZohoItemsCsv(readFileSync(csvPath, "utf8"));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const services = parsed.items.filter((i) => i.isService);
+    const goods = parsed.items.filter((i) => i.isInventory);
+    expect(parsed.items.length).toBe(931);
+    expect(services.length).toBe(19);
+    expect(goods.length).toBe(912);
+    expect(services.some((s) => /extinguisher service/i.test(s.name))).toBe(true);
+    expect(goods.some((g) => g.name === "Extinguisher service 9KG DCP")).toBe(true);
+    expect(
+      goods.find((g) => g.name === "Extinguisher service 9KG DCP")?.isService
+    ).toBe(false);
+  });
 });

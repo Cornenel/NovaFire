@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { setVanStock } from "@/app/admin/actions";
 import {
   adjustWarehouseOnHand,
+  importZohoItemsCsv,
   importZohoStockCatalog,
   issueStockToTechnician,
 } from "@/app/admin/stock/actions";
@@ -66,7 +67,10 @@ interface MovementEntry {
 }
 
 const NOTICES: Record<string, string> = {
-  imported: "Zoho catalogue imported — goods as stock, services as services. Re-import fixes misclassified rows.",
+  imported:
+    "Zoho API catalogue imported using Product Type (goods → stock, service → service).",
+  csv_imported:
+    "Zoho Items.csv applied — Product Type is the source of truth for stock vs services.",
   import_failed: "Zoho stock import failed.",
   issued: "Stock booked out to the technician van.",
   issue_failed: "Could not book stock to the van.",
@@ -199,40 +203,69 @@ export default async function AdminStockPage({
             from the van automatically.
           </p>
         </div>
-        <form action={importZohoStockCatalog} className="rounded-xl border border-white/10 p-4 space-y-3 min-w-[240px]">
-          <p className="text-sm font-medium text-white">Import from Zoho Books</p>
-          <p className="text-xs text-zinc-500">
-            Uses Zoho <span className="text-zinc-300">product type</span>: goods → stock, service →
-            service. Re-run to fix misclassified rows.
-          </p>
-          <label className="flex items-start gap-2 text-xs text-zinc-400">
+        <div className="grid sm:grid-cols-2 gap-3 min-w-[280px] max-w-xl">
+          <form
+            action={importZohoItemsCsv}
+            className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3"
+          >
+            <p className="text-sm font-medium text-white">Fix from Zoho Items.csv</p>
+            <p className="text-xs text-zinc-500">
+              Upload the Books export. Uses{" "}
+              <span className="text-zinc-300">Product Type</span> only — goods = stock, service =
+              service (e.g. extinguisher services).
+            </p>
             <input
-              type="checkbox"
-              name="sync_quantities"
-              value="true"
-              className="mt-0.5 accent-red-600"
+              type="file"
+              name="csv_file"
+              accept=".csv,text/csv"
+              required
+              className="block w-full text-xs text-zinc-400 file:mr-3 file:rounded-md file:border-0 file:bg-white/10 file:px-3 file:py-1.5 file:text-xs file:text-white"
             />
-            Also sync warehouse on-hand from Zoho inventory quantities
-          </label>
-          <button
-            type="submit"
-            className="w-full px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold"
+            <button
+              type="submit"
+              className="w-full px-4 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold"
+            >
+              Apply CSV
+            </button>
+          </form>
+
+          <form
+            action={importZohoStockCatalog}
+            className="rounded-xl border border-white/10 p-4 space-y-3"
           >
-            Import catalogue
-          </button>
-          <Link
-            href="/admin/integrations/zoho"
-            className="block text-center text-xs text-zinc-500 hover:text-white"
-          >
-            Zoho connection settings
-          </Link>
-        </form>
+            <p className="text-sm font-medium text-white">Live Zoho API import</p>
+            <p className="text-xs text-zinc-500">
+              Pulls via API + item details for Product Type. Prefer CSV if types still look wrong.
+            </p>
+            <label className="flex items-start gap-2 text-xs text-zinc-400">
+              <input
+                type="checkbox"
+                name="sync_quantities"
+                value="true"
+                className="mt-0.5 accent-red-600"
+              />
+              Also sync warehouse on-hand from Zoho inventory quantities
+            </label>
+            <button
+              type="submit"
+              className="w-full px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-sm font-semibold"
+            >
+              Import from API
+            </button>
+            <Link
+              href="/admin/integrations/zoho"
+              className="block text-center text-xs text-zinc-500 hover:text-white"
+            >
+              Zoho connection settings
+            </Link>
+          </form>
+        </div>
       </div>
 
       {notice && (
         <p className="rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-100">
           {notice}
-          {params.notice === "imported" && (
+          {(params.notice === "imported" || params.notice === "csv_imported") && (
             <span className="block text-xs text-sky-200/80 mt-1">
               Fetched {params.fetched ?? "—"} · stock {params.inventory ?? "—"} · services{" "}
               {params.services ?? "—"} · created {params.created ?? "—"} · updated{" "}

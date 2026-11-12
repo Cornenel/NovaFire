@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { importZohoItemsToWarehouse } from "@/lib/integrations/zoho/stock-import";
+import {
+  importZohoItemsFromCsv,
+  importZohoItemsToWarehouse,
+} from "@/lib/integrations/zoho/stock-import";
 
 async function requireDispatcher() {
   const supabase = await createClient();
@@ -23,6 +26,27 @@ function noticePath(notice: string, extra?: Record<string, string>) {
   return `/admin/stock?${params.toString()}`;
 }
 
+function importNotice(
+  notice: "imported" | "csv_imported",
+  s: {
+    fetched: number;
+    services: number;
+    inventoryItems: number;
+    created: number;
+    updated: number;
+    quantitiesSynced: number;
+  }
+) {
+  return noticePath(notice, {
+    fetched: String(s.fetched),
+    services: String(s.services),
+    inventory: String(s.inventoryItems),
+    created: String(s.created),
+    updated: String(s.updated),
+    synced: String(s.quantitiesSynced),
+  });
+}
+
 /** Import Zoho Books products + services into the Nova Fire catalogue / warehouse. */
 export async function importZohoStockCatalog(formData: FormData) {
   const { supabase, user } = await requireDispatcher();
@@ -40,17 +64,39 @@ export async function importZohoStockCatalog(formData: FormData) {
     redirect(noticePath("import_failed", { error: result.error.slice(0, 180) }));
   }
 
-  const s = result.summary;
-  redirect(
-    noticePath("imported", {
-      fetched: String(s.fetched),
-      services: String(s.services),
-      inventory: String(s.inventoryItems),
-      created: String(s.created),
-      updated: String(s.updated),
-      synced: String(s.quantitiesSynced),
-    })
-  );
+  redirect(importNotice("imported", result.summary));
+}
+
+/**
+ * Reclassify / upsert from a Zoho Books Items.csv export.
+ * Uses Product Type (goods vs service) as the source of truth.
+ */
+export async function importZohoItemsCsv(formData: FormData) {
+  const { user } = await requireDispatcher();
+  const file = formData.get("csv_file");
+  if (!(file instanceof File) || file.size === 0) {
+    redirect(
+      noticePath("import_failed", {
+        error: "Choose the Zoho Books Items.csv export first.",
+      })
+    );
+  }
+
+  const csvText = await file.text();
+  const syncQuantities = formData.get("sync_quantities") === "true";
+  const result = await importZohoItemsFromCsv({
+    actorId: user.id,
+    csvText,
+    syncQuantities,
+  });
+
+  revalidatePath("/admin/stock");
+
+  if (!result.ok) {
+    redirect(noticePath("import_failed", { error: result.error.slice(0, 180) }));
+  }
+
+  redirect(importNotice("csv_imported", result.summary));
 }
 
 /** Book warehouse stock out to a technician van (decrements warehouse, increments van). */
