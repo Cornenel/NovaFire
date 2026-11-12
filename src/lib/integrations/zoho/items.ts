@@ -10,10 +10,13 @@ export type ZohoCatalogItem = {
   unit: string | null;
   rate: number | null;
   stockOnHand: number | null;
+  /** Zoho item_type: sales | purchases | sales_and_purchases | inventory */
   itemType: string | null;
-  /** True when Zoho tracks inventory for this item. */
+  /** Zoho product_type: goods | service | digital_service | capital_* (ZA) */
+  productType: string | null;
+  /** True when this is a sellable physical / inventory stock item. */
   isInventory: boolean;
-  /** True when this is a sellable service / non-stock product. */
+  /** True when this is a chargeable service you render (not stock). */
   isService: boolean;
 };
 
@@ -33,31 +36,92 @@ function amount(value: unknown): number | null {
   return Number.isFinite(number) ? number : null;
 }
 
-function classifyItem(item: Record<string, unknown>): {
+function normalizeType(value: string | null): string {
+  return (value ?? "").toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+/**
+ * Classify Zoho Books catalogue rows for Nova Fire.
+ *
+ * Zoho has two separate axes:
+ * - product_type: goods vs service (what you sell / render)
+ * - item_type: sales / purchases / sales_and_purchases / inventory (accounting + stock tracking)
+ *
+ * Stock item  = goods (or inventory-tracked) you can sell / hold
+ * Service     = product_type service* — work you render and charge for
+ *
+ * Never treat item_type "sales" alone as a service (goods are often sales).
+ * Never treat stock_on_hand: 0 on a service as inventory.
+ */
+export function classifyZohoCatalogItem(item: Record<string, unknown>): {
   itemType: string | null;
+  productType: string | null;
   isInventory: boolean;
   isService: boolean;
 } {
-  const itemType =
-    text(item.item_type) ?? text(item.product_type) ?? text(item.item_type_formatted);
-  const normalized = (itemType ?? "").toLowerCase().replace(/\s+/g, "_");
-
-  const isInventory =
-    normalized === "inventory" ||
+  const itemType = text(item.item_type) ?? text(item.item_type_formatted);
+  const productType =
+    text(item.product_type) ?? text(item.product_type_formatted);
+  const itemNorm = normalizeType(itemType);
+  const productNorm = normalizeType(productType);
+  const trackInventory =
     item.track_inventory === true ||
-    (typeof item.stock_on_hand === "number" && normalized !== "sales");
+    item.track_inventory === "true" ||
+    item.track_inventory === 1;
 
-  // Zoho Books: sales / sales_and_purchases without inventory tracking ≈ services & non-stock.
-  const isService =
-    !isInventory &&
-    (normalized.includes("service") ||
-      normalized === "sales" ||
-      normalized === "sales_and_purchases" ||
-      normalized === "non_inventory" ||
-      normalized === "non-inventory" ||
-      normalized === "");
+  const productIsService =
+    productNorm === "service" ||
+    productNorm === "digital_service" ||
+    productNorm === "capital_service" ||
+    (productNorm.includes("service") && !productNorm.includes("goods"));
 
-  return { itemType, isInventory, isService };
+  const productIsGoods =
+    productNorm === "goods" ||
+    productNorm === "capital_goods" ||
+    (productNorm.includes("goods") && !productNorm.includes("service"));
+
+  // Services win when Zoho explicitly marks product_type as a service.
+  if (productIsService) {
+    return {
+      itemType,
+      productType,
+      isInventory: false,
+      isService: true,
+    };
+  }
+
+  // Goods / inventory-tracked items are stock — even when item_type is "sales".
+  if (
+    productIsGoods ||
+    itemNorm === "inventory" ||
+    trackInventory ||
+    Boolean(text(item.inventory_account_id))
+  ) {
+    return {
+      itemType,
+      productType,
+      isInventory: true,
+      isService: false,
+    };
+  }
+
+  // Ambiguous (missing product_type): purchases-only stays non-service catalogue;
+  // default sellable rows without a service product_type are stock, not services.
+  if (itemNorm === "purchases") {
+    return {
+      itemType,
+      productType,
+      isInventory: true,
+      isService: false,
+    };
+  }
+
+  return {
+    itemType,
+    productType,
+    isInventory: true,
+    isService: false,
+  };
 }
 
 function parseItem(row: unknown): ZohoCatalogItem | null {
@@ -67,7 +131,8 @@ function parseItem(row: unknown): ZohoCatalogItem | null {
   const name = text(item.name);
   if (!itemId || !name) return null;
 
-  const { itemType, isInventory, isService } = classifyItem(item);
+  const { itemType, productType, isInventory, isService } =
+    classifyZohoCatalogItem(item);
   const stockOnHand = isInventory
     ? amount(item.stock_on_hand) ??
       amount(item.actual_available_stock) ??
@@ -85,6 +150,7 @@ function parseItem(row: unknown): ZohoCatalogItem | null {
     rate: amount(item.rate),
     stockOnHand,
     itemType,
+    productType,
     isInventory,
     isService,
   };
@@ -97,7 +163,7 @@ function pageHasMore(body: unknown, received: number): boolean {
 }
 
 /**
- * Paginated Zoho Books catalogue: inventory items AND services.
+ * Paginated Zoho Books catalogue: inventory goods AND services.
  * Uses Status.All so inactive catalogue rows are included too.
  */
 export async function listAllCatalogItems(input: {
@@ -115,8 +181,6 @@ export async function listAllCatalogItems(input: {
   const maxPages = input.maxPages ?? 50;
   const seen = new Set<string>();
 
-  // Status.All → products + services (active and inactive).
-  // No ItemType filter — Inventory-only would drop services.
   for (let page = 1; page <= maxPages; page++) {
     const result = await zohoBooksGet({
       apiDomain: input.apiDomain,

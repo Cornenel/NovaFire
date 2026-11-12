@@ -26,12 +26,9 @@ function isActiveStatus(status: string | null): boolean {
   return value === "active" || value === "enabled";
 }
 
+/** Nova Fire catalogue: service (rendered work) vs inventory (sellable stock). */
 function categoryFor(item: ZohoCatalogItem): string {
-  if (item.isService) return "service";
-  if (item.isInventory) return "inventory";
-  const type = (item.itemType ?? "").toLowerCase();
-  if (type.includes("purchase")) return "purchase";
-  return "general";
+  return item.isService ? "service" : "inventory";
 }
 
 async function findExistingItem(

@@ -6,23 +6,36 @@ import {
   importZohoStockCatalog,
   issueStockToTechnician,
 } from "@/app/admin/stock/actions";
+import { AdminListToolbar } from "@/components/admin/admin-list-toolbar";
+import { AdminPagination } from "@/components/admin/admin-pagination";
+import {
+  buildAdminListHref,
+  ilikePattern,
+  parseAdminListParams,
+} from "@/lib/admin/list-params";
+import { cn } from "@/lib/utils";
 
 const inputCls =
   "px-3.5 py-2.5 rounded-lg bg-[#171717] border border-white/10 text-white placeholder-zinc-600 text-sm focus:border-red-500/50 focus:outline-none focus:ring-2 focus:ring-red-500/20";
 
-interface WarehouseRow {
-  stock_item_id: string;
-  quantity_on_hand: number;
-  stock_item: {
-    id: string;
-    name: string;
-    sku: string | null;
-    category: string;
-    unit: string;
-    source: string | null;
-    legacy_zoho_item_id: string | null;
-    is_active: boolean;
-  } | null;
+type KindFilter = "all" | "stock" | "service";
+
+const KIND_FILTERS: { value: KindFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "stock", label: "Stock items" },
+  { value: "service", label: "Services" },
+];
+
+interface CatalogueRow {
+  id: string;
+  name: string;
+  sku: string | null;
+  category: string;
+  unit: string;
+  source: string | null;
+  legacy_zoho_item_id: string | null;
+  is_active: boolean;
+  warehouse_stock: { quantity_on_hand: number } | { quantity_on_hand: number }[] | null;
 }
 
 interface VanStockEntry {
@@ -53,7 +66,7 @@ interface MovementEntry {
 }
 
 const NOTICES: Record<string, string> = {
-  imported: "Zoho catalogue imported (products and services).",
+  imported: "Zoho catalogue imported — goods as stock, services as services. Re-import fixes misclassified rows.",
   import_failed: "Zoho stock import failed.",
   issued: "Stock booked out to the technician van.",
   issue_failed: "Could not book stock to the van.",
@@ -61,30 +74,67 @@ const NOTICES: Record<string, string> = {
   adjust_failed: "Could not adjust warehouse stock.",
 };
 
+function warehouseQty(row: CatalogueRow): number {
+  const wh = row.warehouse_stock;
+  if (!wh) return 0;
+  if (Array.isArray(wh)) return wh[0]?.quantity_on_hand ?? 0;
+  return wh.quantity_on_hand ?? 0;
+}
+
 export default async function AdminStockPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
+  const { q, page, pageSize, from, to } = parseAdminListParams(params);
+  const kind: KindFilter =
+    params.kind === "stock" || params.kind === "service" ? params.kind : "all";
   const notice = params.notice ? NOTICES[params.notice] ?? null : null;
   const noticeError = params.error;
   const supabase = await createClient();
 
+  let catalogueQuery = supabase
+    .from("stock_items")
+    .select(
+      "id, name, sku, category, unit, source, legacy_zoho_item_id, is_active, warehouse_stock(quantity_on_hand)",
+      { count: "exact" }
+    )
+    .order("name")
+    .range(from, to);
+
+  if (kind === "service") {
+    catalogueQuery = catalogueQuery.eq("category", "service");
+  } else if (kind === "stock") {
+    catalogueQuery = catalogueQuery.neq("category", "service");
+  }
+
+  if (q) {
+    const pattern = ilikePattern(q);
+    catalogueQuery = catalogueQuery.or(
+      `name.ilike.${pattern},sku.ilike.${pattern},unit.ilike.${pattern}`
+    );
+  }
+
   const [
-    { data: warehouseRaw },
+    { data: catalogueRaw, count: catalogueCount },
+    { count: inventoryCount },
+    { count: serviceCount },
     { data: vanStock },
     { data: usage },
     { data: movements },
     { data: technicians },
-    { data: items },
+    { data: bookOutItems },
   ] = await Promise.all([
+    catalogueQuery,
     supabase
-      .from("warehouse_stock")
-      .select(
-        "stock_item_id, quantity_on_hand, stock_item:stock_items(id, name, sku, category, unit, source, legacy_zoho_item_id, is_active)"
-      )
-      .order("quantity_on_hand", { ascending: false }),
+      .from("stock_items")
+      .select("id", { count: "exact", head: true })
+      .neq("category", "service"),
+    supabase
+      .from("stock_items")
+      .select("id", { count: "exact", head: true })
+      .eq("category", "service"),
     supabase
       .from("van_stock")
       .select(
@@ -112,25 +162,29 @@ export default async function AdminStockPage({
       .order("full_name"),
     supabase
       .from("stock_items")
-      .select("id, name, category, is_active")
+      .select("id, name")
       .eq("is_active", true)
+      .neq("category", "service")
       .order("name"),
   ]);
 
-  const warehouse = (warehouseRaw ?? []) as unknown as WarehouseRow[];
+  const catalogue = (catalogueRaw ?? []) as unknown as CatalogueRow[];
+  const totalCount = catalogueCount ?? 0;
   const stock = (vanStock ?? []) as unknown as VanStockEntry[];
   const usageRows = (usage ?? []) as unknown as UsageEntry[];
   const movementRows = (movements ?? []) as unknown as MovementEntry[];
-
-  const inventoryItems = (items ?? []).filter((i) => i.category !== "service");
-  const serviceCount = warehouse.filter((w) => w.stock_item?.category === "service").length;
-  const inventoryCount = warehouse.filter((w) => w.stock_item?.category !== "service").length;
+  const inventoryItems = bookOutItems ?? [];
 
   const byTech = new Map<string, VanStockEntry[]>();
   for (const row of stock) {
     const key = row.technician?.full_name ?? row.technician_id;
     byTech.set(key, [...(byTech.get(key) ?? []), row]);
   }
+
+  const listParams = {
+    q: q || undefined,
+    kind: kind === "all" ? undefined : kind,
+  };
 
   return (
     <div className="space-y-8">
@@ -140,14 +194,16 @@ export default async function AdminStockPage({
             Stock
           </h1>
           <p className="text-sm text-zinc-500 mt-1 max-w-2xl">
-            Warehouse holds Zoho products and services. Book inventory out to technician vans
-            here. Job usage still deducts from the van automatically — that workflow is unchanged.
+            Stock items are goods you sell or hold. Services are work you render and charge for
+            (e.g. extinguisher services). Book stock out to vans here — job usage still deducts
+            from the van automatically.
           </p>
         </div>
         <form action={importZohoStockCatalog} className="rounded-xl border border-white/10 p-4 space-y-3 min-w-[240px]">
           <p className="text-sm font-medium text-white">Import from Zoho Books</p>
           <p className="text-xs text-zinc-500">
-            Pulls products <span className="text-zinc-300">and services</span> into the catalogue.
+            Uses Zoho <span className="text-zinc-300">product type</span>: goods → stock, service →
+            service. Re-run to fix misclassified rows.
           </p>
           <label className="flex items-start gap-2 text-xs text-zinc-400">
             <input
@@ -178,7 +234,7 @@ export default async function AdminStockPage({
           {notice}
           {params.notice === "imported" && (
             <span className="block text-xs text-sky-200/80 mt-1">
-              Fetched {params.fetched ?? "—"} · inventory {params.inventory ?? "—"} · services{" "}
+              Fetched {params.fetched ?? "—"} · stock {params.inventory ?? "—"} · services{" "}
               {params.services ?? "—"} · created {params.created ?? "—"} · updated{" "}
               {params.updated ?? "—"}
               {params.synced ? ` · qty synced ${params.synced}` : ""}
@@ -191,17 +247,47 @@ export default async function AdminStockPage({
       )}
 
       <div className="grid sm:grid-cols-3 gap-3">
-        <Stat label="Warehouse inventory rows" value={inventoryCount} />
-        <Stat label="Services in catalogue" value={serviceCount} />
+        <Stat label="Stock items" value={inventoryCount ?? 0} />
+        <Stat label="Services" value={serviceCount ?? 0} />
         <Stat label="Technician van lines" value={stock.length} />
       </div>
 
-      {/* Warehouse */}
       <section>
-        <h2 className="text-sm font-semibold text-zinc-300 mb-3">Warehouse</h2>
-        {warehouse.length === 0 ? (
+        <h2 className="text-sm font-semibold text-zinc-300 mb-3">Catalogue</h2>
+
+        <AdminListToolbar
+          action="/admin/stock"
+          q={q}
+          placeholder="Search name, SKU, or unit…"
+          hidden={{ kind: kind === "all" ? undefined : kind }}
+        />
+
+        <div className="flex flex-wrap gap-1.5 mb-5">
+          {KIND_FILTERS.map((f) => (
+            <Link
+              key={f.value}
+              href={buildAdminListHref(
+                "/admin/stock",
+                { q, kind: f.value === "all" ? undefined : f.value },
+                { page: 1 }
+              )}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
+                kind === f.value
+                  ? "bg-red-600/20 border-red-500/40 text-red-400"
+                  : "bg-white/[0.03] border-white/10 text-zinc-400 hover:text-white"
+              )}
+            >
+              {f.label}
+            </Link>
+          ))}
+        </div>
+
+        {catalogue.length === 0 ? (
           <p className="text-sm text-zinc-500">
-            No warehouse rows yet. Import from Zoho or add stock items first.
+            {q || kind !== "all"
+              ? "No catalogue rows match that search."
+              : "No catalogue rows yet. Import from Zoho or add stock items first."}
           </p>
         ) : (
           <div className="rounded-xl border border-white/[0.08] nf-glass-panel overflow-x-auto">
@@ -215,12 +301,11 @@ export default async function AdminStockPage({
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {warehouse.map((row) => {
-                  const item = row.stock_item;
-                  if (!item) return null;
+                {catalogue.map((item) => {
                   const isService = item.category === "service";
+                  const qty = warehouseQty(item);
                   return (
-                    <tr key={row.stock_item_id} className="align-top">
+                    <tr key={item.id} className="align-top">
                       <td className="px-4 py-3">
                         <p className="text-white">{item.name}</p>
                         <p className="text-xs text-zinc-500">
@@ -230,20 +315,20 @@ export default async function AdminStockPage({
                           {!item.is_active ? " · inactive" : ""}
                         </p>
                       </td>
-                      <td className="px-4 py-3 text-zinc-400 capitalize">
-                        {isService ? "Service" : item.category || "Inventory"}
+                      <td className="px-4 py-3 text-zinc-400">
+                        {isService ? "Service" : "Stock"}
                       </td>
                       <td className="px-4 py-3">
                         <span
                           className={
                             isService
                               ? "text-zinc-500"
-                              : row.quantity_on_hand === 0
+                              : qty === 0
                                 ? "text-amber-400 font-semibold"
                                 : "text-white font-semibold"
                           }
                         >
-                          {isService ? "—" : row.quantity_on_hand}
+                          {isService ? "—" : qty}
                         </span>
                       </td>
                       <td className="px-4 py-3">
@@ -251,12 +336,12 @@ export default async function AdminStockPage({
                           <span className="text-xs text-zinc-600">Catalogue only</span>
                         ) : (
                           <form action={adjustWarehouseOnHand} className="flex flex-wrap gap-2">
-                            <input type="hidden" name="stock_item_id" value={row.stock_item_id} />
+                            <input type="hidden" name="stock_item_id" value={item.id} />
                             <input
                               type="number"
                               name="quantity"
                               min={0}
-                              defaultValue={row.quantity_on_hand}
+                              defaultValue={qty}
                               required
                               className={`${inputCls} w-24`}
                             />
@@ -282,9 +367,16 @@ export default async function AdminStockPage({
             </table>
           </div>
         )}
+
+        <AdminPagination
+          pathname="/admin/stock"
+          page={page}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          params={listParams}
+        />
       </section>
 
-      {/* Book out + van correction */}
       <div className="grid lg:grid-cols-2 gap-6">
         <section className="rounded-xl border border-white/[0.08] nf-glass-panel p-4 space-y-3">
           <h2 className="text-sm font-semibold text-zinc-300">
@@ -303,7 +395,7 @@ export default async function AdminStockPage({
               ))}
             </select>
             <select name="stock_item_id" required className={inputCls}>
-              <option value="">Inventory item…</option>
+              <option value="">Stock item…</option>
               {inventoryItems.map((i) => (
                 <option key={i.id} value={i.id}>
                   {i.name}
@@ -338,8 +430,7 @@ export default async function AdminStockPage({
             Set van quantity (correction)
           </h2>
           <p className="text-xs text-zinc-500">
-            Absolute van level only — does not change warehouse. Keep using this for corrections;
-            prefer Book out for normal issues.
+            Absolute van level only — does not change warehouse. Prefer Book out for normal issues.
           </p>
           <form action={setVanStock} className="flex flex-wrap gap-2">
             <select name="technician_id" required className={inputCls}>
@@ -351,7 +442,7 @@ export default async function AdminStockPage({
               ))}
             </select>
             <select name="stock_item_id" required className={inputCls}>
-              <option value="">Item…</option>
+              <option value="">Stock item…</option>
               {inventoryItems.map((i) => (
                 <option key={i.id} value={i.id}>
                   {i.name}

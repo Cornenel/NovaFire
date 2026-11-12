@@ -548,3 +548,50 @@ describe("database safeguards", () => {
     expect(sql).not.toMatch(/drop table public\.customers|delete from public\.customers/i);
   });
 });
+
+describe("Zoho catalogue classification", () => {
+  it("treats goods with item_type sales as stock, not services", async () => {
+    const { classifyZohoCatalogItem } = await import("./items");
+    const classified = classifyZohoCatalogItem({
+      item_type: "sales",
+      product_type: "goods",
+      stock_on_hand: 12,
+    });
+    expect(classified.isInventory).toBe(true);
+    expect(classified.isService).toBe(false);
+  });
+
+  it("treats product_type service as a service even when stock_on_hand is 0", async () => {
+    const { classifyZohoCatalogItem } = await import("./items");
+    const classified = classifyZohoCatalogItem({
+      item_type: "sales",
+      product_type: "service",
+      stock_on_hand: 0,
+    });
+    expect(classified.isService).toBe(true);
+    expect(classified.isInventory).toBe(false);
+  });
+
+  it("treats inventory-tracked and capital goods as stock", async () => {
+    const { classifyZohoCatalogItem } = await import("./items");
+    expect(
+      classifyZohoCatalogItem({
+        item_type: "inventory",
+        product_type: "goods",
+        track_inventory: true,
+      }).isInventory
+    ).toBe(true);
+    expect(
+      classifyZohoCatalogItem({
+        item_type: "sales_and_purchases",
+        product_type: "capital_goods",
+      }).isInventory
+    ).toBe(true);
+    expect(
+      classifyZohoCatalogItem({
+        item_type: "sales",
+        product_type: "capital_service",
+      }).isService
+    ).toBe(true);
+  });
+});
