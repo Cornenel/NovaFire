@@ -1,3 +1,14 @@
+import {
+  BUSINESS_ADDRESS,
+  BUSINESS_MAPS_URL,
+  PRIMARY_EMAIL,
+  PRIMARY_PHONE,
+  SERVICE_PROVINCES,
+  SITE_NAME,
+  SITE_URL,
+  absoluteUrl,
+} from "@/lib/seo";
+
 /**
  * Structured Data (JSON-LD) for SEO
  * Add to layout or pages where relevant.
@@ -7,23 +18,49 @@ export function OrganizationStructuredData() {
   const data = {
     "@context": "https://schema.org",
     "@type": ["Organization", "LocalBusiness"],
-    name: "Nova Fire",
-    url: "https://www.novafire.co.za",
-    logo: "https://www.novafire.co.za/brand/logo.png",
-    image: "https://www.novafire.co.za/og.png",
+    "@id": `${SITE_URL}/#organization`,
+    name: SITE_NAME,
+    legalName: "Nova Fire",
+    url: SITE_URL,
+    logo: absoluteUrl("/brand/logo.png"),
+    image: absoluteUrl("/og.png"),
     description:
-      "Nova Fire provides professional fire protection, equipment servicing and compliance support across Mpumalanga and Limpopo, South Africa.",
+      "Nova Fire is a fire extinguisher service company and equipment supplier for portable and fixed fire equipment across Mpumalanga and Limpopo, South Africa.",
+    email: PRIMARY_EMAIL,
+    telephone: PRIMARY_PHONE,
     address: {
       "@type": "PostalAddress",
-      addressCountry: "ZA",
+      streetAddress: BUSINESS_ADDRESS.streetAddress,
+      addressLocality: BUSINESS_ADDRESS.addressLocality,
+      addressRegion: BUSINESS_ADDRESS.addressRegion,
+      postalCode: BUSINESS_ADDRESS.postalCode,
+      addressCountry: BUSINESS_ADDRESS.addressCountry,
     },
-    contactPoint: {
-      "@type": "ContactPoint",
-      email: "jacques@novafire.co.za",
-      telephone: "+27662700293",
-      contactType: "customer service",
-      areaServed: "ZA",
-    },
+    hasMap: BUSINESS_MAPS_URL,
+    areaServed: SERVICE_PROVINCES.map((name) => ({
+      "@type": "AdministrativeArea",
+      name,
+    })),
+    contactPoint: [
+      {
+        "@type": "ContactPoint",
+        email: PRIMARY_EMAIL,
+        telephone: PRIMARY_PHONE,
+        contactType: "customer service",
+        areaServed: SERVICE_PROVINCES.map((name) => ({
+          "@type": "AdministrativeArea",
+          name,
+        })),
+        availableLanguage: ["en", "af"],
+      },
+    ],
+    knowsAbout: [
+      "Fire extinguisher servicing",
+      "Fire extinguisher supply",
+      "Fire hose reel servicing",
+      "Fire hydrant supply and installation",
+      "Fire safety compliance documentation",
+    ],
   };
 
   return (
@@ -37,7 +74,7 @@ export function OrganizationStructuredData() {
 export function WebPageStructuredData({
   name,
   description,
-  url = "https://novafire.co.za",
+  url = SITE_URL,
 }: {
   name: string;
   description: string;
@@ -49,6 +86,11 @@ export function WebPageStructuredData({
     name,
     description,
     url,
+    isPartOf: {
+      "@type": "WebSite",
+      name: SITE_NAME,
+      url: SITE_URL,
+    },
   };
 
   return (
@@ -76,9 +118,11 @@ export function ServiceAreaStructuredData({
     name,
     url,
     provider: {
-      "@type": "Organization",
-      name: "Nova Fire",
-      url: "https://novafire.co.za",
+      "@type": "LocalBusiness",
+      name: SITE_NAME,
+      url: SITE_URL,
+      telephone: PRIMARY_PHONE,
+      email: PRIMARY_EMAIL,
     },
     areaServed: areas.map((a) => ({ "@type": "AdministrativeArea", name: a })),
     serviceType: services,

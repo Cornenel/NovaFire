@@ -17,7 +17,7 @@ export default function FireHydrantSupplyInstallationPage() {
     <div className="min-h-screen nf-bg-base flex flex-col">
       <ServiceAreaStructuredData
         name="Fire hydrant supply and installation"
-        url="https://novafire.co.za/services/fire-hydrant-supply-installation"
+        url="https://www.novafire.co.za/services/fire-hydrant-supply-installation"
         areas={["Mpumalanga", "Limpopo"]}
         services={[
           "Fire hydrant supply and installation",

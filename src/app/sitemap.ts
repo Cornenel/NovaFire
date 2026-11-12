@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
 import { SERVICE_AREAS } from "@/lib/service-areas";
+import { SITE_URL } from "@/lib/seo";
 
-const siteUrl = "https://www.novafire.co.za";
+const siteUrl = SITE_URL;
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
@@ -16,7 +17,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     {
       path: "/services/fire-extinguisher-servicing",
       changeFrequency: "monthly",
-      priority: 0.85,
+      priority: 0.9,
+    },
+    {
+      path: "/services/fire-extinguisher-supply-installation",
+      changeFrequency: "monthly",
+      priority: 0.9,
     },
     {
       path: "/services/fire-hose-reel-servicing",

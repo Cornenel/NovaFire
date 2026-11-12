@@ -26,6 +26,11 @@ const SERVICE_LINKS = [
     desc: "Portable extinguisher inspections, maintenance and compliance documentation.",
   },
   {
+    href: "/services/fire-extinguisher-supply-installation",
+    title: "Fire extinguisher supply & installation",
+    desc: "Portable extinguisher supply, mounting and replacement for Mpumalanga and Limpopo sites.",
+  },
+  {
     href: "/services/fire-hose-reel-servicing",
     title: "Fire hose reel servicing",
     desc: "Fixed hose reel inspections, testing, maintenance and reporting.",
@@ -106,7 +111,7 @@ export default function ServicesPage() {
     <div className="min-h-screen nf-bg-base flex flex-col">
       <ServiceAreaStructuredData
         name="Fire equipment servicing, detection servicing, supply & installation"
-        url="https://novafire.co.za/services"
+        url="https://www.novafire.co.za/services"
         areas={["Mpumalanga", "Limpopo"]}
         services={[
           "Portable fire equipment servicing",

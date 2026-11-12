@@ -1,5 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
+import {
+  BUSINESS_ADDRESS_DISPLAY,
+  BUSINESS_MAPS_URL,
+  PRIMARY_EMAIL,
+  PRIMARY_PHONE,
+  PRIMARY_PHONE_DISPLAY,
+} from "@/lib/seo";
 
 const LEGAL_LINKS = [
   { label: "Privacy", href: "/legal/privacy" },
@@ -113,19 +120,29 @@ export function SiteFooter({ variant = "full" }: { variant?: "full" | "compact" 
             </h4>
             <ul className="space-y-3 text-sm text-zinc-400">
               <li>
-                <a href="tel:+27662700293" className="transition-colors hover:text-white">
-                  066 270 0293
+                <a href={`tel:${PRIMARY_PHONE}`} className="transition-colors hover:text-white">
+                  {PRIMARY_PHONE_DISPLAY}
                 </a>
               </li>
               <li>
                 <a
-                  href="mailto:jacques@novafire.co.za"
+                  href={`mailto:${PRIMARY_EMAIL}`}
                   className="transition-colors hover:text-white"
                 >
-                  jacques@novafire.co.za
+                  {PRIMARY_EMAIL}
                 </a>
               </li>
-              <li>Mpumalanga &amp; Limpopo, South Africa</li>
+              <li>
+                <a
+                  href={BUSINESS_MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="transition-colors hover:text-white"
+                >
+                  {BUSINESS_ADDRESS_DISPLAY}
+                </a>
+              </li>
+              <li>Serving Mpumalanga &amp; Limpopo</li>
             </ul>
           </div>
           <div>

@@ -17,7 +17,7 @@ export default function FireHoseReelServicingPage() {
     <div className="min-h-screen nf-bg-base flex flex-col">
       <ServiceAreaStructuredData
         name="Fire hose reel servicing"
-        url="https://novafire.co.za/services/fire-hose-reel-servicing"
+        url="https://www.novafire.co.za/services/fire-hose-reel-servicing"
         areas={["Mpumalanga", "Limpopo"]}
         services={[
           "Fire hose reel servicing",

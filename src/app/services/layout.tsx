@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     title: "Fire equipment servicing & installations | Mpumalanga & Limpopo",
     description:
       "Portable and fixed fire equipment servicing, fire detection servicing, and supply & installation across Mpumalanga and Limpopo.",
-    url: "https://novafire.co.za/services",
+    url: "https://www.novafire.co.za/services",
   },
 };
 

@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
+import { SITE_URL } from "@/lib/seo";
 
 export default function robots(): MetadataRoute.Robots {
-  const siteUrl = "https://www.novafire.co.za";
+  const siteUrl = SITE_URL;
   return {
     rules: [
       {

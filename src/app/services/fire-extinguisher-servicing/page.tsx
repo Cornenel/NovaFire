@@ -6,9 +6,9 @@ import { SiteFooter } from "@/components/site-footer";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
-  title: "Fire extinguisher servicing (portable) | Mpumalanga & Limpopo",
+  title: "Fire extinguisher service company | Mpumalanga & Limpopo",
   description:
-    "Portable fire extinguisher servicing in Mpumalanga and Limpopo. Certified inspections, maintenance, replacements where required, and compliant documentation aligned with SANS requirements.",
+    "Fire extinguisher service company for Mpumalanga and Limpopo. Portable extinguisher inspections, maintenance, replacements where required, and compliant documentation aligned with SANS practice.",
   alternates: { canonical: "/services/fire-extinguisher-servicing" },
 };
 
@@ -17,10 +17,11 @@ export default function FireExtinguisherServicingPage() {
     <div className="min-h-screen nf-bg-base flex flex-col">
       <ServiceAreaStructuredData
         name="Portable fire extinguisher servicing"
-        url="https://novafire.co.za/services/fire-extinguisher-servicing"
+        url="https://www.novafire.co.za/services/fire-extinguisher-servicing"
         areas={["Mpumalanga", "Limpopo"]}
         services={[
           "Portable fire extinguisher servicing",
+          "Fire extinguisher service company",
           "Inspection and certification",
           "Replacement and recharge where required",
         ]}
@@ -33,12 +34,12 @@ export default function FireExtinguisherServicingPage() {
             Servicing
           </p>
           <h1 className="text-3xl md:text-5xl font-bold text-white font-[family-name:var(--font-syne)] leading-tight">
-            Portable fire extinguisher servicing in Mpumalanga & Limpopo
+            Fire extinguisher service company in Mpumalanga & Limpopo
           </h1>
           <p className="text-zinc-400 mt-5 text-base md:text-lg leading-relaxed">
             Keep your site audit-ready with scheduled extinguisher inspections, maintenance, and
-            documentation. We service portable extinguishers for lodges, estates, farms, warehouses,
-            and commercial facilities across Mpumalanga and Limpopo.
+            documentation. Nova Fire is a portable fire extinguisher service company for lodges,
+            estates, farms, warehouses and commercial facilities across Mpumalanga and Limpopo.
           </p>
 
           <div className="mt-10 grid md:grid-cols-2 gap-6">
@@ -63,6 +64,17 @@ export default function FireExtinguisherServicingPage() {
               </p>
             </div>
           </div>
+
+          <p className="mt-8 text-sm text-zinc-500">
+            Need new units as well? See our{" "}
+            <Link
+              href="/services/fire-extinguisher-supply-installation"
+              className="text-zinc-300 underline-offset-4 hover:text-white hover:underline"
+            >
+              fire extinguisher supply &amp; installation
+            </Link>{" "}
+            page for Mpumalanga and Limpopo sites.
+          </p>
 
           <div className="mt-10 flex flex-col sm:flex-row gap-4">
             <Button asChild className="bg-red-600 hover:bg-red-500">

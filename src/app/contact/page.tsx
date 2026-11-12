@@ -5,11 +5,18 @@ import {
   MarketingContainer,
   MarketingPanel,
 } from "@/components/marketing/primitives";
+import {
+  BUSINESS_ADDRESS_DISPLAY,
+  BUSINESS_MAPS_URL,
+  PRIMARY_EMAIL,
+  PRIMARY_PHONE,
+  PRIMARY_PHONE_DISPLAY,
+} from "@/lib/seo";
 
 export const metadata: Metadata = {
-  title: "Contact",
+  title: "Contact fire extinguisher servicing & supply",
   description:
-    "Contact Nova Fire for quotations, servicing enquiries and training across Mpumalanga and Limpopo.",
+    "Contact Nova Fire — fire extinguisher service company and supplier for quotations, servicing and training across Mpumalanga and Limpopo.",
   alternates: { canonical: "/contact" },
 };
 
@@ -31,8 +38,8 @@ export default function ContactPage() {
                 <span className="block text-xs tracking-[0.2em] text-zinc-500 uppercase">
                   Telephone
                 </span>
-                <a href="tel:+27662700293" className="mt-1 inline-block text-lg text-white">
-                  066 270 0293
+                <a href={`tel:${PRIMARY_PHONE}`} className="mt-1 inline-block text-lg text-white">
+                  {PRIMARY_PHONE_DISPLAY}
                 </a>
               </li>
               <li>
@@ -40,10 +47,23 @@ export default function ContactPage() {
                   Email
                 </span>
                 <a
-                  href="mailto:jacques@novafire.co.za"
+                  href={`mailto:${PRIMARY_EMAIL}`}
                   className="mt-1 inline-block text-lg text-white"
                 >
-                  jacques@novafire.co.za
+                  {PRIMARY_EMAIL}
+                </a>
+              </li>
+              <li>
+                <span className="block text-xs tracking-[0.2em] text-zinc-500 uppercase">
+                  Address
+                </span>
+                <a
+                  href={BUSINESS_MAPS_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 block text-zinc-300 hover:text-white"
+                >
+                  {BUSINESS_ADDRESS_DISPLAY}
                 </a>
               </li>
               <li>

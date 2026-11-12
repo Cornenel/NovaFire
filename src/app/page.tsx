@@ -2,22 +2,24 @@ import type { Metadata } from "next";
 import MarketingHome from "@/components/marketing/home";
 
 export const metadata: Metadata = {
-  title: "Nova Fire | Fire Protection, Servicing & Compliance | South Africa",
+  title:
+    "Fire Extinguisher Service Company & Supplier | Mpumalanga & Limpopo",
   description:
-    "Professional fire protection, equipment servicing and compliance support for lodges, estates, commercial and industrial sites across Mpumalanga and Limpopo.",
+    "Nova Fire is a fire extinguisher service company and supplier for Mpumalanga and Limpopo — portable extinguisher servicing, equipment supply, hose reels, hydrants and compliance documentation.",
   alternates: {
     canonical: "/",
   },
   openGraph: {
-    title: "Nova Fire | Fire Protection, Servicing & Compliance",
+    title:
+      "Nova Fire | Fire Extinguisher Service Company & Supplier | Mpumalanga & Limpopo",
     description:
-      "Fire equipment servicing, supply, documentation and scheduled maintenance across Mpumalanga and Limpopo.",
+      "Fire extinguisher servicing and supply, fixed equipment support and documentation across Mpumalanga and Limpopo.",
     images: [
       {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "Nova Fire — fire protection and compliance",
+        alt: "Nova Fire — fire extinguisher servicing and supply in Mpumalanga and Limpopo",
       },
     ],
   },

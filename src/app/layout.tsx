@@ -35,11 +35,20 @@ const jetbrainsMono = localFont({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.novafire.co.za"),
   title: {
-    default: "Nova Fire | Fire Protection, Compliance & Safety | South Africa",
+    default:
+      "Nova Fire | Fire Extinguisher Service Company & Supplier | Mpumalanga & Limpopo",
     template: "%s | Nova Fire",
   },
   description:
-    "Nova Fire delivers fire protection systems, fire equipment servicing, installations, and compliance solutions. Keep your business operational and audit-ready across South Africa.",
+    "Fire extinguisher servicing and supply company for Mpumalanga and Limpopo. Portable extinguishers, hose reels, hydrants, installations and compliance documentation for lodges, estates, commercial and industrial sites.",
+  keywords: [
+    "fire extinguisher service company Mpumalanga",
+    "fire extinguisher supplier Limpopo",
+    "fire extinguisher servicing Mbombela",
+    "fire extinguisher servicing Polokwane",
+    "fire equipment supply Mpumalanga",
+    "fire protection Limpopo",
+  ],
   alternates: {
     canonical: "/",
   },
@@ -51,23 +60,26 @@ export const metadata: Metadata = {
     type: "website",
     url: "https://www.novafire.co.za",
     siteName: "Nova Fire",
-    title: "Nova Fire | Fire Protection, Compliance & Safety | South Africa",
+    title:
+      "Nova Fire | Fire Extinguisher Service Company & Supplier | Mpumalanga & Limpopo",
     description:
-      "Fire protection systems, servicing, installations, compliance management, risk assessments, and fire safety training across South Africa.",
+      "Servicing and supply of fire extinguishers and related fire equipment across Mpumalanga and Limpopo.",
     images: [
       {
         url: "/og.png",
         width: 1200,
         height: 630,
-        alt: "Nova Fire — fire protection and compliance",
+        alt: "Nova Fire — fire extinguisher servicing and supply in Mpumalanga and Limpopo",
       },
     ],
+    locale: "en_ZA",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Nova Fire | Fire Protection, Compliance & Safety | South Africa",
+    title:
+      "Nova Fire | Fire Extinguisher Service Company & Supplier | Mpumalanga & Limpopo",
     description:
-      "Fire protection systems, servicing, installations, compliance management, risk assessments, and fire safety training across South Africa.",
+      "Servicing and supply of fire extinguishers and related fire equipment across Mpumalanga and Limpopo.",
     images: ["/og.png"],
   },
   robots: {

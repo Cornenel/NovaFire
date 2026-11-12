@@ -5,9 +5,9 @@ import { SiteFooter } from "@/components/site-footer";
 import { SERVICE_AREAS } from "@/lib/service-areas";
 
 export const metadata: Metadata = {
-  title: "Service areas | Mpumalanga & Limpopo",
+  title: "Fire extinguisher service areas | Mpumalanga & Limpopo",
   description:
-    "Nova Fire service areas across Mpumalanga and Limpopo. Fire equipment servicing, detection servicing, and supply & installation.",
+    "Nova Fire service areas across Mpumalanga and Limpopo — fire extinguisher servicing and supply, hose reels, hydrants and compliance support in towns like Mbombela, Polokwane, Hoedspruit and more.",
   alternates: { canonical: "/areas" },
 };
 
@@ -24,11 +24,12 @@ export default function AreasIndexPage() {
             Areas We Serve
           </p>
           <h1 className="text-3xl md:text-5xl font-bold text-white font-[family-name:var(--font-syne)]">
-            Mpumalanga & Limpopo
+            Fire extinguisher service areas in Mpumalanga & Limpopo
           </h1>
           <p className="text-zinc-400 mt-5 max-w-3xl leading-relaxed">
-            We provide portable and fixed fire equipment servicing, fire detection servicing, and
-            supply & installation across these areas.
+            Nova Fire is a fire extinguisher service company and supplier covering these towns —
+            portable extinguisher servicing, equipment supply, hose reels, hydrants and compliance
+            documentation.
           </p>
 
           <div className="mt-12 grid lg:grid-cols-2 gap-8">
