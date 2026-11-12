@@ -131,6 +131,36 @@ function phonesMatch(contact: ZohoContact, customer: NovaCustomer): boolean {
   return Boolean(customerPhone) && phones.has(customerPhone);
 }
 
+/** Reason to refuse a new customer, or null when no Nova Fire customer already owns this identity. */
+export function duplicateCustomerReason(
+  contact: ZohoContact,
+  customers: NovaCustomer[]
+): string | null {
+  const vat = normalizeIdentifier(contact.vatNumber);
+  const registration = normalizeIdentifier(contact.registrationNumber);
+  const names = [contact.companyName, contact.contactName]
+    .map((value) => normalizeCompanyName(value))
+    .filter(Boolean);
+  for (const customer of customers) {
+    if (vat.length >= 6 && vat === normalizeIdentifier(customer.vatNumber)) {
+      return `Nova Fire already has ${customer.name} with this VAT number. Link that customer instead of creating another.`;
+    }
+    if (
+      registration.length >= 5 &&
+      registration === normalizeIdentifier(customer.registrationNumber)
+    ) {
+      return `Nova Fire already has ${customer.name} with this registration number. Link that customer instead of creating another.`;
+    }
+    const existingNames = [customer.name, customer.tradingName ?? ""]
+      .map((value) => normalizeCompanyName(value))
+      .filter(Boolean);
+    if (names.some((name) => existingNames.includes(name))) {
+      return `Nova Fire already has ${customer.name}. Link that customer instead of creating another.`;
+    }
+  }
+  return null;
+}
+
 function identifierMatch(
   contact: ZohoContact,
   customer: NovaCustomer

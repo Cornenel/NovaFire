@@ -12,7 +12,7 @@ import {
   resolveAccountsServer,
 } from "./config";
 import { decryptSecret, encryptSecret, mergeRefreshToken, safeEqual } from "./crypto";
-import { hasAnotherContactPage, matchZohoContact } from "./matching";
+import { duplicateCustomerReason, hasAnotherContactPage, matchZohoContact } from "./matching";
 import { buildAuthorizationUrl, evaluateOAuthState, parseTokenResponse } from "./oauth";
 import { proposeCustomerChanges } from "./proposals";
 import { FINANCIAL_WRITES_ENABLED, type NovaCustomer, type ZohoContact } from "./types";
@@ -410,6 +410,26 @@ describe("customer matching", () => {
       category: "verified_match",
       method: "normalized_name",
     });
+  });
+
+  it("refuses to create a customer that already exists by name or VAT number", () => {
+    expect(
+      duplicateCustomerReason(contact({ vatNumber: "4123456789" }), [
+        customer({ name: "Other Lodge", vatNumber: "4123 456 789" }),
+      ])
+    ).toMatch(/Other Lodge/);
+    expect(
+      duplicateCustomerReason(
+        contact({ contactName: "Kambaku Lodge", companyName: "Kambaku Lodge", vatNumber: null }),
+        [customer({ name: "Kambaku Lodge" })]
+      )
+    ).toMatch(/already has Kambaku Lodge/);
+    expect(
+      duplicateCustomerReason(
+        contact({ contactName: "New Workshop", companyName: "New Workshop", vatNumber: null }),
+        [customer()]
+      )
+    ).toBeNull();
   });
 
   it("stops contact pagination when Zoho returns an empty extra page", () => {

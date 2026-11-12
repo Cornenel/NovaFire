@@ -14,6 +14,7 @@ import type { FieldProposal } from "@/lib/integrations/zoho/types";
 import { cn } from "@/lib/utils";
 import {
   applyAllZohoChanges,
+  rematchZohoPreview,
   saveZohoReviewDecision,
 } from "../actions";
 
@@ -261,6 +262,24 @@ export default async function ZohoPreviewPage({
         ))}
       </div>
 
+      <form action={rematchZohoPreview} className="rounded-xl border border-white/10 bg-white/[0.03] p-4 space-y-2">
+        <input type="hidden" name="run_id" value={run.id} />
+        <input type="hidden" name="tab" value={tab} />
+        <input type="hidden" name="page" value={String(page)} />
+        <input type="hidden" name="q" value={search} />
+        <p className="text-sm text-white font-medium">Check unmatched again</p>
+        <p className="text-xs text-zinc-500 max-w-xl">
+          Compares this preview with every Nova Fire customer, and reads the next 200 unmatched
+          Zoho records for VAT and registration. Nothing is created.
+          {summary.novaCustomersCompared != null
+            ? ` Last check used ${summary.novaCustomersCompared} customers.`
+            : ""}
+        </p>
+        <button className={secondaryClass} type="submit">
+          Rematch without creating customers
+        </button>
+      </form>
+
       <AdminListToolbar
         action={`/admin/integrations/zoho/${run.id}`}
         q={search}
@@ -400,16 +419,14 @@ export default async function ZohoPreviewPage({
                     <form action={saveZohoReviewDecision} className="space-y-3">
                       <input type="hidden" name="run_id" value={run.id} />
                       <input type="hidden" name="item_id" value={item.id} />
+                      <input type="hidden" name="tab" value={tab} />
+                      <input type="hidden" name="page" value={String(page)} />
+                      <input type="hidden" name="q" value={search} />
                       <ZohoCustomerLinkPicker initialCandidates={candidates} />
-                      <label className="flex items-center gap-2 text-xs text-zinc-400">
-                        <input
-                          type="checkbox"
-                          name="confirm_distinct"
-                          value="true"
-                          className="accent-red-600"
-                        />
-                        I checked this is not an existing customer (required to create)
-                      </label>
+                      <p className="text-xs text-zinc-500">
+                        Search first. Create is only for an account that is not already in Nova
+                        Fire. A matching name, VAT number or registration number is blocked.
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         <button
                           className={secondaryClass}
@@ -428,12 +445,12 @@ export default async function ZohoPreviewPage({
                           Skip
                         </button>
                         <button
-                          className={secondaryClass}
+                          className={buttonClass}
                           name="decision"
                           value="create_customer"
                           type="submit"
                         >
-                          Create new customer
+                          Create this customer
                         </button>
                       </div>
                     </form>

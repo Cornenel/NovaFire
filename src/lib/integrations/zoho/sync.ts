@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { planCustomerWrite } from "./apply-plan";
 import { getCustomerContact, listCustomerContacts } from "./contacts";
 import { getConnection } from "./connection";
-import { matchZohoContact, normalizeCompanyName, normalizeIdentifier } from "./matching";
+import { matchZohoContact, duplicateCustomerReason } from "./matching";
 import { countProposalActions, proposeCustomerChanges } from "./proposals";
 import { getValidAccessToken } from "./tokens";
 import type { NovaCustomer, ZohoContact } from "./types";
@@ -29,6 +29,7 @@ type SyncItemRow = {
   apply_conflicts: boolean;
   confirm_distinct: boolean;
   apply_status: string | null;
+  apply_error: string | null;
 };
 
 function admin(): SupabaseClient {
@@ -62,20 +63,52 @@ function toCustomer(row: Record<string, unknown>): NovaCustomer {
 const CUSTOMER_COLUMNS =
   "id, name, trading_name, email, phone, vat_number, registration_number, billing_address, physical_address, contact_person, legacy_zoho_customer_id";
 
-async function loadCustomers(supabase: SupabaseClient): Promise<NovaCustomer[]> {
-  const { data, error } = await supabase.from("customers").select(CUSTOMER_COLUMNS);
-  if (error) throw new Error("Nova Fire customers could not be loaded.");
-  return (data ?? []).map((row) => toCustomer(row as Record<string, unknown>));
+const PAGE_SIZE = 1000;
+const DETAIL_BATCH = 200;
+
+async function selectAll<T>(
+  load: (
+    from: number,
+    to: number
+  ) => PromiseLike<{ data: T[] | null; error: { message?: string } | null }>
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; from <= 50000; from += PAGE_SIZE) {
+    const { data, error } = await load(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message ?? "The customer list could not be loaded.");
+    const batch = data ?? [];
+    rows.push(...batch);
+    if (batch.length < PAGE_SIZE) return rows;
+  }
+  return rows;
+}
+
+async function loadCustomers(): Promise<NovaCustomer[]> {
+  const rows = await selectAll<Record<string, unknown>>((from, to) =>
+    admin()
+      .from("customers")
+      .select(CUSTOMER_COLUMNS)
+      .order("id")
+      .range(from, to)
+      .then((result) => ({
+        data: (result.data as Record<string, unknown>[] | null) ?? null,
+        error: result.error,
+      }))
+  );
+  return rows.map((row) => toCustomer(row));
 }
 
 async function loadMappings(organizationId: string) {
-  const { data, error } = await admin()
-    .from("zoho_books_contact_mappings")
-    .select("zoho_contact_id, customer_id")
-    .eq("organization_id", organizationId)
-    .eq("match_status", "verified");
-  if (error) throw new Error("Zoho customer mappings could not be loaded.");
-  return (data ?? []).map((row) => ({
+  const rows = await selectAll<{ zoho_contact_id: string; customer_id: string }>((from, to) =>
+    admin()
+      .from("zoho_books_contact_mappings")
+      .select("zoho_contact_id, customer_id")
+      .eq("organization_id", organizationId)
+      .eq("match_status", "verified")
+      .order("id")
+      .range(from, to)
+  );
+  return rows.map((row) => ({
     zohoContactId: String(row.zoho_contact_id),
     customerId: String(row.customer_id),
   }));
@@ -169,7 +202,7 @@ export async function runCustomerPreview(input: {
     });
     if (!listed.ok) throw new Error(listed.error);
 
-    const customers = await loadCustomers(input.supabase);
+    const customers = await loadCustomers();
     const mappings = await loadMappings(token.organizationId);
     const matches = listed.contacts.map((contact) => ({
       contact,
@@ -287,25 +320,31 @@ export async function runCustomerPreview(input: {
   }
 }
 
-function identifierTaken(contact: ZohoContact, customers: NovaCustomer[]): boolean {
-  const vat = normalizeIdentifier(contact.vatNumber);
-  const registration = normalizeIdentifier(contact.registrationNumber);
-  const names = [contact.companyName, contact.contactName]
-    .map((value) => normalizeCompanyName(value))
-    .filter(Boolean);
-  return customers.some((customer) => {
-    if (vat.length >= 6 && vat === normalizeIdentifier(customer.vatNumber)) return true;
-    if (
-      registration.length >= 5 &&
-      registration === normalizeIdentifier(customer.registrationNumber)
-    ) {
-      return true;
-    }
-    const customerNames = [customer.name, customer.tradingName ?? ""]
-      .map((value) => normalizeCompanyName(value))
-      .filter(Boolean);
-    return names.some((name) => customerNames.includes(name));
-  });
+const RUN_ITEM_COLUMNS =
+  "id, run_id, organization_id, zoho_contact_id, zoho_display_name, customer_id, category, match_method, confidence, candidates, proposed_changes, zoho_snapshot, decision, decision_customer_id, apply_conflicts, confirm_distinct, apply_status, apply_error";
+
+async function loadRunItems(runId: string, itemIds?: string[]): Promise<SyncItemRow[]> {
+  if (itemIds && itemIds.length > 0) {
+    const { data, error } = await admin()
+      .from("zoho_books_sync_items")
+      .select(RUN_ITEM_COLUMNS)
+      .eq("run_id", runId)
+      .in("id", itemIds);
+    if (error || !data) throw new Error("Preview items could not be loaded.");
+    return data as SyncItemRow[];
+  }
+  return selectAll<SyncItemRow>((from, to) =>
+    admin()
+      .from("zoho_books_sync_items")
+      .select(RUN_ITEM_COLUMNS)
+      .eq("run_id", runId)
+      .order("id")
+      .range(from, to)
+      .then((result) => ({
+        data: (result.data as SyncItemRow[] | null) ?? null,
+        error: result.error,
+      }))
+  );
 }
 
 async function ensureMapping(input: {
@@ -370,6 +409,7 @@ export async function applyCustomerDecisions(input: {
   applyVerified?: boolean;
   applySaved?: boolean;
   applyConflicts?: boolean;
+  itemIds?: string[];
 }): Promise<{ ok: true; applied: number; failed: number } | { ok: false; error: string }> {
   const applyVerified = input.applyVerified !== false;
   const applySaved = input.applySaved !== false;
@@ -388,15 +428,14 @@ export async function applyCustomerDecisions(input: {
   }
   if (run.status === "running") return { ok: false, error: "That preview is still running." };
 
-  const { data: items, error: itemError } = await admin()
-    .from("zoho_books_sync_items")
-    .select(
-      "id, run_id, organization_id, zoho_contact_id, zoho_display_name, customer_id, category, match_method, confidence, candidates, proposed_changes, zoho_snapshot, decision, decision_customer_id, apply_conflicts, confirm_distinct, apply_status"
-    )
-    .eq("run_id", input.runId);
-  if (itemError || !items) return { ok: false, error: "Preview items could not be loaded." };
+  let items: SyncItemRow[];
+  try {
+    items = await loadRunItems(input.runId, input.itemIds);
+  } catch {
+    return { ok: false, error: "Preview items could not be loaded." };
+  }
 
-  const customers = await loadCustomers(input.supabase);
+  const customers = await loadCustomers();
   const customerById = new Map(customers.map((customer) => [customer.id, customer]));
   let applied = 0;
   let failed = 0;
@@ -425,6 +464,8 @@ export async function applyCustomerDecisions(input: {
     const plausible = Array.isArray(raw.candidates) ? raw.candidates.length : 0;
     // Always recompute proposals from live customer + Zoho snapshot so missing
     // fields are filled even if the preview snapshot went stale.
+    const duplicate =
+      decision === "create_customer" ? duplicateCustomerReason(contact, customers) : null;
     const plan = planCustomerWrite({
       decision: decision as "approve_update" | "link" | "create_customer",
       customer,
@@ -433,12 +474,10 @@ export async function applyCustomerDecisions(input: {
       applyConflicts: treatAsVerified
         ? input.applyConflicts === true
         : raw.apply_conflicts,
-      confirmDistinct: raw.confirm_distinct,
+      confirmDistinct: decision === "create_customer" || raw.confirm_distinct,
       plausibleCandidateCount: plausible,
-      identifierTaken:
-        decision === "create_customer"
-          ? identifierTaken(contact, customers)
-          : false,
+      identifierTaken: Boolean(duplicate),
+      identifierTakenReason: duplicate,
     });
 
     if (plan.type === "noop") {
@@ -598,6 +637,146 @@ export async function applyCustomerDecisions(input: {
   return { ok: true, applied, failed };
 }
 
+export async function rematchCustomerPreview(input: {
+  runId: string;
+}): Promise<
+  | {
+      ok: true;
+      verified: number;
+      needsReview: number;
+      unmatched: number;
+      detailsFetched: number;
+    }
+  | { ok: false; error: string }
+> {
+  const connection = await getConnection();
+  if (!connection?.organization_id) {
+    return { ok: false, error: "Zoho Books is not connected to an organisation." };
+  }
+  const { data: run, error: runError } = await admin()
+    .from("zoho_books_sync_runs")
+    .select("id, organization_id, status, summary")
+    .eq("id", input.runId)
+    .maybeSingle();
+  if (runError || !run) return { ok: false, error: "That preview could not be found." };
+  if (run.organization_id !== connection.organization_id) {
+    return { ok: false, error: "That preview belongs to a different Zoho organisation." };
+  }
+  if (run.status === "running") return { ok: false, error: "That preview is still running." };
+
+  let items: SyncItemRow[];
+  let customers: NovaCustomer[];
+  let mappings: Awaited<ReturnType<typeof loadMappings>>;
+  try {
+    items = await loadRunItems(input.runId);
+    customers = await loadCustomers();
+    mappings = await loadMappings(connection.organization_id);
+  } catch {
+    return { ok: false, error: "Nova Fire customers could not be loaded for this comparison." };
+  }
+  const customerById = new Map(customers.map((customer) => [customer.id, customer]));
+  const refreshed = new Set<string>();
+
+  const token = await getValidAccessToken(connection.id);
+  if (token.ok && token.organizationId) {
+    const pendingDetails = items.filter(
+      (item) =>
+        item.apply_status !== "applied" &&
+        (item.category === "unmatched" || item.category === "needs_review") &&
+        item.zoho_snapshot?.detailLoaded !== true
+    );
+    for (const item of pendingDetails.slice(0, DETAIL_BATCH)) {
+      const detailed = await getCustomerContact({
+        apiDomain: token.apiDomain,
+        accessToken: token.accessToken,
+        organizationId: token.organizationId,
+        contactId: item.zoho_contact_id,
+      });
+      if (detailed.ok && detailed.contact) {
+        item.zoho_snapshot = detailed.contact;
+        refreshed.add(item.id);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    }
+  }
+
+  let verified = 0;
+  let needsReview = 0;
+  let unmatched = 0;
+  let conflicts = 0;
+  for (const item of items) {
+    const countCategory = (category: string) => {
+      if (category === "verified_match") verified += 1;
+      else if (category === "needs_review") needsReview += 1;
+      else if (category === "unmatched") unmatched += 1;
+      else conflicts += 1;
+    };
+    if (item.apply_status === "applied") {
+      countCategory(item.category);
+      continue;
+    }
+    const match = matchZohoContact({
+      contact: item.zoho_snapshot,
+      customers,
+      mappings,
+    });
+    const customer = match.customerId ? customerById.get(match.customerId) ?? null : null;
+    countCategory(match.category);
+    const changed =
+      refreshed.has(item.id) ||
+      item.category !== match.category ||
+      (item.customer_id ?? null) !== (customer?.id ?? null) ||
+      item.match_method !== match.method ||
+      item.apply_status === "failed" ||
+      Boolean(item.apply_error);
+    if (!changed) continue;
+    const proposals = customer ? proposeCustomerChanges(customer, item.zoho_snapshot) : [];
+    const resetCreate =
+      match.category === "verified_match" && item.decision === "create_customer";
+    const { error } = await admin()
+      .from("zoho_books_sync_items")
+      .update({
+        category: match.category,
+        match_method: match.method,
+        confidence: match.confidence,
+        candidates: match.candidates,
+        customer_id: customer?.id ?? null,
+        customer_name_snapshot: customer?.name ?? null,
+        proposed_changes: proposals,
+        zoho_snapshot: item.zoho_snapshot,
+        ...(resetCreate
+          ? {
+              decision: "pending",
+              decision_customer_id: null,
+              confirm_distinct: false,
+            }
+          : {}),
+        apply_status: item.apply_status === "failed" ? null : item.apply_status,
+        apply_error: null,
+      })
+      .eq("id", item.id);
+    if (error) return { ok: false, error: "The comparison could not be saved." };
+  }
+
+  const previousSummary = (run.summary as Record<string, unknown> | null) ?? {};
+  await admin()
+    .from("zoho_books_sync_runs")
+    .update({
+      summary: {
+        ...previousSummary,
+        verified,
+        needsReview,
+        unmatched,
+        conflicts,
+        detailFetched: Number(previousSummary.detailFetched ?? 0) + refreshed.size,
+        novaCustomersCompared: customers.length,
+      },
+    })
+    .eq("id", input.runId);
+
+  return { ok: true, verified, needsReview, unmatched, detailsFetched: refreshed.size };
+}
+
 export async function saveReviewDecision(input: {
   actorId: string;
   runId: string;
@@ -625,7 +804,7 @@ export async function saveReviewDecision(input: {
     .update({
       decision: input.decision,
       decision_customer_id: input.decision === "link" ? input.customerId : null,
-      confirm_distinct: input.confirmDistinct === true,
+      confirm_distinct: input.decision === "create_customer" || input.confirmDistinct === true,
       apply_conflicts: input.applyConflicts === true,
       decided_by: input.actorId,
       decided_at: new Date().toISOString(),

@@ -14,6 +14,7 @@ import { listEstimates, listInvoices, listItems } from "@/lib/integrations/zoho/
 import { listOrganizations } from "@/lib/integrations/zoho/organizations";
 import {
   applyCustomerDecisions,
+  rematchCustomerPreview,
   runCustomerPreview,
   saveReviewDecision,
   unlinkMapping,
@@ -138,28 +139,69 @@ export async function applyVerifiedZohoMatches(formData: FormData) {
   go(`/admin/integrations/zoho/${runId}`, result.ok ? "applied" : "apply_failed");
 }
 
+function previewPath(runId: string, formData: FormData): string {
+  const params = new URLSearchParams();
+  const tab = String(formData.get("tab") ?? "");
+  const page = String(formData.get("page") ?? "");
+  const q = String(formData.get("q") ?? "").trim();
+  if (tab && tab !== "all") params.set("tab", tab);
+  if (page && page !== "1") params.set("page", page);
+  if (q) params.set("q", q);
+  const query = params.toString();
+  return `/admin/integrations/zoho/${runId}${query ? `?${query}` : ""}`;
+}
+
 export async function saveZohoReviewDecision(formData: FormData) {
   const auth = await adminContext();
   const runId = String(formData.get("run_id") ?? "");
+  const back = previewPath(runId, formData);
   const decision = String(formData.get("decision") ?? "");
   if (decision !== "link" && decision !== "create_customer" && decision !== "skip" && decision !== "reject") {
-    go(`/admin/integrations/zoho/${runId}`, "decision_failed");
+    go(back, "decision_failed");
   }
   const customerId =
     String(formData.get("customer_id") ?? "").trim() ||
     String(formData.get("customer_id_manual") ?? "").trim() ||
     null;
+  const creating = decision === "create_customer";
   const result = await saveReviewDecision({
     actorId: auth.userId,
     runId,
     itemId: String(formData.get("item_id") ?? ""),
     decision,
     customerId,
-    confirmDistinct: formData.get("confirm_distinct") === "true",
+    confirmDistinct: creating,
     applyConflicts: formData.get("apply_conflicts") === "true",
   });
+  if (!result.ok) {
+    revalidatePath(`/admin/integrations/zoho/${runId}`);
+    go(back, "decision_failed");
+  }
+  if (creating) {
+    const applied = await applyCustomerDecisions({
+      actorId: auth.userId,
+      supabase: auth.supabase,
+      runId,
+      applyVerified: false,
+      applySaved: true,
+      itemIds: [String(formData.get("item_id") ?? "")],
+    });
+    revalidatePath("/admin/customers");
+    revalidatePath(`/admin/integrations/zoho/${runId}`);
+    if (!applied.ok || applied.failed > 0) go(back, "create_blocked");
+    go(back, "created");
+  }
   revalidatePath(`/admin/integrations/zoho/${runId}`);
-  go(`/admin/integrations/zoho/${runId}`, result.ok ? "decision" : "decision_failed");
+  go(back, "decision");
+}
+
+export async function rematchZohoPreview(formData: FormData) {
+  await adminContext();
+  const runId = String(formData.get("run_id") ?? "");
+  const back = previewPath(runId, formData);
+  const result = await rematchCustomerPreview({ runId });
+  revalidatePath(`/admin/integrations/zoho/${runId}`);
+  go(back, result.ok ? "rematched" : "rematch_failed");
 }
 
 export async function applySavedZohoDecisions(formData: FormData) {

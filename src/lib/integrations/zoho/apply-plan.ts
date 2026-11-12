@@ -86,6 +86,7 @@ export function planCustomerWrite(input: {
   confirmDistinct?: boolean;
   plausibleCandidateCount?: number;
   identifierTaken?: boolean;
+  identifierTakenReason?: string | null;
 }): CustomerWritePlan {
   if (input.decision === "pending" || input.decision === "skip" || input.decision === "reject") {
     return { type: "noop", reason: "No customer write was approved." };
@@ -101,7 +102,9 @@ export function planCustomerWrite(input: {
     if (input.identifierTaken) {
       return {
         type: "blocked",
-        reason: "A Nova Fire customer already uses this VAT or registration number.",
+        reason:
+          input.identifierTakenReason ??
+          "A Nova Fire customer already uses this name, VAT or registration number. Link that customer instead of creating another.",
       };
     }
     const name = clean(input.contact.companyName) ?? clean(input.contact.contactName);
